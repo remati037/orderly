@@ -84,22 +84,33 @@ export async function POST(request: NextRequest) {
 
   const supabase = adminClient();
 
-  const { data, error } = await supabase
+  // Check if a row already exists for this site+product
+  const { data: existing } = await supabase
     .from("products")
-    .upsert(
-      {
-        site_id,
-        name,
-        cost_percent: cost_percent ?? null,
-        cost_fixed: cost_fixed ?? null,
-      },
-      { onConflict: "site_id,name" }
-    )
-    .select()
-    .single();
+    .select("id")
+    .eq("site_id", site_id)
+    .eq("name", name)
+    .maybeSingle();
+
+  let result, error;
+
+  if (existing) {
+    ({ data: result, error } = await supabase
+      .from("products")
+      .update({ cost_percent: cost_percent ?? null, cost_fixed: cost_fixed ?? null })
+      .eq("id", existing.id)
+      .select()
+      .single());
+  } else {
+    ({ data: result, error } = await supabase
+      .from("products")
+      .insert({ site_id, name, cost_percent: cost_percent ?? null, cost_fixed: cost_fixed ?? null })
+      .select()
+      .single());
+  }
 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json(data);
+  return NextResponse.json(result);
 }
