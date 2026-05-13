@@ -31,8 +31,8 @@ export function useSoundNotification() {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
-  // ── Fully lazy AudioContext — only ever created inside a user gesture handler ──
-  // Do NOT call this at hook mount or in any auto-running effect.
+  // ── AudioContext helpers ───────────────────────────────────────────────────────
+
   const getOrCreateCtx = useCallback((): AudioContext => {
     if (!audioCtxRef.current) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +40,40 @@ export function useSoundNotification() {
       setIsReady(true);
     }
     return audioCtxRef.current!;
+  }, []);
+
+  // Create the AudioContext on the FIRST user interaction anywhere on the page.
+  // This ensures the context starts in "running" state, which allows
+  // ctx.resume() to succeed even when an order arrives in a background tab.
+  useEffect(() => {
+    function init() {
+      if (audioCtxRef.current) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      audioCtxRef.current = new ((window as any).AudioContext ?? (window as any).webkitAudioContext)();
+      setIsReady(true);
+    }
+    window.addEventListener("click",      init, { once: true });
+    window.addEventListener("keydown",    init, { once: true });
+    window.addEventListener("touchstart", init, { once: true });
+    return () => {
+      window.removeEventListener("click",      init);
+      window.removeEventListener("keydown",    init);
+      window.removeEventListener("touchstart", init);
+    };
+  }, []);
+
+  // Resume the context whenever the user returns to this tab.
+  // Browsers suspend AudioContext while a tab is hidden; this unblocks it
+  // immediately on focus, and also means subsequent background-tab resume()
+  // calls succeed (Chrome allows resume after the context was previously running).
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        audioCtxRef.current?.resume();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   // ── Load settings from API ─────────────────────────────────────────────────

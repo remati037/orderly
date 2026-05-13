@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RadioIcon } from "lucide-react";
-import {
-  useRealtimeOrders,
-  type RealtimeOrder,
-} from "@/lib/hooks/use-realtime-orders";
+import { useRealtimeOrdersContext } from "@/lib/contexts/realtime-orders-context";
+import type { RealtimeOrder } from "@/lib/hooks/use-realtime-orders";
 
 // ── animation keyframes injected once ─────────────────────────────────────────
 
@@ -222,23 +220,22 @@ const MAX_VISIBLE = 15;
 
 export function LiveFeed() {
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const { recentOrders, newOrderCount, clearNewCount, subscribeToNewOrders } =
+    useRealtimeOrdersContext();
 
-  const handleNewOrder = useCallback((order: RealtimeOrder) => {
-    setFreshIds((s) => new Set([...s, order.id]));
-    setTimeout(() => {
-      setFreshIds((s) => {
-        const next = new Set(s);
-        next.delete(order.id);
-        return next;
-      });
-    }, 700);
-  }, []);
-
-  // silent: true because SoundSubscriber in the layout already handles sounds
-  const { recentOrders, newOrderCount, clearNewCount } = useRealtimeOrders({
-    onNewOrder: handleNewOrder,
-    silent: true,
-  });
+  // Register animation callback with the layout-level channel — no subscription of our own
+  useEffect(() => {
+    return subscribeToNewOrders((order: RealtimeOrder) => {
+      setFreshIds((s) => new Set([...s, order.id]));
+      setTimeout(() => {
+        setFreshIds((s) => {
+          const next = new Set(s);
+          next.delete(order.id);
+          return next;
+        });
+      }, 700);
+    });
+  }, [subscribeToNewOrders]);
 
   const visible = recentOrders.slice(0, MAX_VISIBLE);
 
