@@ -32,7 +32,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
           Dashboard
         </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0", textTransform: "capitalize" }}>
+        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0", textTransform: "capitalize" }} suppressHydrationWarning>
           {todaySr()}
         </p>
       </div>

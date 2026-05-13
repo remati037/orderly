@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabaseBrowser } from "@/lib/supabase/browser-client";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -82,14 +82,13 @@ export function useRealtimeOrders({
   useEffect(() => {
     loadSites();
 
-    const supabase = createClient();
-
-    const channel = supabase
+    const channel = supabaseBrowser
       .channel("orders-realtime")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "orders" },
         (payload) => {
+          console.log("Realtime event: INSERT orders", payload);
           const newRow = payload.new as Record<string, unknown>;
           const siteId = newRow.site_id as string;
           const order = enrich(newRow, siteId);
@@ -103,6 +102,7 @@ export function useRealtimeOrders({
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders" },
         (payload) => {
+          console.log("Realtime event: UPDATE orders", payload);
           const updated = payload.new as Record<string, unknown>;
           const id = updated.id as string;
           const nextStatus = updated.status as string;
@@ -114,14 +114,20 @@ export function useRealtimeOrders({
           );
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log("Realtime status:", status);
+        if (err) console.error("Realtime subscription error:", err);
+      });
+
+    console.log("Realtime: subscribed to orders-realtime channel");
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log("Realtime: removing orders-realtime channel");
+      supabaseBrowser.removeChannel(channel);
     };
-    // loadSites is stable; enrich reads the ref
+    // singleton client + stable loadSites — effect must only run once
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadSites]);
+  }, []);
 
   const clearNewCount = useCallback(() => setNewOrderCount(0), []);
 
