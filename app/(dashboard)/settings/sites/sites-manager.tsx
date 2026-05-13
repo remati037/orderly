@@ -12,6 +12,7 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
   BuildingIcon,
+  AlertTriangleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,38 @@ const PROJECT_TYPE_LABELS: Record<string, string> = {
   digital: "Digital",
 };
 
+type SyncPreset = "year" | "90days" | "30days" | "all" | "custom";
+
+const SYNC_PRESETS: Array<{ value: SyncPreset; label: string }> = [
+  { value: "year",   label: "Od početka godine" },
+  { value: "90days", label: "Poslednjih 90 dana" },
+  { value: "30days", label: "Poslednjih 30 dana" },
+  { value: "all",    label: "Sve porudžbine (može biti sporo)" },
+  { value: "custom", label: "Izaberi period" },
+];
+
+function calcAfterDate(preset: SyncPreset, customFrom: string): string | null {
+  const now = new Date();
+  switch (preset) {
+    case "year":
+      return new Date(now.getFullYear(), 0, 1).toISOString();
+    case "90days": {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 90);
+      return d.toISOString();
+    }
+    case "30days": {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 30);
+      return d.toISOString();
+    }
+    case "all":
+      return null;
+    case "custom":
+      return customFrom ? new Date(customFrom).toISOString() : null;
+  }
+}
+
 // ── sub-components ─────────────────────────────────────────────────────────────
 
 function PlatformCard({
@@ -200,6 +233,12 @@ export default function SitesManager() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+
+  // Sync dialog
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncingSite, setSyncingSite] = useState<Site | null>(null);
+  const [syncPreset, setSyncPreset] = useState<SyncPreset>("90days");
+  const [syncCustomFrom, setSyncCustomFrom] = useState("");
 
   const showToast = useCallback(
     (message: string, type: "success" | "error") => {
@@ -338,18 +377,34 @@ export default function SitesManager() {
     }
   }
 
-  async function handleSync(site: Site) {
+  function openSyncDialog(site: Site) {
+    setSyncingSite(site);
+    setSyncPreset("90days");
+    setSyncCustomFrom("");
+    setSyncDialogOpen(true);
+  }
+
+  async function confirmSync() {
+    if (!syncingSite) return;
+    setSyncDialogOpen(false);
+    const site = syncingSite;
     setSyncing((s) => ({ ...s, [site.id]: true }));
     try {
+      const after = calcAfterDate(syncPreset, syncCustomFrom);
       const path =
         site.platform === "woocommerce"
           ? `/api/sync/woo/${site.id}`
           : `/api/sync/thinkific/${site.id}`;
-      const res = await fetch(path, { method: "POST" });
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true, after }),
+      });
       if (res.ok) {
-        showToast("Sync started, this may take a few minutes", "success");
+        const { synced } = await res.json();
+        showToast(`Sync završen — ${synced} porudžbina`, "success");
       } else {
-        showToast("Sync failed", "error");
+        showToast("Sync nije uspeo", "error");
       }
       await loadSites();
     } finally {
@@ -472,7 +527,7 @@ export default function SitesManager() {
                       variant="ghost"
                       size="icon-sm"
                       disabled={syncing[site.id]}
-                      onClick={() => handleSync(site)}
+                      onClick={() => openSyncDialog(site)}
                     >
                       <RefreshCwIcon
                         className={cn(
@@ -509,6 +564,72 @@ export default function SitesManager() {
           </TableBody>
         </Table>
       )}
+
+      {/* ── Sync Dialog ────────────────────────────────────────────────────── */}
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sinhronizacija porudžbina</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            {/* Warning */}
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              <AlertTriangleIcon className="size-4 shrink-0 mt-0.5" />
+              <span>
+                Ovo će obrisati postojeće porudžbine za ovaj sajt u izabranom periodu i ponovo ih učitati.
+              </span>
+            </div>
+
+            {/* Preset radio buttons */}
+            <div className="flex flex-col gap-2">
+              {SYNC_PRESETS.map((p) => (
+                <label
+                  key={p.value}
+                  className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                  style={{ borderColor: syncPreset === p.value ? "hsl(var(--primary))" : undefined,
+                           background: syncPreset === p.value ? "hsl(var(--primary) / 0.05)" : undefined }}
+                >
+                  <input
+                    type="radio"
+                    name="sync-preset"
+                    value={p.value}
+                    checked={syncPreset === p.value}
+                    onChange={() => setSyncPreset(p.value)}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm font-medium">{p.label}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Custom date input */}
+            {syncPreset === "custom" && (
+              <div className="flex flex-col gap-1.5 pl-1">
+                <label className="text-sm font-medium">Od datuma</label>
+                <input
+                  type="date"
+                  value={syncCustomFrom}
+                  onChange={(e) => setSyncCustomFrom(e.target.value)}
+                  className="rounded-md border border-input bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
+              Otkaži
+            </Button>
+            <Button
+              onClick={confirmSync}
+              disabled={syncPreset === "custom" && !syncCustomFrom}
+            >
+              Pokreni sync
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Add / Edit Dialog ──────────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>

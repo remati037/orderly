@@ -14,7 +14,8 @@ interface WooSite {
 export async function syncWooSite(
   supabase: SupabaseClient,
   site: WooSite,
-  logType: "manual" | "cron" = "manual"
+  logType: "manual" | "cron" = "manual",
+  after?: string // ISO date — only fetch orders created after this date
 ): Promise<number> {
   const auth = Buffer.from(
     `${site.consumer_key}:${site.consumer_secret}`
@@ -24,9 +25,10 @@ export async function syncWooSite(
   let synced = 0;
 
   while (true) {
-    const url =
+    let url =
       `${site.url}/wp-json/wc/v3/orders` +
       `?per_page=100&page=${page}&orderby=date&order=asc`;
+    if (after) url += `&after=${encodeURIComponent(after)}`;
 
     let orders: WooOrder[];
     try {

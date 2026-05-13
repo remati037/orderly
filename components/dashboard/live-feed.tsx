@@ -160,7 +160,7 @@ function OrderRow({
         {order.customer_name || "—"}
       </span>
 
-      {/* site name (product context) */}
+      {/* product name */}
       <span
         style={{
           flex: 2,
@@ -172,11 +172,29 @@ function OrderRow({
           whiteSpace: "nowrap",
         }}
       >
-        {order.site_name}
+        {order.product_name ?? order.site_name}
       </span>
 
       {/* product type tag */}
       <ProductTypeTag type={order.product_type} />
+
+      {/* late badge */}
+      {order.is_late && (
+        <span style={{
+          display: "inline-block",
+          fontSize: 10,
+          fontWeight: 600,
+          padding: "1px 6px",
+          borderRadius: 6,
+          background: "#FFF7ED",
+          color: "#C2410C",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+          letterSpacing: "0.02em",
+        }}>
+          zakasnelo
+        </span>
+      )}
 
       {/* status badge */}
       <StatusBadge status={order.status} />

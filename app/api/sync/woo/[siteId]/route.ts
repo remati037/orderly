@@ -17,6 +17,7 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}));
   const force = body?.force === true;
+  const after: string | null = body?.after ?? null; // ISO date string for date-range sync
 
   const { data: site, error } = await supabase
     .from("sites")
@@ -33,20 +34,19 @@ export async function POST(
   }
 
   if (force) {
-    // Delete order_items first (FK), then orders
-    const { data: orderIds } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("site_id", siteId);
+    // Delete only orders within the date range being resynced (scoped delete)
+    let selectQ = supabase.from("orders").select("id").eq("site_id", siteId);
+    if (after) selectQ = selectQ.gte("created_at", after);
 
+    const { data: orderIds } = await selectQ;
     if (orderIds && orderIds.length > 0) {
       const ids = orderIds.map((r) => r.id);
       await supabase.from("order_items").delete().in("order_id", ids);
-      await supabase.from("orders").delete().eq("site_id", siteId);
+      await supabase.from("orders").delete().in("id", ids);
     }
   }
 
-  const synced = await syncWooSite(supabase, site, "manual");
+  const synced = await syncWooSite(supabase, site, "manual", after ?? undefined);
 
-  return NextResponse.json({ synced, site: site.name, force });
+  return NextResponse.json({ synced, site: site.name, force, after });
 }
