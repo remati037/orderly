@@ -95,7 +95,7 @@ export function useKpiStats(siteId?: string): {
   const { data, error, isLoading } = useSWR<KpiRaw>(
     url,
     fetcher,
-    { refreshInterval: 60_000, revalidateOnFocus: true }
+    { refreshInterval: 30_000, revalidateOnFocus: true }
   );
 
   return {

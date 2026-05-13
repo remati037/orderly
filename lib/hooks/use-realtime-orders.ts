@@ -36,6 +36,7 @@ interface SiteInfo {
 
 interface UseRealtimeOrdersOptions {
   onNewOrder?: (order: RealtimeOrder) => void;
+  onUpdate?: (id: string, status: string) => void;
   channelName?: string;
   silent?: boolean; // true = never play sound on INSERT (e.g. LiveFeed which relies on SoundSubscriber)
 }
@@ -66,6 +67,7 @@ function isOrderFromToday(createdAt: string): boolean {
 
 export function useRealtimeOrders({
   onNewOrder,
+  onUpdate,
   channelName = "orders-realtime",
   silent = false,
 }: UseRealtimeOrdersOptions = {}) {
@@ -76,6 +78,8 @@ export function useRealtimeOrders({
   const sitesCache = useRef<Map<string, SiteInfo>>(new Map());
   const onNewOrderRef = useRef(onNewOrder);
   onNewOrderRef.current = onNewOrder;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
 
   // Refs for props consumed inside the effect — lets the effect stay on [] deps
   // while always reading the latest values from inside the stable closure.
@@ -248,6 +252,7 @@ export function useRealtimeOrders({
             setRecentOrders((prev) =>
               prev.map((o) => (o.id === id ? { ...o, status: nextStatus } : o))
             );
+            onUpdateRef.current?.(id, nextStatus);
           }
         )
         .subscribe((status, err) => {
