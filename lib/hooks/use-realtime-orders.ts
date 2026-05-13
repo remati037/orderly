@@ -77,6 +77,13 @@ export function useRealtimeOrders({
   const onNewOrderRef = useRef(onNewOrder);
   onNewOrderRef.current = onNewOrder;
 
+  // Refs for props consumed inside the effect — lets the effect stay on [] deps
+  // while always reading the latest values from inside the stable closure.
+  const channelNameRef = useRef(channelName);
+  channelNameRef.current = channelName;
+  const silentRef = useRef(silent);
+  silentRef.current = silent;
+
   // Always read the latest sound context without re-running the channel effect
   const soundCtx = useSoundContext();
   const soundCtxRef = useRef(soundCtx);
@@ -171,7 +178,7 @@ export function useRealtimeOrders({
 
     function createChannel(): ReturnType<typeof supabaseBrowser.channel> {
       const ch = supabaseBrowser
-        .channel(channelName)
+        .channel(channelNameRef.current)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "orders" },
@@ -188,8 +195,8 @@ export function useRealtimeOrders({
               is_late: !isOrderFromToday(createdAt),
             };
 
-            // Play sound — reads isMuted from shared context via ref (stays current without re-running effect)
-            if (!silent) {
+            // Play sound — all values read via refs so they're always current
+            if (!silentRef.current) {
               const { isMuted, shouldPlay, playSound, settings } = soundCtxRef.current;
               console.log("[Sound] New order received — status:", orderStatus, "| isMuted:", isMuted, "| shouldPlay:", shouldPlay(orderStatus));
               if (!isMuted && shouldPlay(orderStatus)) {
@@ -277,7 +284,7 @@ export function useRealtimeOrders({
     }
 
     currentChannel = createChannel();
-    console.log(`Realtime: subscribed to ${channelName} channel`);
+    console.log(`Realtime: subscribed to ${channelNameRef.current} channel`);
 
     // Heartbeat: only acts after the channel was SUBSCRIBED at least once,
     // ensuring we don't misfire during the initial handshake
@@ -296,7 +303,7 @@ export function useRealtimeOrders({
       isMounted = false;
       setIsConnected(false);
       clearInterval(heartbeat);
-      console.log(`Realtime: removing ${channelName} channel`);
+      console.log(`Realtime: removing ${channelNameRef.current} channel`);
       supabaseBrowser.removeChannel(currentChannel);
     };
   }, []); // empty deps — must never re-run

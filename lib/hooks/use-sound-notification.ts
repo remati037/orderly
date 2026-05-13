@@ -31,22 +31,15 @@ export function useSoundNotification() {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
-  // ── Lazy AudioContext — created on first user interaction ──────────────────
-  useEffect(() => {
-    function init() {
-      if (audioCtxRef.current) return;
+  // ── Fully lazy AudioContext — only ever created inside a user gesture handler ──
+  // Do NOT call this at hook mount or in any auto-running effect.
+  const getOrCreateCtx = useCallback((): AudioContext => {
+    if (!audioCtxRef.current) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       audioCtxRef.current = new ((window as any).AudioContext ?? (window as any).webkitAudioContext)();
       setIsReady(true);
     }
-    window.addEventListener("click",      init, { once: true });
-    window.addEventListener("keydown",    init, { once: true });
-    window.addEventListener("touchstart", init, { once: true });
-    return () => {
-      window.removeEventListener("click",      init);
-      window.removeEventListener("keydown",    init);
-      window.removeEventListener("touchstart", init);
-    };
+    return audioCtxRef.current;
   }, []);
 
   // ── Load settings from API ─────────────────────────────────────────────────
@@ -85,20 +78,20 @@ export function useSoundNotification() {
     return () => { cancelled = true; };
   }, [isReady, settings.soundUrl]);
 
-  // ── unlockAudio — call on any user gesture to ensure AudioContext is running ──
-  const unlockAudio = useCallback(async () => {
-    const ctx = audioCtxRef.current;
-    if (ctx && ctx.state === "suspended") await ctx.resume();
-  }, []);
+  // ── unlockAudio — must be called from a user gesture (e.g. mute button click) ──
+  // Creates the AudioContext if it doesn't exist yet, then resumes it.
+  const unlockAudio = useCallback(() => {
+    const ctx = getOrCreateCtx();
+    if (ctx.state === "suspended") ctx.resume();
+  }, [getOrCreateCtx]);
 
   // ── playSound ──────────────────────────────────────────────────────────────
   const playSound = useCallback(async (volumePct?: number) => {
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
+    const ctx = getOrCreateCtx();
 
     console.log("[Sound] playSound called — ctx.state:", ctx.state);
 
-    // Resume suspended context (browser requires a prior user gesture)
+    // Resume if the context was suspended (tab switch, Safari, etc.)
     if (ctx.state === "suspended") await ctx.resume();
 
     const vol = (volumePct ?? settingsRef.current.volume) / 100;
@@ -129,7 +122,7 @@ export function useSoundNotification() {
       osc.start(t);
       osc.stop(t + 0.4);
     }
-  }, []);
+  }, [getOrCreateCtx]);
 
   // ── shouldPlay: checks all conditions before playing ──────────────────────
   const shouldPlay = useCallback((orderStatus: string): boolean => {
