@@ -39,7 +39,7 @@ export function useSoundNotification() {
       audioCtxRef.current = new ((window as any).AudioContext ?? (window as any).webkitAudioContext)();
       setIsReady(true);
     }
-    return audioCtxRef.current;
+    return audioCtxRef.current!;
   }, []);
 
   // ── Load settings from API ─────────────────────────────────────────────────
