@@ -85,13 +85,21 @@ export function useSoundNotification() {
     return () => { cancelled = true; };
   }, [isReady, settings.soundUrl]);
 
+  // ── unlockAudio — call on any user gesture to ensure AudioContext is running ──
+  const unlockAudio = useCallback(async () => {
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state === "suspended") await ctx.resume();
+  }, []);
+
   // ── playSound ──────────────────────────────────────────────────────────────
-  const playSound = useCallback((volumePct?: number) => {
+  const playSound = useCallback(async (volumePct?: number) => {
     const ctx = audioCtxRef.current;
     if (!ctx) return;
 
-    // Resume suspended context (Safari requires this after tab switch)
-    if (ctx.state === "suspended") ctx.resume();
+    console.log("[Sound] playSound called — ctx.state:", ctx.state);
+
+    // Resume suspended context (browser requires a prior user gesture)
+    if (ctx.state === "suspended") await ctx.resume();
 
     const vol = (volumePct ?? settingsRef.current.volume) / 100;
     const t   = ctx.currentTime;
@@ -129,5 +137,5 @@ export function useSoundNotification() {
     return s.enabled && s.triggerStatuses.includes(orderStatus);
   }, []);
 
-  return { playSound, shouldPlay, isReady, isMuted, setMuted, settings, setSettings, reload };
+  return { playSound, unlockAudio, shouldPlay, isReady, isMuted, setMuted, settings, setSettings, reload };
 }

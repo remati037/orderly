@@ -8,7 +8,8 @@ import { useSoundNotification, SoundSettings } from "@/lib/hooks/use-sound-notif
 interface SoundContextValue {
   isMuted: boolean;
   setMuted: (v: boolean) => void;
-  playSound: (vol?: number) => void;
+  playSound: (vol?: number) => Promise<void>;
+  unlockAudio: () => Promise<void>;
   shouldPlay: (status: string) => boolean;
   isReady: boolean;
   settings: SoundSettings;
@@ -25,7 +26,8 @@ const DEFAULTS: SoundSettings = {
 const SoundContext = createContext<SoundContextValue>({
   isMuted: false,
   setMuted: () => {},
-  playSound: () => {},
+  playSound: async () => {},
+  unlockAudio: async () => {},
   shouldPlay: () => false,
   isReady: false,
   settings: DEFAULTS,
@@ -34,7 +36,7 @@ const SoundContext = createContext<SoundContextValue>({
 // ── Dashboard provider — reads/writes localStorage ─────────────────────────────
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
-  const { playSound, shouldPlay, isReady, settings } = useSoundNotification();
+  const { playSound, unlockAudio, shouldPlay, isReady, settings } = useSoundNotification();
 
   const [isMuted, setMutedState] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -47,7 +49,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SoundContext.Provider value={{ isMuted, setMuted, playSound, shouldPlay, isReady, settings }}>
+    <SoundContext.Provider value={{ isMuted, setMuted, playSound, unlockAudio, shouldPlay, isReady, settings }}>
       {children}
     </SoundContext.Provider>
   );
@@ -56,10 +58,10 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 // ── TV provider — always unmuted, ignores localStorage ─────────────────────────
 
 export function TVSoundProvider({ children }: { children: React.ReactNode }) {
-  const { playSound, shouldPlay, isReady, settings } = useSoundNotification();
+  const { playSound, unlockAudio, shouldPlay, isReady, settings } = useSoundNotification();
 
   return (
-    <SoundContext.Provider value={{ isMuted: false, setMuted: () => {}, playSound, shouldPlay, isReady, settings }}>
+    <SoundContext.Provider value={{ isMuted: false, setMuted: () => {}, playSound, unlockAudio, shouldPlay, isReady, settings }}>
       {children}
     </SoundContext.Provider>
   );

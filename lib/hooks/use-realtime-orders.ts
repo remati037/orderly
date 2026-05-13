@@ -191,8 +191,14 @@ export function useRealtimeOrders({
             // Play sound — reads isMuted from shared context via ref (stays current without re-running effect)
             if (!silent) {
               const { isMuted, shouldPlay, playSound, settings } = soundCtxRef.current;
+              console.log("[Sound] New order received — status:", orderStatus, "| isMuted:", isMuted, "| shouldPlay:", shouldPlay(orderStatus));
               if (!isMuted && shouldPlay(orderStatus)) {
+                console.log("[Sound] Playing sound for order status:", orderStatus);
                 playSound(settings.volume);
+              } else if (isMuted) {
+                console.log("[Sound] Sound skipped: muted");
+              } else {
+                console.log("[Sound] Sound skipped: status", orderStatus, "not in triggerStatuses");
               }
             }
 

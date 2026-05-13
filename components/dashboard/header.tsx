@@ -9,7 +9,7 @@ import {
 import { useSoundContext } from "@/lib/contexts/sound-context";
 
 export function DashboardHeader() {
-  const { isMuted, setMuted } = useSoundContext();
+  const { isMuted, setMuted, unlockAudio } = useSoundContext();
 
   return (
     <header
@@ -27,7 +27,7 @@ export function DashboardHeader() {
     >
       <Tooltip>
         <TooltipTrigger
-          onClick={() => setMuted(!isMuted)}
+          onClick={() => { unlockAudio(); setMuted(!isMuted); }}
           aria-label={isMuted ? "Uključi zvuk" : "Isključi zvuk"}
           render={
             <button
