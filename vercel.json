@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/all",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/digest/daily",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/digest/weekly",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/digest/monthly",
+      "schedule": "0 8 1 * *"
+    }
+  ]
+}
