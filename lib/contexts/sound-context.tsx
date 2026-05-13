@@ -9,7 +9,7 @@ interface SoundContextValue {
   isMuted: boolean;
   setMuted: (v: boolean) => void;
   playSound: (vol?: number) => Promise<void>;
-  unlockAudio: () => Promise<void>;
+  unlockAudio: () => void;
   shouldPlay: (status: string) => boolean;
   isReady: boolean;
   settings: SoundSettings;
@@ -27,7 +27,7 @@ const SoundContext = createContext<SoundContextValue>({
   isMuted: false,
   setMuted: () => {},
   playSound: async () => {},
-  unlockAudio: async () => {},
+  unlockAudio: () => {},
   shouldPlay: () => false,
   isReady: false,
   settings: DEFAULTS,
