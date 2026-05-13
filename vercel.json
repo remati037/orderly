@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/sync/all",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/digest/daily",
       "schedule": "0 8 * * *"
     },
