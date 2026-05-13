@@ -176,13 +176,16 @@ export function useRealtimeOrders({
     let isReconnecting = false;
     let lastStatus = "";
     let subscribedOnce = false; // prevents heartbeat from firing before first SUBSCRIBED
+    let channelSeq = 0;         // unique suffix per channel to avoid reusing a subscribed channel
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Holds the active channel so cleanup and reconnect always reference the latest one
     let currentChannel: ReturnType<typeof supabaseBrowser.channel>;
 
     function createChannel(): ReturnType<typeof supabaseBrowser.channel> {
+      const name = `${channelNameRef.current}-${++channelSeq}`;
       const ch = supabaseBrowser
-        .channel(channelNameRef.current)
+        .channel(name)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "orders" },
@@ -263,6 +266,8 @@ export function useRealtimeOrders({
           if (status === "SUBSCRIBED") {
             subscribedOnce = true;
             isReconnecting = false;
+            // Cancel any pending reconnect — channel recovered on its own
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
             setIsConnected(true);
           }
 
@@ -277,11 +282,12 @@ export function useRealtimeOrders({
           ) {
             isReconnecting = true;
             console.log(`Realtime: ${status} — reconnecting in ${RECONNECT_DELAY_MS}ms`);
-            setTimeout(() => {
+            reconnectTimer = setTimeout(() => {
               if (!isMounted) return;
+              reconnectTimer = null;
               supabaseBrowser.removeChannel(ch);
               currentChannel = createChannel();
-              isReconnecting = false;
+              // isReconnecting stays true until the new channel fires SUBSCRIBED
             }, RECONNECT_DELAY_MS);
           }
         });
@@ -309,7 +315,7 @@ export function useRealtimeOrders({
       isMounted = false;
       setIsConnected(false);
       clearInterval(heartbeat);
-      console.log(`Realtime: removing ${channelNameRef.current} channel`);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       supabaseBrowser.removeChannel(currentChannel);
     };
   }, []); // empty deps — must never re-run
