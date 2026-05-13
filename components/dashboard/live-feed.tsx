@@ -234,8 +234,10 @@ export function LiveFeed() {
     }, 700);
   }, []);
 
+  // silent: true because SoundSubscriber in the layout already handles sounds
   const { recentOrders, newOrderCount, clearNewCount } = useRealtimeOrders({
     onNewOrder: handleNewOrder,
+    silent: true,
   });
 
   const visible = recentOrders.slice(0, MAX_VISIBLE);

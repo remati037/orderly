@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
+import { useSoundContext } from "@/lib/contexts/sound-context";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ interface SiteInfo {
 
 interface UseRealtimeOrdersOptions {
   onNewOrder?: (order: RealtimeOrder) => void;
+  channelName?: string;
+  silent?: boolean; // true = never play sound on INSERT (e.g. LiveFeed which relies on SoundSubscriber)
 }
 
 const MAX_ORDERS = 50;
@@ -63,13 +66,21 @@ function isOrderFromToday(createdAt: string): boolean {
 
 export function useRealtimeOrders({
   onNewOrder,
+  channelName = "orders-realtime",
+  silent = false,
 }: UseRealtimeOrdersOptions = {}) {
   const [recentOrders, setRecentOrders] = useState<RealtimeOrder[]>([]);
   const [newOrderCount, setNewOrderCount] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   const sitesCache = useRef<Map<string, SiteInfo>>(new Map());
   const onNewOrderRef = useRef(onNewOrder);
   onNewOrderRef.current = onNewOrder;
+
+  // Always read the latest sound context without re-running the channel effect
+  const soundCtx = useSoundContext();
+  const soundCtxRef = useRef(soundCtx);
+  soundCtxRef.current = soundCtx;
 
   const loadSites = useCallback(async () => {
     try {
@@ -160,7 +171,7 @@ export function useRealtimeOrders({
 
     function createChannel(): ReturnType<typeof supabaseBrowser.channel> {
       const ch = supabaseBrowser
-        .channel("orders-realtime")
+        .channel(channelName)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "orders" },
@@ -169,12 +180,21 @@ export function useRealtimeOrders({
             const newRow = payload.new as Record<string, unknown>;
             const siteId = newRow.site_id as string;
             const createdAt = newRow.created_at as string;
+            const orderStatus = newRow.status as string;
 
             const order: RealtimeOrder = {
               ...enrichFromCache(newRow, siteId),
               product_name: null,
               is_late: !isOrderFromToday(createdAt),
             };
+
+            // Play sound — reads isMuted from shared context via ref (stays current without re-running effect)
+            if (!silent) {
+              const { isMuted, shouldPlay, playSound, settings } = soundCtxRef.current;
+              if (!isMuted && shouldPlay(orderStatus)) {
+                playSound(settings.volume);
+              }
+            }
 
             setRecentOrders((prev) => {
               if (prev.some((o) => o.id === order.id)) return prev;
@@ -224,6 +244,11 @@ export function useRealtimeOrders({
 
           if (status === "SUBSCRIBED") {
             subscribedOnce = true;
+            setIsConnected(true);
+          }
+
+          if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+            setIsConnected(false);
           }
 
           if (
@@ -246,7 +271,7 @@ export function useRealtimeOrders({
     }
 
     currentChannel = createChannel();
-    console.log("Realtime: subscribed to orders-realtime channel");
+    console.log(`Realtime: subscribed to ${channelName} channel`);
 
     // Heartbeat: only acts after the channel was SUBSCRIBED at least once,
     // ensuring we don't misfire during the initial handshake
@@ -263,8 +288,9 @@ export function useRealtimeOrders({
 
     return () => {
       isMounted = false;
+      setIsConnected(false);
       clearInterval(heartbeat);
-      console.log("Realtime: removing orders-realtime channel");
+      console.log(`Realtime: removing ${channelName} channel`);
       supabaseBrowser.removeChannel(currentChannel);
     };
   }, []); // empty deps — must never re-run
@@ -295,5 +321,5 @@ export function useRealtimeOrders({
 
   const clearNewCount = useCallback(() => setNewOrderCount(0), []);
 
-  return { recentOrders, newOrderCount, clearNewCount };
+  return { recentOrders, newOrderCount, clearNewCount, isConnected };
 }

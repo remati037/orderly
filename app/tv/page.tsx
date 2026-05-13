@@ -1,7 +1,12 @@
+import { Suspense } from "react";
+import TVContent from "./tv-content";
+
+export const dynamic = "force-dynamic";
+
 export default function TVPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black">
-      <p className="text-white text-2xl font-medium">TV Mode coming soon</p>
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-[#09090B]" />}>
+      <TVContent />
+    </Suspense>
   );
 }
