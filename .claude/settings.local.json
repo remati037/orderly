@@ -4,7 +4,8 @@
       "Bash(grep -v '^$')",
       "Bash(npx tsc *)",
       "Bash(xargs cat)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npm run *)"
     ]
   }
 }

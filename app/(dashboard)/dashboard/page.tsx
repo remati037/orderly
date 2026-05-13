@@ -55,7 +55,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </div>
 
       {/* Filter bar (sticky) + Orders table */}
-      <FilterBar />
+      <Suspense fallback={<div style={{ height: 48, background: "#F4F4F5", borderRadius: 10, animation: "pulse 2s infinite" }} />}>
+        <FilterBar />
+      </Suspense>
 
       <Suspense fallback={
         <div style={{
