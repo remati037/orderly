@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
 
   const supabase = adminClient();
 
+  // Ensure the bucket exists — creates it on first upload, no-ops if already present
+  await supabase.storage.createBucket("sounds", { public: true });
+
   const { error: uploadError } = await supabase.storage
     .from("sounds")
     .upload(filename, buffer, { contentType: file.type, upsert: false });

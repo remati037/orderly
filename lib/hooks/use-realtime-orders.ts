@@ -262,6 +262,7 @@ export function useRealtimeOrders({
 
           if (status === "SUBSCRIBED") {
             subscribedOnce = true;
+            isReconnecting = false;
             setIsConnected(true);
           }
 
@@ -300,7 +301,7 @@ export function useRealtimeOrders({
         isReconnecting = true;
         supabaseBrowser.removeChannel(currentChannel);
         currentChannel = createChannel();
-        isReconnecting = false;
+        // isReconnecting stays true until the new channel fires SUBSCRIBED
       }
     }, HEARTBEAT_INTERVAL_MS);
 
