@@ -92,7 +92,6 @@ export async function POST(request: NextRequest) {
         name,
         cost_percent: cost_percent ?? null,
         cost_fixed: cost_fixed ?? null,
-        updated_at: new Date().toISOString(),
       },
       { onConflict: "site_id,name" }
     )
