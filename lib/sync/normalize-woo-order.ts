@@ -15,6 +15,8 @@ export interface WooOrder {
   status: string;
   total: string;
   currency: string;
+  date_created?: string;
+  date_modified?: string;
   billing: {
     first_name: string;
     last_name: string;
@@ -39,7 +41,8 @@ export interface NormalizedWooOrder {
     product_type: "digital" | "physical";
     payment_type: "one-time";
     woo_data: WooOrder;
-    updated_at: string;
+    created_at: string;
+    updated_at: string | null;
   };
   itemRows: Array<{
     product_name: string;
@@ -135,7 +138,12 @@ export async function normalizeWooOrder(
       product_type: detectProductType(lineItems),
       payment_type: "one-time",
       woo_data: order,
-      updated_at: new Date().toISOString(),
+      created_at: order.date_created
+        ? new Date(order.date_created).toISOString()
+        : new Date().toISOString(),
+      updated_at: order.date_modified
+        ? new Date(order.date_modified).toISOString()
+        : null,
     },
     itemRows: lineItems.map((item) => ({
       product_name: item.name,

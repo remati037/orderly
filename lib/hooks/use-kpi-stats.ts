@@ -1,44 +1,48 @@
 "use client";
 
 import useSWR from "swr";
+import { formatCurrency } from "@/lib/utils/currency";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
 interface KpiRaw {
-  revenue_today: number;
-  revenue_yesterday: number;
-  revenue_month: number;
+  base_currency:      string;
+  revenue_today:      number;
+  revenue_yesterday:  number;
+  revenue_month:      number;
   revenue_last_month: number;
-  orders_today: number;
-  orders_yesterday: number;
-  aov_today: number;
-  net_profit_today: number;
-  active_sites: number;
+  orders_today:       number;
+  orders_yesterday:   number;
+  aov_today:          number;
+  net_profit_today:   number;
+  active_sites:       number;
 }
 
 export interface KpiStats {
   // raw
-  revenue_today: number;
-  revenue_yesterday: number;
-  revenue_month: number;
+  base_currency:      string;
+  revenue_today:      number;
+  revenue_yesterday:  number;
+  revenue_month:      number;
   revenue_last_month: number;
-  orders_today: number;
-  orders_yesterday: number;
-  aov_today: number;
-  net_profit_today: number;
-  active_sites: number;
-  // formatted
-  revenue_today_fmt: string;
-  revenue_month_fmt: string;
-  aov_today_fmt: string;
+  orders_today:       number;
+  orders_yesterday:   number;
+  aov_today:          number;
+  net_profit_today:   number;
+  active_sites:       number;
+  // formatted (in base currency)
+  revenue_today_fmt:    string;
+  revenue_month_fmt:    string;
+  aov_today_fmt:        string;
   net_profit_today_fmt: string;
   // trends (signed string, e.g. "+12.5" or "-3.2")
   trend_revenue: string;
-  trend_orders: string;
+  trend_orders:  string;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
+// Keep formatRSD exported — used in orders-table-client and other components
 export function formatRSD(amount: number): string {
   return `${Math.round(amount).toLocaleString("sr-RS")} RSD`;
 }
@@ -50,25 +54,27 @@ function trend(current: number, previous: number): string {
 }
 
 function buildStats(raw: KpiRaw): KpiStats {
+  const bc = raw.base_currency ?? "RSD";
   return {
     // raw
-    revenue_today: raw.revenue_today,
-    revenue_yesterday: raw.revenue_yesterday,
-    revenue_month: raw.revenue_month,
+    base_currency:      bc,
+    revenue_today:      raw.revenue_today,
+    revenue_yesterday:  raw.revenue_yesterday,
+    revenue_month:      raw.revenue_month,
     revenue_last_month: raw.revenue_last_month,
-    orders_today: raw.orders_today,
-    orders_yesterday: raw.orders_yesterday,
-    aov_today: raw.aov_today,
-    net_profit_today: raw.net_profit_today,
-    active_sites: raw.active_sites,
+    orders_today:       raw.orders_today,
+    orders_yesterday:   raw.orders_yesterday,
+    aov_today:          raw.aov_today,
+    net_profit_today:   raw.net_profit_today,
+    active_sites:       raw.active_sites,
     // formatted
-    revenue_today_fmt: formatRSD(raw.revenue_today),
-    revenue_month_fmt: formatRSD(raw.revenue_month),
-    aov_today_fmt: formatRSD(raw.aov_today),
-    net_profit_today_fmt: formatRSD(raw.net_profit_today),
+    revenue_today_fmt:    formatCurrency(raw.revenue_today,     bc),
+    revenue_month_fmt:    formatCurrency(raw.revenue_month,     bc),
+    aov_today_fmt:        formatCurrency(raw.aov_today,         bc),
+    net_profit_today_fmt: formatCurrency(raw.net_profit_today,  bc),
     // trends
     trend_revenue: trend(raw.revenue_today, raw.revenue_yesterday),
-    trend_orders: trend(raw.orders_today, raw.orders_yesterday),
+    trend_orders:  trend(raw.orders_today,  raw.orders_yesterday),
   };
 }
 

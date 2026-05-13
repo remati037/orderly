@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/customers",       label: "Kupci",        icon: UsersIcon },
   { href: "/subscriptions",   label: "Pretplate",   icon: CreditCardIcon },
   { href: "/profit",          label: "Profit",      icon: CircleDollarSignIcon },
+  { href: "/settings/general", label: "Opšte",       icon: SlidersHorizontalIcon },
   { href: "/settings/sites",  label: "Sajtovi",     icon: SettingsIcon },
   { href: "/tv",              label: "TV prikaz",   icon: MonitorIcon },
 ];

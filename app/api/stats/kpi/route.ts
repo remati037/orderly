@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 const EXCLUDED_STATUSES = ["cancelled", "refunded"];
 
@@ -24,11 +25,12 @@ async function queryOrders(
   supabase: ReturnType<typeof adminClient>,
   from: string,
   to: string,
+  rates: Record<string, number>,
   siteId?: string | null
 ) {
   let q = supabase
     .from("orders")
-    .select("total, net_profit")
+    .select("total, net_profit, currency")
     .gte("created_at", from)
     .lt("created_at", to)
     .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
@@ -39,8 +41,8 @@ async function queryOrders(
   if (error || !data) return { revenue: 0, netProfit: 0, orders: 0 };
 
   return {
-    revenue: data.reduce((s, r) => s + (r.total ?? 0), 0),
-    netProfit: data.reduce((s, r) => s + (r.net_profit ?? 0), 0),
+    revenue:   data.reduce((s, r) => s + toBase(r.total     ?? 0, r.currency ?? "RSD", rates), 0),
+    netProfit: data.reduce((s, r) => s + toBase(r.net_profit ?? 0, r.currency ?? "RSD", rates), 0),
     orders: data.length,
   };
 }
@@ -53,35 +55,35 @@ export async function GET(request: NextRequest) {
   const siteId = new URL(request.url).searchParams.get("siteId");
   const supabase = adminClient();
 
-  const today = dayBounds(0);
+  const fx = await loadFxSettings(supabase);
+
+  const today     = dayBounds(0);
   const yesterday = dayBounds(-1);
   const thisMonth = monthBounds(0);
   const lastMonth = monthBounds(-1);
 
   const [todayData, yesterdayData, monthData, lastMonthData, activeSitesRes] =
     await Promise.all([
-      queryOrders(supabase, today.start, today.end, siteId),
-      queryOrders(supabase, yesterday.start, yesterday.end, siteId),
-      queryOrders(supabase, thisMonth.start, thisMonth.end, siteId),
-      queryOrders(supabase, lastMonth.start, lastMonth.end, siteId),
-      supabase
-        .from("sites")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true),
+      queryOrders(supabase, today.start,     today.end,     fx.rates, siteId),
+      queryOrders(supabase, yesterday.start, yesterday.end, fx.rates, siteId),
+      queryOrders(supabase, thisMonth.start, thisMonth.end, fx.rates, siteId),
+      queryOrders(supabase, lastMonth.start, lastMonth.end, fx.rates, siteId),
+      supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
     ]);
 
   const aov_today =
     todayData.orders > 0 ? todayData.revenue / todayData.orders : 0;
 
   return NextResponse.json({
-    revenue_today: todayData.revenue,
-    revenue_yesterday: yesterdayData.revenue,
-    revenue_month: monthData.revenue,
-    revenue_last_month: lastMonthData.revenue,
-    orders_today: todayData.orders,
-    orders_yesterday: yesterdayData.orders,
+    base_currency:       fx.baseCurrency,
+    revenue_today:       todayData.revenue,
+    revenue_yesterday:   yesterdayData.revenue,
+    revenue_month:       monthData.revenue,
+    revenue_last_month:  lastMonthData.revenue,
+    orders_today:        todayData.orders,
+    orders_yesterday:    yesterdayData.orders,
     aov_today,
-    net_profit_today: todayData.netProfit,
-    active_sites: activeSitesRes.count ?? 0,
+    net_profit_today:    todayData.netProfit,
+    active_sites:        activeSitesRes.count ?? 0,
   });
 }

@@ -4,7 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { syncWooSite } from "@/lib/sync/sync-woo-site";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
   const { userId } = await auth();
@@ -14,6 +14,9 @@ export async function POST(
 
   const { siteId } = await params;
   const supabase = adminClient();
+
+  const body = await request.json().catch(() => ({}));
+  const force = body?.force === true;
 
   const { data: site, error } = await supabase
     .from("sites")
@@ -29,7 +32,21 @@ export async function POST(
     return NextResponse.json({ error: "Not a WooCommerce site" }, { status: 400 });
   }
 
+  if (force) {
+    // Delete order_items first (FK), then orders
+    const { data: orderIds } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("site_id", siteId);
+
+    if (orderIds && orderIds.length > 0) {
+      const ids = orderIds.map((r) => r.id);
+      await supabase.from("order_items").delete().in("order_id", ids);
+      await supabase.from("orders").delete().eq("site_id", siteId);
+    }
+  }
+
   const synced = await syncWooSite(supabase, site, "manual");
 
-  return NextResponse.json({ synced, site: site.name });
+  return NextResponse.json({ synced, site: site.name, force });
 }

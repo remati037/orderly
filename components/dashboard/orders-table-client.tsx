@@ -14,7 +14,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { formatRSD } from "@/lib/hooks/use-kpi-stats";
+import { formatCurrency } from "@/lib/utils/currency";
+import { toBase } from "@/lib/utils/fx";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -69,8 +70,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 function formatAmount(total: number, currency: string): string {
-  if (currency === "RSD") return formatRSD(total);
-  return `${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  return formatCurrency(total, currency);
 }
 
 function relativeTime(dateStr: string): string {
@@ -130,7 +130,15 @@ function ProductTypeTag({ type }: { type: string }) {
 
 // ── order detail sheet ─────────────────────────────────────────────────────────
 
-function OrderDetail({ order }: { order: OrderRow }) {
+function OrderDetail({
+  order,
+  baseCurrency,
+  exchangeRates,
+}: {
+  order: OrderRow;
+  baseCurrency: string;
+  exchangeRates: Record<string, number>;
+}) {
   const itemsTotal = order.order_items.reduce((s, i) => s + i.price, 0);
 
   return (
@@ -209,12 +217,30 @@ function OrderDetail({ order }: { order: OrderRow }) {
       <section style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
           <span style={{ color: "#71717A" }}>Ukupno</span>
-          <span style={{ fontWeight: 700, color: "#18181B" }}>{formatAmount(order.total, order.currency)}</span>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ fontWeight: 700, color: "#18181B", display: "block" }}>
+              {formatCurrency(toBase(order.total, order.currency, exchangeRates), baseCurrency)}
+            </span>
+            {order.currency !== baseCurrency && (
+              <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+                {formatAmount(order.total, order.currency)}
+              </span>
+            )}
+          </div>
         </div>
         {order.net_profit != null && order.net_profit > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "#71717A" }}>Neto zarada</span>
-            <span style={{ fontWeight: 700, color: "#16A34A" }}>{formatAmount(order.net_profit, order.currency)}</span>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontWeight: 700, color: "#16A34A", display: "block" }}>
+                {formatCurrency(toBase(order.net_profit, order.currency, exchangeRates), baseCurrency)}
+              </span>
+              {order.currency !== baseCurrency && (
+                <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+                  {formatAmount(order.net_profit, order.currency)}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </section>
@@ -243,7 +269,17 @@ function OrderDetail({ order }: { order: OrderRow }) {
 
 // ── table row ──────────────────────────────────────────────────────────────────
 
-function TableRow({ order, onClick }: { order: OrderRow; onClick: () => void }) {
+function TableRow({
+  order,
+  onClick,
+  baseCurrency,
+  exchangeRates,
+}: {
+  order: OrderRow;
+  onClick: () => void;
+  baseCurrency: string;
+  exchangeRates: Record<string, number>;
+}) {
   const firstItem  = order.order_items[0];
   const extraItems = order.order_items.length - 1;
 
@@ -329,9 +365,14 @@ function TableRow({ order, onClick }: { order: OrderRow; onClick: () => void }) 
 
       {/* Iznos */}
       <td style={{ padding: "10px 20px 10px 16px", verticalAlign: "middle", textAlign: "right", minWidth: 100 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#18181B" }}>
-          {formatAmount(order.total, order.currency)}
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#18181B", display: "block" }}>
+          {formatCurrency(toBase(order.total, order.currency, exchangeRates), baseCurrency)}
         </span>
+        {order.currency !== baseCurrency && (
+          <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+            {formatAmount(order.total, order.currency)}
+          </span>
+        )}
       </td>
 
       {/* Datum */}
@@ -353,9 +394,15 @@ function TableRow({ order, onClick }: { order: OrderRow; onClick: () => void }) 
 
 interface Props {
   orders: OrderRow[];
+  baseCurrency?: string;
+  exchangeRates?: Record<string, number>;
 }
 
-export function OrdersTableClient({ orders }: Props) {
+export function OrdersTableClient({
+  orders,
+  baseCurrency = "RSD",
+  exchangeRates = {},
+}: Props) {
   const [selected, setSelected] = useState<OrderRow | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -399,7 +446,13 @@ export function OrdersTableClient({ orders }: Props) {
               </tr>
             ) : (
               orders.map((order) => (
-                <TableRow key={order.id} order={order} onClick={() => openSheet(order)} />
+                <TableRow
+                  key={order.id}
+                  order={order}
+                  onClick={() => openSheet(order)}
+                  baseCurrency={baseCurrency}
+                  exchangeRates={exchangeRates}
+                />
               ))
             )}
           </tbody>
@@ -420,7 +473,11 @@ export function OrdersTableClient({ orders }: Props) {
                 </div>
                 <SheetCloseButton />
               </SheetHeader>
-              <OrderDetail order={selected} />
+              <OrderDetail
+                order={selected}
+                baseCurrency={baseCurrency}
+                exchangeRates={exchangeRates}
+              />
             </>
           )}
         </SheetContent>

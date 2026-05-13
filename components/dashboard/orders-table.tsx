@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings } from "@/lib/utils/fx";
 import { OrdersTableClient, type OrderRow } from "./orders-table-client";
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ export async function OrdersTable({ searchParams }: Props) {
   const dateTo      = typeof params.date_to === "string" ? params.date_to : undefined;
 
   const supabase = adminClient();
+  const fx = await loadFxSettings(supabase);
 
   let query = supabase
     .from("orders")
@@ -155,7 +157,11 @@ export async function OrdersTable({ searchParams }: Props) {
         </div>
       ) : (
         <>
-          <OrdersTableClient orders={orders} />
+          <OrdersTableClient
+            orders={orders}
+            baseCurrency={fx.baseCurrency}
+            exchangeRates={fx.rates}
+          />
 
           {/* pagination */}
           {total > PAGE_SIZE && (
