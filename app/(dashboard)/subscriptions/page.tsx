@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { formatRSD } from "@/lib/hooks/use-kpi-stats";
+import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -327,7 +328,7 @@ export default function SubscriptionsPage() {
                             </div>
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "#18181B", whiteSpace: "nowrap" }}>
-                            {formatRSD(sub.mrr ?? 0)}
+                            {formatRSD(toBase(sub.mrr ?? 0, "RSD", DEFAULT_RATES))}
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle" }}>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>

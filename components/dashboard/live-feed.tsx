@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { RadioIcon } from "lucide-react";
 import { useRealtimeOrdersContext } from "@/lib/contexts/realtime-orders-context";
 import type { RealtimeOrder } from "@/lib/hooks/use-realtime-orders";
+import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
+import { RadioIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 // ── animation keyframes injected once ─────────────────────────────────────────
 
@@ -93,13 +94,8 @@ function ProductTypeTag({ type }: { type: string }) {
 }
 
 function formatAmount(total: number, currency: string): string {
-  if (currency === "RSD") {
-    return `${Math.round(total).toLocaleString("sr-RS")} RSD`;
-  }
-  return `${total.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  const eur = toBase(total, currency, DEFAULT_RATES);
+  return `€${eur.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // ── order row ──────────────────────────────────────────────────────────────────
@@ -111,6 +107,7 @@ function OrderRow({
   order: RealtimeOrder;
   isFresh: boolean;
 }) {
+
   return (
     <div
       style={{

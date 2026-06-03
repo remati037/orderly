@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRSD } from "@/lib/hooks/use-kpi-stats";
+import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ interface Order {
   currency: string;
   product_type: string;
   payment_type: string;
+  payment_method: string | null;
   created_at: string;
   sites: { name: string; color_hex: string; platform: string } | null;
   order_items: OrderItem[];
@@ -86,8 +88,7 @@ function relativeTime(iso: string): string {
 }
 
 function formatAmount(total: number, currency: string): string {
-  if (currency === "RSD") return formatRSD(total);
-  return `${total.toFixed(2)} ${currency}`;
+  return formatRSD(toBase(total, currency, DEFAULT_RATES));
 }
 
 const STATUS: Record<string, { bg: string; color: string; label: string }> = {
@@ -100,9 +101,9 @@ const STATUS: Record<string, { bg: string; color: string; label: string }> = {
 };
 
 const SEGMENT_CONFIG: Record<string, { bg: string; color: string; label: string; description: string }> = {
-  VIP:     { bg: "#FFF7ED", color: "#C2410C", label: "VIP",     description: "Više od 50.000 RSD potrošeno" },
-  Regular: { bg: "#F0FDF4", color: "#166534", label: "Regular", description: "Više od 10.000 RSD potrošeno" },
-  New:     { bg: "#EEF2FF", color: "#4338CA", label: "New",     description: "Manje od 10.000 RSD potrošeno" },
+  VIP:     { bg: "#FFF7ED", color: "#C2410C", label: "VIP",     description: "Više od €500 potrošeno" },
+  Regular: { bg: "#F0FDF4", color: "#166534", label: "Regular", description: "Više od €100 potrošeno" },
+  New:     { bg: "#EEF2FF", color: "#4338CA", label: "New",     description: "Manje od €100 potrošeno" },
 };
 
 const PLATFORM_LABEL: Record<string, string> = {

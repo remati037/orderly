@@ -7,7 +7,8 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d.get\\('dependencies',{}\\).items\\(\\) if any\\(x in k for x in ['clerk','recharts','supabase']\\)]\")",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(xargs ls -la)"
     ]
   }
 }

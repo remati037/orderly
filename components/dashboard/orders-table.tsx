@@ -100,7 +100,7 @@ export async function OrdersTable({ searchParams }: Props) {
   let query = supabase
     .from("orders")
     .select(
-      "id, woo_order_id, source, status, total, net_profit, currency, customer_name, customer_email, customer_city, product_type, created_at, updated_at, sites(name, color_hex), order_items(product_name, product_type, quantity, price)",
+      "id, woo_order_id, source, status, total, net_profit, currency, customer_name, customer_email, customer_city, product_type, payment_method, created_at, updated_at, sites(name, color_hex), order_items(product_name, product_type, quantity, price)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })

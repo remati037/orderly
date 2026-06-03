@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     .from("orders")
     .select("site_id, total, currency, created_at")
     .gte("created_at", from.toISOString())
-    .not("status", "in", "(cancelled,refunded)")
+    .not("status", "in", "(cancelled,refunded,failed)")
     .order("created_at");
 
   if (siteId) query = query.eq("site_id", siteId);

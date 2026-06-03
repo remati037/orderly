@@ -17,6 +17,7 @@ export interface WooOrder {
   currency: string;
   date_created?: string;
   date_modified?: string;
+  payment_method?: string;
   billing: {
     first_name: string;
     last_name: string;
@@ -40,6 +41,7 @@ export interface NormalizedWooOrder {
     customer_city: string;
     product_type: "digital" | "physical";
     payment_type: "one-time";
+    payment_method: string | null;
     woo_data: WooOrder;
     created_at: string;
     updated_at: string | null;
@@ -76,15 +78,16 @@ async function calcNetProfit(
   siteId: string,
   lineItems: WooLineItem[],
   orderTotal: number,
-  marginPercent: number
+  marginPercent: number,
+  revenueMultiplier: number = 1
 ): Promise<number> {
   if (lineItems.length === 0) {
-    return Math.max(0, orderTotal * (marginPercent / 100));
+    return Math.max(0, orderTotal * revenueMultiplier * (marginPercent / 100));
   }
 
   let net = 0;
   for (const item of lineItems) {
-    const itemTotal = parseFloat(item.total ?? "0");
+    const itemTotal = parseFloat(item.total ?? "0") * revenueMultiplier;
     const qty = item.quantity ?? 1;
 
     const { data: product } = await supabase
@@ -116,6 +119,10 @@ export async function normalizeWooOrder(
   const lineItems: WooLineItem[] = order.line_items ?? [];
   const total = parseFloat(order.total);
 
+  const isCardPayment = /stripe/i.test(order.payment_method ?? "");
+  const revenueMultiplier = isCardPayment ? 0.95 : 1;
+  const netProfit = await calcNetProfit(supabase, siteId, lineItems, total, marginPercent, revenueMultiplier);
+
   return {
     orderRow: {
       site_id: siteId,
@@ -123,13 +130,7 @@ export async function normalizeWooOrder(
       source: "woocommerce",
       status: order.status,
       total,
-      net_profit: await calcNetProfit(
-        supabase,
-        siteId,
-        lineItems,
-        total,
-        marginPercent
-      ),
+      net_profit: netProfit,
       currency: order.currency || "RSD",
       customer_name:
         `${order.billing.first_name} ${order.billing.last_name}`.trim(),
@@ -137,6 +138,7 @@ export async function normalizeWooOrder(
       customer_city: order.billing.city,
       product_type: detectProductType(lineItems),
       payment_type: "one-time",
+      payment_method: order.payment_method ?? null,
       woo_data: order,
       created_at: order.date_created
         ? new Date(order.date_created).toISOString()

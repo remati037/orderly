@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -15,9 +16,11 @@ export async function GET(request: NextRequest) {
 
   const supabase = adminClient();
 
+  const fx = await loadFxSettings(supabase);
+
   let query = supabase
     .from("order_items")
-    .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at)")
+    .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency)")
     .not("order.status", "in", "(cancelled,refunded)");
 
   if (siteId) query = query.eq("order.site_id", siteId);
@@ -35,7 +38,8 @@ export async function GET(request: NextRequest) {
   for (const item of data ?? []) {
     const key = item.product_name ?? "Nepoznat proizvod";
     const existing = map.get(key);
-    const revenue = (item.price ?? 0) * (item.quantity ?? 1);
+    const orderCurrency = (item.order as { currency?: string } | null)?.currency ?? "RSD";
+    const revenue = toBase((item.price ?? 0) * (item.quantity ?? 1), orderCurrency, fx.rates);
     if (existing) {
       existing.revenue += revenue;
       existing.units += item.quantity ?? 1;

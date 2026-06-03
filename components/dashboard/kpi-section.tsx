@@ -6,6 +6,7 @@ import {
   ShoppingBagIcon,
   ReceiptIcon,
   CircleDollarSignIcon,
+  CreditCardIcon,
 } from "lucide-react";
 import { KPICard } from "./kpi-card";
 import { useKpiStats } from "@/lib/hooks/use-kpi-stats";
@@ -30,7 +31,7 @@ export function KPISection({ siteId }: KPISectionProps) {
 
   return (
     <div>
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KPICard
           label="Prihod danas"
           value={stats?.revenue_today_fmt ?? "—"}
@@ -68,6 +69,13 @@ export function KPISection({ siteId }: KPISectionProps) {
           value={stats?.net_profit_today_fmt ?? "—"}
           trend={null}
           icon={CircleDollarSignIcon}
+          isLoading={loading}
+        />
+        <KPICard
+          label="Stripe naknade"
+          value={stats?.stripe_fees_today_fmt ?? "—"}
+          trend={null}
+          icon={CreditCardIcon}
           isLoading={loading}
         />
       </div>

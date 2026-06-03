@@ -38,6 +38,7 @@ export interface OrderRow {
   customer_email: string | null;
   customer_city: string | null;
   product_type: string;
+  payment_method: string | null;
   created_at: string;
   updated_at: string;
   sites: { name: string; color_hex: string } | null;
@@ -139,8 +140,6 @@ function OrderDetail({
   baseCurrency: string;
   exchangeRates: Record<string, number>;
 }) {
-  const itemsTotal = order.order_items.reduce((s, i) => s + i.price, 0);
-
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
       {/* Customer */}
@@ -228,6 +227,14 @@ function OrderDetail({
             )}
           </div>
         </div>
+        {/stripe/i.test(order.payment_method ?? "") && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+            <span style={{ color: "#71717A" }}>Stripe naknada (5%)</span>
+            <span style={{ color: "#E11D48" }}>
+              −{formatCurrency(toBase(order.total * 0.05, order.currency, exchangeRates), baseCurrency)}
+            </span>
+          </div>
+        )}
         {order.net_profit != null && order.net_profit > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "#71717A" }}>Neto zarada</span>
@@ -241,6 +248,18 @@ function OrderDetail({
                 </span>
               )}
             </div>
+          </div>
+        )}
+        {order.payment_method && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 8 }}>
+            <span style={{ color: "#A1A1AA" }}>Način plaćanja</span>
+            <span style={{ color: "#71717A", fontWeight: 500 }}>
+              {/stripe/i.test(order.payment_method)
+                ? "Stripe (kreditna kartica)"
+                : order.payment_method === "bacs"
+                ? "Bankovna transakcija"
+                : order.payment_method}
+            </span>
           </div>
         )}
       </section>
@@ -400,7 +419,7 @@ interface Props {
 
 export function OrdersTableClient({
   orders,
-  baseCurrency = "RSD",
+  baseCurrency = "EUR",
   exchangeRates = {},
 }: Props) {
   const [selected, setSelected] = useState<OrderRow | null>(null);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 function monthBounds() {
   const now = new Date();
@@ -15,15 +16,18 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = adminClient();
-  const { start, end } = monthBounds();
+  const [fx, { start, end }] = await Promise.all([
+    loadFxSettings(supabase),
+    Promise.resolve(monthBounds()),
+  ]);
 
   const [ordersRes, productsRes] = await Promise.all([
     supabase
       .from("orders")
-      .select("total, net_profit")
+      .select("total, net_profit, currency")
       .gte("created_at", start)
       .lt("created_at", end)
-      .not("status", "in", "(cancelled,refunded)"),
+      .not("status", "in", "(cancelled,refunded,failed)"),
     supabase
       .from("products")
       .select("name, cost_percent")
@@ -31,8 +35,8 @@ export async function GET() {
   ]);
 
   const orders = ordersRes.data ?? [];
-  const grossRevenue = orders.reduce((s, o) => s + (o.total ?? 0), 0);
-  const netProfit = orders.reduce((s, o) => s + (o.net_profit ?? 0), 0);
+  const grossRevenue = orders.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
+  const netProfit = orders.reduce((s, o) => s + toBase(o.net_profit ?? 0, o.currency ?? "RSD", fx.rates), 0);
   const avgMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0;
 
   let highestMarginProduct: string | null = null;

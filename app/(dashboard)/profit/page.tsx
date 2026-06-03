@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   TrendingUpIcon,
   CircleDollarSignIcon,
@@ -9,6 +9,7 @@ import {
   RotateCcwIcon,
   CheckIcon,
 } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase/browser-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,7 @@ interface ProductEdit {
 
 // ── Constants & helpers ────────────────────────────────────────────────────────
 
-const PREVIEW_ORDER = 5_000;
+const PREVIEW_ORDER = 50;
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   standard: "Standard",
@@ -86,7 +87,7 @@ function calcEffectiveMargin(mode: CostMode, value: string): string {
   const num = parseFloat(value);
   if (isNaN(num)) return "—";
   if (mode === "percent") return `${Math.round(100 - num)}%`;
-  return `−${num.toLocaleString("sr-RS")} RSD/ks`;
+  return `−€${num.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ks`;
 }
 
 function calcPreviewNet(mode: CostMode, value: string): string {
@@ -312,6 +313,28 @@ export default function ProfitPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // ── Realtime: refresh KPI when orders change ──────────────────────────────────
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
+  useEffect(() => {
+    const channel = supabaseBrowser
+      .channel("profit-orders-watch")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        () => loadDataRef.current()
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        () => loadDataRef.current()
+      )
+      .subscribe();
+
+    return () => { supabaseBrowser.removeChannel(channel); };
+  }, []);
 
   // ── Site margin actions ───────────────────────────────────────────────────────
 
@@ -706,7 +729,7 @@ export default function ProfitPage() {
                     <TableHead>Vrsta troška</TableHead>
                     <TableHead>Vrednost</TableHead>
                     <TableHead>Efektivna marža</TableHead>
-                    <TableHead>Net na 5.000 RSD</TableHead>
+                    <TableHead>Net na €50</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -790,7 +813,7 @@ export default function ProfitPage() {
                               userSelect: "none",
                             }}
                           >
-                            {edit.mode === "percent" ? "%" : "RSD"}
+                            {edit.mode === "percent" ? "%" : "€"}
                           </button>
                         </TableCell>
 
@@ -813,13 +836,13 @@ export default function ProfitPage() {
                                 updateEdit(p, { value: e.target.value })
                               }
                               placeholder={
-                                edit.mode === "percent" ? "0–100" : "RSD"
+                                edit.mode === "percent" ? "0–100" : "0.00"
                               }
                             />
                             <span
                               style={{ fontSize: 12, color: "#71717A" }}
                             >
-                              {edit.mode === "percent" ? "%" : "RSD"}
+                              {edit.mode === "percent" ? "%" : "€"}
                             </span>
                           </div>
                         </TableCell>

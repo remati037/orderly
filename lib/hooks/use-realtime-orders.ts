@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/browser-client";
 import { useSoundContext } from "@/lib/contexts/sound-context";
+import { supabaseBrowser } from "@/lib/supabase/browser-client";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -111,6 +111,7 @@ export function useRealtimeOrders({
 
   // Shared row mapper used by both the initial fetch and the visibility refetch
   function mapRows(data: Record<string, unknown>[]): RealtimeOrder[] {
+    console.log(data);
     return data.map((row) => {
       const sites = row.sites as { name: string; color_hex: string } | null;
       const items = row.order_items as Array<{ product_name: string }> | null;
@@ -143,6 +144,7 @@ export function useRealtimeOrders({
     siteId: string
   ): Omit<RealtimeOrder, "product_name" | "is_late"> {
     const info = sitesCache.current.get(siteId);
+    console.log(info);
     return {
       ...(row as Omit<RealtimeOrder, "site_name" | "site_color" | "product_name" | "is_late">),
       site_name: info?.name ?? "Unknown",
@@ -159,6 +161,7 @@ export function useRealtimeOrders({
         .from("orders")
         .select("*, sites(name, color_hex), order_items(product_name)")
         .gte("created_at", startOfTodayISO())
+        .not("status", "in", "(cancelled,refunded,failed)")
         .order("created_at", { ascending: false })
         .limit(MAX_ORDERS);
 
@@ -195,6 +198,8 @@ export function useRealtimeOrders({
             const siteId = newRow.site_id as string;
             const createdAt = newRow.created_at as string;
             const orderStatus = newRow.status as string;
+
+            if (orderStatus === "failed") return;
 
             const order: RealtimeOrder = {
               ...enrichFromCache(newRow, siteId),
@@ -253,7 +258,9 @@ export function useRealtimeOrders({
             const nextStatus = updated.status as string;
 
             setRecentOrders((prev) =>
-              prev.map((o) => (o.id === id ? { ...o, status: nextStatus } : o))
+              nextStatus === "failed"
+                ? prev.filter((o) => o.id !== id)
+                : prev.map((o) => (o.id === id ? { ...o, status: nextStatus } : o))
             );
             onUpdateRef.current?.(id, nextStatus);
           }
@@ -330,6 +337,7 @@ export function useRealtimeOrders({
         .from("orders")
         .select("*, sites(name, color_hex), order_items(product_name)")
         .gte("created_at", startOfTodayISO())
+        .not("status", "in", "(cancelled,refunded,failed)")
         .order("created_at", { ascending: false })
         .limit(MAX_ORDERS);
 

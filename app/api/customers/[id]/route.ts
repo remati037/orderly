@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(
   _request: NextRequest,
@@ -12,6 +13,7 @@ export async function GET(
 
   const { id } = await params;
   const supabase = adminClient();
+  const fx = await loadFxSettings(supabase);
 
   const { data: customer, error } = await supabase
     .from("customers")
@@ -26,7 +28,7 @@ export async function GET(
     supabase
       .from("orders")
       .select(
-        "id, woo_order_id, source, status, total, net_profit, currency, product_type, payment_type, created_at, updated_at, site_id, sites(name, color_hex, platform), order_items(product_name, product_type, quantity, price)"
+        "id, woo_order_id, source, status, total, net_profit, currency, product_type, payment_type, payment_method, created_at, updated_at, site_id, sites(name, color_hex, platform), order_items(product_name, product_type, quantity, price)"
       )
       .eq("customer_email", customer.email)
       .order("created_at", { ascending: false }),
@@ -39,11 +41,11 @@ export async function GET(
 
   const orders = ordersRes.data ?? [];
   const completed = orders.filter(
-    (o) => !["cancelled", "refunded"].includes(o.status)
+    (o) => !["cancelled", "refunded", "failed"].includes(o.status)
   );
 
-  const totalSpent = completed.reduce((s, o) => s + (o.total ?? 0), 0);
-  const netSpent = completed.reduce((s, o) => s + (o.net_profit ?? 0), 0);
+  const totalSpent = completed.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
+  const netSpent = completed.reduce((s, o) => s + toBase(o.net_profit ?? 0, o.currency ?? "RSD", fx.rates), 0);
   const orderCount = completed.length;
   const aov = orderCount > 0 ? totalSpent / orderCount : 0;
 
@@ -57,9 +59,9 @@ export async function GET(
   const ltv = Math.round(totalSpent / monthsSinceFirst);
 
   const segment =
-    totalSpent >= 50_000
+    totalSpent >= 500
       ? "VIP"
-      : totalSpent >= 10_000
+      : totalSpent >= 100
       ? "Regular"
       : "New";
 

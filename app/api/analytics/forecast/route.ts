@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 // ── Holt's linear exponential smoothing ───────────────────────────────────────
 
@@ -46,6 +47,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = adminClient();
+  const fx = await loadFxSettings(supabase);
 
   const HISTORY_DAYS = 90;
   const FORECAST_DAYS = 30;
@@ -56,9 +58,9 @@ export async function GET() {
 
   const { data: orders } = await supabase
     .from("orders")
-    .select("total, created_at")
+    .select("total, currency, created_at")
     .gte("created_at", from.toISOString())
-    .not("status", "in", "(cancelled,refunded)")
+    .not("status", "in", "(cancelled,refunded,failed)")
     .order("created_at");
 
   // Aggregate daily totals
@@ -73,7 +75,7 @@ export async function GET() {
     const d = new Date(order.created_at);
     const label = dateLabel(d);
     if (label in dailyMap) {
-      dailyMap[label] = (dailyMap[label] ?? 0) + (order.total ?? 0);
+      dailyMap[label] = (dailyMap[label] ?? 0) + toBase(order.total ?? 0, order.currency ?? "RSD", fx.rates);
     }
   }
 
@@ -106,7 +108,7 @@ export async function GET() {
 
   const realizedThisMonth = (orders ?? [])
     .filter((o) => new Date(o.created_at) >= monthStart)
-    .reduce((s, o) => s + (o.total ?? 0), 0);
+    .reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
 
   const avgForecastDaily = forecast.slice(0, Math.ceil(remainingDays)).reduce((s, v, _, arr) => s + v / arr.length, 0);
   const projectedMonthRevenue = Math.round(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { DEFAULT_RATES, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     .from("orders")
     .select("customer_email, site_id, sites(name, color_hex, platform)")
     .in("customer_email", emails)
-    .not("status", "in", "(cancelled,refunded)");
+    .not("status", "in", "(cancelled,refunded,failed)");
 
   // Aggregate: email → siteId → { count, name, color, platform }
   type SiteInfo = { count: number; name: string; color: string; platform: string };
@@ -74,16 +75,18 @@ export async function GET(request: NextRequest) {
     const monthsSinceFirst = c.first_order_at
       ? Math.max(1, (now - new Date(c.first_order_at).getTime()) / (30 * 24 * 3600 * 1000))
       : 1;
-    const ltv_score = Math.round((c.total_spent ?? 0) / monthsSinceFirst);
+    const totalSpentEur = toBase(c.total_spent ?? 0, "RSD", DEFAULT_RATES);
+    const ltv_score = Math.round(totalSpentEur / monthsSinceFirst);
     const segment =
-      (c.total_spent ?? 0) >= 50_000
+      totalSpentEur >= 500
         ? "VIP"
-        : (c.total_spent ?? 0) >= 10_000
+        : totalSpentEur >= 100
         ? "Regular"
         : "New";
 
     return {
       ...c,
+      total_spent: totalSpentEur,
       ltv_score,
       segment,
       primary_site: c.email ? (primarySite[c.email] ?? null) : null,

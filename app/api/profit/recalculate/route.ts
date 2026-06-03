@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     supabase
       .from("orders")
       .select("*", { count: "exact", head: true })
-      .not("status", "in", "(cancelled,refunded)"),
+      .not("status", "in", "(cancelled,refunded,failed)"),
   ]);
 
   const total = countRes.count ?? 0;
@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
 
   const ordersRes = await supabase
     .from("orders")
-    .select("id, site_id, total")
-    .not("status", "in", "(cancelled,refunded)")
+    .select("id, site_id, total, payment_method, woo_data")
+    .not("status", "in", "(cancelled,refunded,failed)")
     .order("created_at")
     .range(from, from + BATCH_SIZE - 1);
 
@@ -69,22 +69,27 @@ export async function POST(request: NextRequest) {
       const site = siteMap.get(order.site_id);
       const defaultMargin = site?.default_margin_percent ?? 50;
 
+      const wooData = order.woo_data as { payment_method?: string } | null;
+      const paymentMethod = (order as { payment_method?: string | null }).payment_method ?? wooData?.payment_method ?? "";
+      const isCardPayment = /stripe/i.test(paymentMethod);
+      const revenueMultiplier = isCardPayment ? 0.95 : 1;
+
       let netProfit = 0;
 
       if (orderItems.length === 0) {
-        netProfit = (order.total ?? 0) * (defaultMargin / 100);
+        netProfit = (order.total ?? 0) * revenueMultiplier * (defaultMargin / 100);
       } else {
         for (const item of orderItems) {
           const price = item.price ?? 0;
           const qty = item.quantity ?? 1;
-          const revenue = price * qty;
+          const revenue = price * qty * revenueMultiplier;
           const key = `${order.site_id}::${item.product_name}`;
           const override = productMap.get(key);
 
           if (override?.cost_percent != null) {
             netProfit += revenue * (1 - override.cost_percent / 100);
           } else if (override?.cost_fixed != null) {
-            netProfit += (price - override.cost_fixed) * qty;
+            netProfit += revenue - override.cost_fixed * qty;
           } else {
             netProfit += revenue * (defaultMargin / 100);
           }
@@ -93,7 +98,10 @@ export async function POST(request: NextRequest) {
 
       await supabase
         .from("orders")
-        .update({ net_profit: Math.round(netProfit) })
+        .update({
+          net_profit: Math.round(netProfit * 100) / 100,
+          payment_method: paymentMethod || null,
+        })
         .eq("id", order.id);
     })
   );

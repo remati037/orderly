@@ -15,6 +15,7 @@ interface KpiRaw {
   orders_yesterday:   number;
   aov_today:          number;
   net_profit_today:   number;
+  stripe_fees_today:  number;
   active_sites:       number;
 }
 
@@ -29,12 +30,14 @@ export interface KpiStats {
   orders_yesterday:   number;
   aov_today:          number;
   net_profit_today:   number;
+  stripe_fees_today:  number;
   active_sites:       number;
   // formatted (in base currency)
-  revenue_today_fmt:    string;
-  revenue_month_fmt:    string;
-  aov_today_fmt:        string;
-  net_profit_today_fmt: string;
+  revenue_today_fmt:      string;
+  revenue_month_fmt:      string;
+  aov_today_fmt:          string;
+  net_profit_today_fmt:   string;
+  stripe_fees_today_fmt:  string;
   // trends (signed string, e.g. "+12.5" or "-3.2")
   trend_revenue: string;
   trend_orders:  string;
@@ -42,9 +45,9 @@ export interface KpiStats {
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
-// Keep formatRSD exported — used in orders-table-client and other components
+// Keep formatRSD exported — used across components; formats amounts as EUR
 export function formatRSD(amount: number): string {
-  return `${Math.round(amount).toLocaleString("sr-RS")} RSD`;
+  return `€${amount.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function trend(current: number, previous: number): string {
@@ -54,7 +57,7 @@ function trend(current: number, previous: number): string {
 }
 
 function buildStats(raw: KpiRaw): KpiStats {
-  const bc = raw.base_currency ?? "RSD";
+  const bc = raw.base_currency ?? "EUR";
   return {
     // raw
     base_currency:      bc,
@@ -66,12 +69,14 @@ function buildStats(raw: KpiRaw): KpiStats {
     orders_yesterday:   raw.orders_yesterday,
     aov_today:          raw.aov_today,
     net_profit_today:   raw.net_profit_today,
+    stripe_fees_today:  raw.stripe_fees_today,
     active_sites:       raw.active_sites,
     // formatted
-    revenue_today_fmt:    formatCurrency(raw.revenue_today,     bc),
-    revenue_month_fmt:    formatCurrency(raw.revenue_month,     bc),
-    aov_today_fmt:        formatCurrency(raw.aov_today,         bc),
-    net_profit_today_fmt: formatCurrency(raw.net_profit_today,  bc),
+    revenue_today_fmt:      formatCurrency(raw.revenue_today,    bc),
+    revenue_month_fmt:      formatCurrency(raw.revenue_month,    bc),
+    aov_today_fmt:          formatCurrency(raw.aov_today,        bc),
+    net_profit_today_fmt:   formatCurrency(raw.net_profit_today, bc),
+    stripe_fees_today_fmt:  formatCurrency(raw.stripe_fees_today, bc),
     // trends
     trend_revenue: trend(raw.revenue_today, raw.revenue_yesterday),
     trend_orders:  trend(raw.orders_today,  raw.orders_yesterday),

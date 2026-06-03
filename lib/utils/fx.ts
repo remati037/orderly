@@ -5,7 +5,7 @@ export interface FxSettings {
   rates: Record<string, number>;
 }
 
-const DEFAULT_RATES: Record<string, number> = { EUR: 1, RSD: 0.00855, USD: 0.92 };
+export const DEFAULT_RATES: Record<string, number> = { EUR: 1, RSD: 0.00855, USD: 0.92 };
 
 export async function loadFxSettings(supabase: SupabaseClient): Promise<FxSettings> {
   const [{ data: bc }, { data: ratesRow }] = await Promise.all([

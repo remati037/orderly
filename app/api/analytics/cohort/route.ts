@@ -34,7 +34,7 @@ export async function GET() {
       .from("orders")
       .select("customer_email, created_at")
       .gte("created_at", lookbackStart.toISOString())
-      .not("status", "in", "(cancelled,refunded)")
+      .not("status", "in", "(cancelled,refunded,failed)")
       .not("customer_email", "is", null),
   ]);
 
