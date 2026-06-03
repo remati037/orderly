@@ -21,76 +21,16 @@ function monthBounds(offsetMonths = 0) {
   return { start, end };
 }
 
-function computeNetProfit(
-  orders: Array<{
-    total: number | null;
-    currency: string | null;
-    site_id: string | null;
-    payment_method: string | null;
-    order_items: Array<{ product_name: string | null; price: number | null; quantity: number | null }>;
-  }>,
-  siteMargins: Map<string, number>,
-  productMap: Map<string, { cost_percent: number | null; cost_fixed: number | null }>,
-  rates: Record<string, number>
-): { revenue: number; netProfit: number; orders: number; stripeFees: number } {
-  let revenue = 0;
-  let netProfit = 0;
-  let stripeFees = 0;
-
-  for (const order of orders) {
-    const total = order.total ?? 0;
-    const currency = order.currency ?? "RSD";
-    const siteId = order.site_id ?? "";
-    const defaultMargin = siteMargins.get(siteId) ?? 50;
-    const items = order.order_items ?? [];
-    const isStripe = /stripe/i.test(order.payment_method ?? "");
-    const revenueMultiplier = isStripe ? 0.95 : 1;
-
-    revenue += toBase(total, currency, rates);
-
-    if (isStripe) {
-      stripeFees += toBase(total * 0.05, currency, rates);
-    }
-
-    let net = 0;
-    if (items.length === 0) {
-      net = total * revenueMultiplier * (defaultMargin / 100);
-    } else {
-      for (const item of items) {
-        const price = item.price ?? 0;
-        const qty = item.quantity ?? 1;
-        const lineRevenue = price * qty * revenueMultiplier;
-        const key = `${siteId}::${item.product_name}`;
-        const override = productMap.get(key);
-
-        if (override?.cost_percent != null) {
-          net += lineRevenue * (1 - override.cost_percent / 100);
-        } else if (override?.cost_fixed != null) {
-          net += lineRevenue - override.cost_fixed * qty;
-        } else {
-          net += lineRevenue * (defaultMargin / 100);
-        }
-      }
-    }
-
-    netProfit += toBase(net, currency, rates);
-  }
-
-  return { revenue, netProfit, orders: orders.length, stripeFees };
-}
-
 async function queryOrders(
   supabase: ReturnType<typeof adminClient>,
   from: string,
   to: string,
   rates: Record<string, number>,
-  siteMargins: Map<string, number>,
-  productMap: Map<string, { cost_percent: number | null; cost_fixed: number | null }>,
   siteId?: string | null
 ) {
   let q = supabase
     .from("orders")
-    .select("total, currency, site_id, payment_method, order_items(product_name, price, quantity)")
+    .select("total, net_profit, currency, payment_method")
     .gte("created_at", from)
     .lt("created_at", to)
     .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
@@ -98,9 +38,26 @@ async function queryOrders(
   if (siteId) q = q.eq("site_id", siteId);
 
   const { data, error } = await q;
-  if (error || !data) return { revenue: 0, netProfit: 0, orders: 0 };
+  if (error || !data) return { revenue: 0, netProfit: 0, orders: 0, stripeFees: 0 };
 
-  return computeNetProfit(data as Parameters<typeof computeNetProfit>[0], siteMargins, productMap, rates);
+  let revenue = 0;
+  let netProfit = 0;
+  let stripeFees = 0;
+
+  for (const order of data) {
+    const total = order.total ?? 0;
+    const currency = (order.currency as string | null) ?? "RSD";
+    const isStripe = /stripe/i.test((order.payment_method as string | null) ?? "");
+
+    revenue   += toBase(total, currency, rates);
+    netProfit += toBase((order.net_profit as number | null) ?? 0, currency, rates);
+
+    if (isStripe) {
+      stripeFees += toBase(total * 0.05, currency, rates);
+    }
+  }
+
+  return { revenue, netProfit, orders: data.length, stripeFees };
 }
 
 export async function GET(request: NextRequest) {
@@ -111,31 +68,22 @@ export async function GET(request: NextRequest) {
   const siteId = new URL(request.url).searchParams.get("siteId");
   const supabase = adminClient();
 
-  const [fx, sitesRes, productsRes] = await Promise.all([
+  const [fx, activeSitesRes] = await Promise.all([
     loadFxSettings(supabase),
-    supabase.from("sites").select("id, default_margin_percent"),
-    supabase.from("products").select("site_id, name, cost_percent, cost_fixed"),
+    supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
-
-  const siteMargins = new Map<string, number>(
-    (sitesRes.data ?? []).map((s) => [s.id, s.default_margin_percent ?? 50])
-  );
-  const productMap = new Map<string, { cost_percent: number | null; cost_fixed: number | null }>(
-    (productsRes.data ?? []).map((p) => [`${p.site_id}::${p.name}`, p])
-  );
 
   const today     = dayBounds(0);
   const yesterday = dayBounds(-1);
   const thisMonth = monthBounds(0);
   const lastMonth = monthBounds(-1);
 
-  const [todayData, yesterdayData, monthData, lastMonthData, activeSitesRes] =
+  const [todayData, yesterdayData, monthData, lastMonthData] =
     await Promise.all([
-      queryOrders(supabase, today.start,     today.end,     fx.rates, siteMargins, productMap, siteId),
-      queryOrders(supabase, yesterday.start, yesterday.end, fx.rates, siteMargins, productMap, siteId),
-      queryOrders(supabase, thisMonth.start, thisMonth.end, fx.rates, siteMargins, productMap, siteId),
-      queryOrders(supabase, lastMonth.start, lastMonth.end, fx.rates, siteMargins, productMap, siteId),
-      supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
+      queryOrders(supabase, today.start,     today.end,     fx.rates, siteId),
+      queryOrders(supabase, yesterday.start, yesterday.end, fx.rates, siteId),
+      queryOrders(supabase, thisMonth.start, thisMonth.end, fx.rates, siteId),
+      queryOrders(supabase, lastMonth.start, lastMonth.end, fx.rates, siteId),
     ]);
 
   const aov_today =
