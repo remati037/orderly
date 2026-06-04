@@ -1,51 +1,45 @@
 "use client";
 
 import useSWR from "swr";
+import { useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
 interface KpiRaw {
-  base_currency:      string;
-  revenue_today:      number;
-  revenue_yesterday:  number;
-  revenue_month:      number;
-  revenue_last_month: number;
-  orders_today:       number;
-  orders_yesterday:   number;
-  aov_today:          number;
-  net_profit_today:   number;
-  stripe_fees_today:  number;
-  active_sites:       number;
+  base_currency:   string;
+  revenue_current: number;
+  revenue_prev:    number;
+  orders_current:  number;
+  orders_prev:     number;
+  aov_current:     number;
+  net_profit:      number;
+  stripe_fees:     number;
+  active_sites:    number;
 }
 
 export interface KpiStats {
-  // raw
-  base_currency:      string;
-  revenue_today:      number;
-  revenue_yesterday:  number;
-  revenue_month:      number;
-  revenue_last_month: number;
-  orders_today:       number;
-  orders_yesterday:   number;
-  aov_today:          number;
-  net_profit_today:   number;
-  stripe_fees_today:  number;
-  active_sites:       number;
-  // formatted (in base currency)
-  revenue_today_fmt:      string;
-  revenue_month_fmt:      string;
-  aov_today_fmt:          string;
-  net_profit_today_fmt:   string;
-  stripe_fees_today_fmt:  string;
+  base_currency:    string;
+  revenue_current:  number;
+  revenue_prev:     number;
+  orders_current:   number;
+  orders_prev:      number;
+  aov_current:      number;
+  net_profit:       number;
+  stripe_fees:      number;
+  active_sites:     number;
+  // formatted
+  revenue_fmt:      string;
+  aov_fmt:          string;
+  net_profit_fmt:   string;
+  stripe_fees_fmt:  string;
   // trends (signed string, e.g. "+12.5" or "-3.2")
-  trend_revenue: string;
-  trend_orders:  string;
+  trend_revenue:    string;
+  trend_orders:     string;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
-// Keep formatRSD exported — used across components; formats amounts as EUR
 export function formatRSD(amount: number): string {
   return `€${amount.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -59,27 +53,21 @@ function trend(current: number, previous: number): string {
 function buildStats(raw: KpiRaw): KpiStats {
   const bc = raw.base_currency ?? "EUR";
   return {
-    // raw
-    base_currency:      bc,
-    revenue_today:      raw.revenue_today,
-    revenue_yesterday:  raw.revenue_yesterday,
-    revenue_month:      raw.revenue_month,
-    revenue_last_month: raw.revenue_last_month,
-    orders_today:       raw.orders_today,
-    orders_yesterday:   raw.orders_yesterday,
-    aov_today:          raw.aov_today,
-    net_profit_today:   raw.net_profit_today,
-    stripe_fees_today:  raw.stripe_fees_today,
-    active_sites:       raw.active_sites,
-    // formatted
-    revenue_today_fmt:      formatCurrency(raw.revenue_today,    bc),
-    revenue_month_fmt:      formatCurrency(raw.revenue_month,    bc),
-    aov_today_fmt:          formatCurrency(raw.aov_today,        bc),
-    net_profit_today_fmt:   formatCurrency(raw.net_profit_today, bc),
-    stripe_fees_today_fmt:  formatCurrency(raw.stripe_fees_today, bc),
-    // trends
-    trend_revenue: trend(raw.revenue_today, raw.revenue_yesterday),
-    trend_orders:  trend(raw.orders_today,  raw.orders_yesterday),
+    base_currency:   bc,
+    revenue_current: raw.revenue_current,
+    revenue_prev:    raw.revenue_prev,
+    orders_current:  raw.orders_current,
+    orders_prev:     raw.orders_prev,
+    aov_current:     raw.aov_current,
+    net_profit:      raw.net_profit,
+    stripe_fees:     raw.stripe_fees,
+    active_sites:    raw.active_sites,
+    revenue_fmt:     formatCurrency(raw.revenue_current, bc),
+    aov_fmt:         formatCurrency(raw.aov_current,     bc),
+    net_profit_fmt:  formatCurrency(raw.net_profit,      bc),
+    stripe_fees_fmt: formatCurrency(raw.stripe_fees,     bc),
+    trend_revenue:   trend(raw.revenue_current, raw.revenue_prev),
+    trend_orders:    trend(raw.orders_current,  raw.orders_prev),
   };
 }
 
@@ -91,17 +79,34 @@ async function fetcher(url: string): Promise<KpiRaw> {
 
 // ── hook ───────────────────────────────────────────────────────────────────────
 
-export function useKpiStats(siteId?: string): {
+// forceSiteId: used by the per-site dashboard (/dashboard/[siteId]) to lock the
+// site filter regardless of URL params.
+export function useKpiStats(forceSiteId?: string): {
   stats: KpiStats | null;
   isLoading: boolean;
   error: Error | null;
 } {
-  const url = siteId ? `/api/stats/kpi?siteId=${siteId}` : "/api/stats/kpi";
-  const { data, error, isLoading } = useSWR<KpiRaw>(
-    url,
-    fetcher,
-    { refreshInterval: 30_000, revalidateOnFocus: true }
-  );
+  const sp = useSearchParams();
+
+  const preset        = sp.get("kpi_preset") ?? "today";
+  const from          = sp.get("kpi_from");
+  const to            = sp.get("kpi_to");
+  const siteId        = forceSiteId ?? sp.get("kpi_site");
+  const productsParam = sp.get("kpi_products");
+  const products      = productsParam ? productsParam.split(",").filter(Boolean) : [];
+
+  const params = new URLSearchParams({ preset });
+  if (from)            params.set("from",     from);
+  if (to)              params.set("to",       to);
+  if (siteId)          params.set("siteId",   siteId);
+  if (products.length) params.set("products", products.join(","));
+
+  const url = `/api/stats/kpi?${params.toString()}`;
+
+  const { data, error, isLoading } = useSWR<KpiRaw>(url, fetcher, {
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+  });
 
   return {
     stats: data ? buildStats(data) : null,

@@ -41,7 +41,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <DailyGoalTracker />
 
       {/* KPIs */}
-      <KPISection />
+      <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+        <KPISection />
+      </Suspense>
 
       {/* Live feed + revenue chart (2:1 split) */}
       <div style={{

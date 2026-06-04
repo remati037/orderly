@@ -2,62 +2,95 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { dayBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
 
 const EXCLUDED_STATUSES = ["cancelled", "refunded", "failed"];
 
-function dayBounds(offsetDays = 0) {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + offsetDays);
-  const start = d.toISOString();
-  d.setDate(d.getDate() + 1);
-  return { start, end: d.toISOString() };
+interface PeriodResult {
+  revenue: number;
+  netProfit: number;
+  orders: number;
+  stripeFees: number;
 }
 
-function monthBounds(offsetMonths = 0) {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1).toISOString();
-  const end = new Date(now.getFullYear(), now.getMonth() + offsetMonths + 1, 1).toISOString();
-  return { start, end };
+type OrderRow = {
+  total: number | null;
+  net_profit: number | null;
+  currency: string | null;
+  payment_method: string | null;
+};
+
+function sumOrders(rows: OrderRow[], rates: Record<string, number>): PeriodResult {
+  let revenue = 0, netProfit = 0, stripeFees = 0;
+  for (const o of rows) {
+    const total    = o.total ?? 0;
+    const currency = o.currency ?? "RSD";
+    const isStripe = /stripe/i.test(o.payment_method ?? "");
+    revenue   += toBase(total, currency, rates);
+    netProfit += toBase(o.net_profit ?? 0, currency, rates);
+    if (isStripe) stripeFees += toBase(total * 0.05, currency, rates);
+  }
+  return { revenue, netProfit, orders: rows.length, stripeFees };
 }
+
+const EMPTY: PeriodResult = { revenue: 0, netProfit: 0, orders: 0, stripeFees: 0 };
 
 async function queryOrders(
   supabase: ReturnType<typeof adminClient>,
   from: string,
   to: string,
   rates: Record<string, number>,
-  siteId?: string | null
-) {
+  siteId?: string | null,
+  products?: string[] | null,
+): Promise<PeriodResult> {
+  if (products?.length) {
+    // Supabase TS cannot infer types for non-literal select strings; cast to any.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (supabase as any)
+      .from("orders")
+      .select("total, net_profit, currency, payment_method, order_items!inner(product_name)")
+      .gte("created_at", from)
+      .lt("created_at", to)
+      .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`)
+      .in("order_items.product_name", products);
+    if (siteId) q = q.eq("site_id", siteId);
+    const { data, error } = (await q) as { data: OrderRow[] | null; error: unknown };
+    return error || !data ? EMPTY : sumOrders(data, rates);
+  }
+
   let q = supabase
     .from("orders")
     .select("total, net_profit, currency, payment_method")
     .gte("created_at", from)
     .lt("created_at", to)
     .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
-
   if (siteId) q = q.eq("site_id", siteId);
-
   const { data, error } = await q;
-  if (error || !data) return { revenue: 0, netProfit: 0, orders: 0, stripeFees: 0 };
+  return error || !data ? EMPTY : sumOrders(data as OrderRow[], rates);
+}
 
-  let revenue = 0;
-  let netProfit = 0;
-  let stripeFees = 0;
-
-  for (const order of data) {
-    const total = order.total ?? 0;
-    const currency = (order.currency as string | null) ?? "RSD";
-    const isStripe = /stripe/i.test((order.payment_method as string | null) ?? "");
-
-    revenue   += toBase(total, currency, rates);
-    netProfit += toBase((order.net_profit as number | null) ?? 0, currency, rates);
-
-    if (isStripe) {
-      stripeFees += toBase(total * 0.05, currency, rates);
-    }
+function periodBounds(preset: string, from: string | null, to: string | null) {
+  switch (preset) {
+    case "yesterday":
+      return { current: dayBounds(-1), prev: dayBounds(-2) };
+    case "this_week":
+      return { current: weekBounds(0), prev: weekBounds(-1) };
+    case "this_month":
+      return { current: monthBounds(0), prev: monthBounds(-1) };
+    case "this_year":
+      return { current: yearBounds(0), prev: yearBounds(-1) };
+    case "custom":
+      if (from && to) {
+        const b = customBounds(from, to);
+        return {
+          current: { start: b.start,    end: b.end     },
+          prev:    { start: b.prevStart, end: b.prevEnd },
+        };
+      }
+      return { current: dayBounds(0), prev: dayBounds(-1) };
+    default: // "today"
+      return { current: dayBounds(0), prev: dayBounds(-1) };
   }
-
-  return { revenue, netProfit, orders: data.length, stripeFees };
 }
 
 export async function GET(request: NextRequest) {
@@ -65,7 +98,14 @@ export async function GET(request: NextRequest) {
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const siteId = new URL(request.url).searchParams.get("siteId");
+  const sp            = new URL(request.url).searchParams;
+  const preset        = sp.get("preset") ?? "today";
+  const from          = sp.get("from");
+  const to            = sp.get("to");
+  const siteId        = sp.get("siteId");
+  const productsParam = sp.get("products");
+  const products      = productsParam ? productsParam.split(",").filter(Boolean) : null;
+
   const supabase = adminClient();
 
   const [fx, activeSitesRes] = await Promise.all([
@@ -73,33 +113,24 @@ export async function GET(request: NextRequest) {
     supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
-  const today     = dayBounds(0);
-  const yesterday = dayBounds(-1);
-  const thisMonth = monthBounds(0);
-  const lastMonth = monthBounds(-1);
+  const { current, prev } = periodBounds(preset, from, to);
 
-  const [todayData, yesterdayData, monthData, lastMonthData] =
-    await Promise.all([
-      queryOrders(supabase, today.start,     today.end,     fx.rates, siteId),
-      queryOrders(supabase, yesterday.start, yesterday.end, fx.rates, siteId),
-      queryOrders(supabase, thisMonth.start, thisMonth.end, fx.rates, siteId),
-      queryOrders(supabase, lastMonth.start, lastMonth.end, fx.rates, siteId),
-    ]);
+  const [currentData, prevData] = await Promise.all([
+    queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),
+    queryOrders(supabase, prev.start,    prev.end,    fx.rates, siteId, products),
+  ]);
 
-  const aov_today =
-    todayData.orders > 0 ? todayData.revenue / todayData.orders : 0;
+  const aov = currentData.orders > 0 ? currentData.revenue / currentData.orders : 0;
 
   return NextResponse.json({
-    base_currency:        fx.baseCurrency,
-    revenue_today:        todayData.revenue,
-    revenue_yesterday:    yesterdayData.revenue,
-    revenue_month:        monthData.revenue,
-    revenue_last_month:   lastMonthData.revenue,
-    orders_today:         todayData.orders,
-    orders_yesterday:     yesterdayData.orders,
-    aov_today,
-    net_profit_today:     todayData.netProfit,
-    stripe_fees_today:    todayData.stripeFees,
-    active_sites:         activeSitesRes.count ?? 0,
+    base_currency:   fx.baseCurrency,
+    revenue_current: currentData.revenue,
+    revenue_prev:    prevData.revenue,
+    orders_current:  currentData.orders,
+    orders_prev:     prevData.orders,
+    aov_current:     aov,
+    net_profit:      currentData.netProfit,
+    stripe_fees:     currentData.stripeFees,
+    active_sites:    activeSitesRes.count ?? 0,
   });
 }

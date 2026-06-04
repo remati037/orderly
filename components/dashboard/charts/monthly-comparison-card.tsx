@@ -1,8 +1,8 @@
 "use client";
 
+import useSWR from "swr";
 import { TrendingUpIcon, TrendingDownIcon } from "lucide-react";
-import { useKpiStats, formatRSD } from "@/lib/hooks/use-kpi-stats";
-import { cn } from "@/lib/utils";
+import { formatRSD } from "@/lib/hooks/use-kpi-stats";
 
 function monthName(offsetMonths = 0): string {
   const d = new Date();
@@ -10,14 +10,23 @@ function monthName(offsetMonths = 0): string {
   return d.toLocaleDateString("sr-RS", { month: "long", year: "numeric" });
 }
 
+async function fetcher(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("fetch failed");
+  return res.json() as Promise<{ revenue_current: number; revenue_prev: number }>;
+}
+
 interface MonthlyComparisonCardProps {
   siteId?: string;
 }
 
 export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
-  const { stats, isLoading } = useKpiStats(siteId);
+  const url = siteId
+    ? `/api/stats/kpi?preset=this_month&siteId=${siteId}`
+    : "/api/stats/kpi?preset=this_month";
+  const { data, isLoading } = useSWR(url, fetcher, { refreshInterval: 30_000 });
 
-  if (isLoading || !stats) {
+  if (isLoading || !data) {
     return (
       <div style={{
         background: "#fff",
@@ -32,8 +41,8 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
     );
   }
 
-  const current = stats.revenue_month;
-  const previous = stats.revenue_last_month;
+  const current = data.revenue_current;
+  const previous = data.revenue_prev;
   const pct = previous === 0
     ? (current > 0 ? 100 : 0)
     : ((current - previous) / previous) * 100;

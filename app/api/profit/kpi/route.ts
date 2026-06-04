@@ -2,13 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
-
-function monthBounds() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-  return { start, end };
-}
+import { monthBounds } from "@/lib/utils/tz";
 
 export async function GET() {
   const { userId } = await auth();

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { useKpiStats, formatRSD } from "@/lib/hooks/use-kpi-stats";
+import { formatRSD } from "@/lib/hooks/use-kpi-stats";
 
 const STYLES = `
 @keyframes dgt-spring {
@@ -28,9 +28,21 @@ interface DailyGoalTrackerProps {
   siteId?: string;
 }
 
+async function fetchTodayRevenue(url: string): Promise<{ revenue_current: number }> {
+  const res = await fetch(url);
+  if (!res.ok) return { revenue_current: 0 };
+  return res.json();
+}
+
 export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
-  const { stats, isLoading } = useKpiStats(siteId);
   const [animated, setAnimated] = useState(false);
+
+  const kpiUrl = siteId
+    ? `/api/stats/kpi?preset=today&siteId=${siteId}`
+    : "/api/stats/kpi?preset=today";
+  const { data: kpiData, isLoading } = useSWR(kpiUrl, fetchTodayRevenue, {
+    refreshInterval: 30_000,
+  });
 
   const goalKey = siteId ? `goal_daily_site_${siteId}` : "goal_daily_global";
   const { data: goalData, isLoading: goalLoading } = useSWR<GoalResponse>(
@@ -40,7 +52,7 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
   );
 
   const goal = goalData?.value ? Number(goalData.value) : null;
-  const current = stats?.revenue_today ?? 0;
+  const current = kpiData?.revenue_current ?? 0;
   const pct = goal ? Math.min(100, (current / goal) * 100) : 0;
   const reached = goal !== null && current >= goal;
   const remaining = goal !== null ? goal - current : 0;
@@ -52,7 +64,7 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
     }
   }, [isLoading, goalLoading, goal]);
 
-  if ((isLoading && !stats) || goalLoading) {
+  if ((isLoading && !kpiData) || goalLoading) {
     return (
       <div style={{
         background: "#fff", border: "1px solid #E4E4E7", borderRadius: 10,
