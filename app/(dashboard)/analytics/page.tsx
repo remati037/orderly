@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { DailyRevenueChart } from "@/components/dashboard/charts/daily-revenue-chart";
 import { StatusBreakdownChart } from "@/components/dashboard/charts/status-breakdown-chart";
 import { TopProductsChart } from "@/components/dashboard/charts/top-products-chart";
