@@ -51,17 +51,23 @@ export async function GET() {
 
   const fx = await loadFxSettings(supabase);
 
-  const todayStart    = startOfDay(now);
-  const tomorrowStart = startOfDay(new Date(now.getTime() + 86_400_000));
+  const todayStart     = startOfDay(now);
   const yesterdayStart = startOfDay(new Date(now.getTime() - 86_400_000));
   const thisMonthStart = startOfMonth(now);
   const prevMonthStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
+  // For "today" comparisons use the same elapsed time yesterday, not the full day
+  const yesterdaySameTime = new Date(now.getTime() - 86_400_000).toISOString();
+
+  // For "this month" comparisons use the same elapsed days in the previous month
+  const elapsedThisMonth  = now.getTime() - new Date(thisMonthStart).getTime();
+  const prevMonthSameTime = new Date(new Date(prevMonthStart).getTime() + elapsedThisMonth).toISOString();
+
   const [today, yesterday, thisMonth, lastMonth] = await Promise.all([
-    sumOrders(supabase, todayStart,     tomorrowStart,  fx.rates),
-    sumOrders(supabase, yesterdayStart, todayStart,     fx.rates),
-    sumOrders(supabase, thisMonthStart, tomorrowStart,  fx.rates),
-    sumOrders(supabase, prevMonthStart, thisMonthStart, fx.rates),
+    sumOrders(supabase, todayStart,     now.toISOString(),   fx.rates),
+    sumOrders(supabase, yesterdayStart, yesterdaySameTime,   fx.rates),
+    sumOrders(supabase, thisMonthStart, now.toISOString(),   fx.rates),
+    sumOrders(supabase, prevMonthStart, prevMonthSameTime,   fx.rates),
   ]);
 
   const aovToday    = today.orders    > 0 ? today.revenue    / today.orders    : 0;
