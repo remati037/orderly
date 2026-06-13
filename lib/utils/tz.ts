@@ -26,6 +26,19 @@ export function dayBounds(offsetDays = 0) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+// "Today so far" vs "same elapsed time yesterday" — avoids comparing partial today to full yesterday.
+export function todayComparisonBounds() {
+  const now = new Date();
+  const { y, m, d } = todayInTZ();
+  const todayStart = tzMidnight(y, m, d);
+  const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
+  const yesterdaySameTime = new Date(now.getTime() - 86_400_000);
+  return {
+    current: { start: todayStart.toISOString(),     end: now.toISOString()                   },
+    prev:    { start: yesterdayStart.toISOString(), end: yesterdaySameTime.toISOString()      },
+  };
+}
+
 export function weekBounds(offsetWeeks = 0) {
   const { y, m, d } = todayInTZ();
   const dow = (new Date(Date.UTC(y, m, d)).getUTCDay() + 6) % 7; // Mon=0…Sun=6

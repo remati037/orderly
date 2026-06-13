@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
-import { dayBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
+import { dayBounds, todayComparisonBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
 
 const EXCLUDED_STATUSES = ["cancelled", "refunded", "failed"];
 
@@ -89,7 +89,7 @@ function periodBounds(preset: string, from: string | null, to: string | null) {
       }
       return { current: dayBounds(0), prev: dayBounds(-1) };
     default: // "today"
-      return { current: dayBounds(0), prev: dayBounds(-1) };
+      return todayComparisonBounds();
   }
 }
 
