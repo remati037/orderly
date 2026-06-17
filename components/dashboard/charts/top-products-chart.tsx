@@ -65,7 +65,12 @@ export function TopProductsChart({ siteId }: TopProductsChartProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "10" });
+      // Last 30 days window (today + 29 previous days)
+      const from = new Date();
+      from.setDate(from.getDate() - 29);
+      from.setHours(0, 0, 0, 0);
+
+      const params = new URLSearchParams({ limit: "10", from: from.toISOString() });
       if (siteId) params.set("siteId", siteId);
       const res = await fetch(`/api/analytics/top-products?${params}`);
       if (res.ok) {
@@ -96,7 +101,7 @@ export function TopProductsChart({ siteId }: TopProductsChartProps) {
           Top 10 proizvoda
         </span>
         <span style={{ fontSize: 12, color: "#A1A1AA", marginLeft: 8 }}>
-          po prihodu
+          po prihodu · poslednjih 30 dana
         </span>
       </div>
 
