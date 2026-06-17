@@ -11,6 +11,7 @@ import {
 import { KPICard } from "./kpi-card";
 import { KpiFilters } from "./kpi-filters";
 import { useKpiStats } from "@/lib/hooks/use-kpi-stats";
+import { useSparklines } from "@/lib/hooks/use-sparklines";
 
 function parseTrend(signed: string): number {
   return parseFloat(signed);
@@ -24,6 +25,7 @@ interface KPISectionProps {
 
 export function KPISection({ siteId }: KPISectionProps) {
   const { stats, isLoading } = useKpiStats(siteId);
+  const { data: spark } = useSparklines(siteId);
   const loading = isLoading || !stats;
 
   return (
@@ -38,6 +40,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           trend={stats ? parseTrend(stats.trend_revenue) : null}
           icon={TrendingUpIcon}
           isLoading={loading}
+          sparkline={spark?.revenue}
         />
         <KPICard
           label="Porudžbine"
@@ -45,6 +48,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           trend={stats ? parseTrend(stats.trend_orders) : null}
           icon={ShoppingBagIcon}
           isLoading={loading}
+          sparkline={spark?.orders}
         />
         <KPICard
           label="AOV"
@@ -52,6 +56,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           trend={stats ? parseTrend(stats.trend_aov) : null}
           icon={ReceiptIcon}
           isLoading={loading}
+          sparkline={spark?.aov}
         />
         <KPICard
           label="Neto zarada"

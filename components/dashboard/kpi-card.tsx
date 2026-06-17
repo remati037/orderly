@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Sparkline } from "./sparkline";
 
 // ── skeleton ───────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ interface KPICardProps {
   trend: number | null;
   icon: LucideIcon;
   isLoading: boolean;
+  sparkline?: number[];
 }
 
 export function KPICard({
@@ -50,7 +52,9 @@ export function KPICard({
   trend,
   icon: Icon,
   isLoading,
+  sparkline,
 }: KPICardProps) {
+  const sparkColor = trend == null || trend >= 0 ? "#16A34A" : "#DC2626";
   return (
     <div
       className="group"
@@ -96,32 +100,42 @@ export function KPICard({
         <Icon style={{ width: 16, height: 16, color: "#A1A1AA", flexShrink: 0 }} />
       </div>
 
-      {/* Value */}
-      <div style={{ marginTop: 6 }}>
-        {isLoading ? (
-          <Skeleton className="h-8 w-32 mt-1" />
-        ) : (
-          <span
-            style={{
-              display: "block",
-              fontSize: 28,
-              fontWeight: 700,
-              letterSpacing: "-0.03em",
-              color: "#18181B",
-              lineHeight: 1.1,
-            }}
-          >
-            {value}
-          </span>
+      {/* Value + trend on the left, 7-day sparkline on the right */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          {/* Value */}
+          <div style={{ marginTop: 6 }}>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32 mt-1" />
+            ) : (
+              <span
+                style={{
+                  display: "block",
+                  fontSize: 28,
+                  fontWeight: 700,
+                  letterSpacing: "-0.03em",
+                  color: "#18181B",
+                  lineHeight: 1.1,
+                }}
+              >
+                {value}
+              </span>
+            )}
+          </div>
+
+          {/* Trend */}
+          {isLoading ? (
+            <Skeleton className="h-5 w-16 mt-2" />
+          ) : (
+            trend !== null && <TrendBadge value={trend} />
+          )}
+        </div>
+
+        {/* Sparkline */}
+        {!isLoading && sparkline && sparkline.length > 1 && (
+          <Sparkline data={sparkline} color={sparkColor} />
         )}
       </div>
-
-      {/* Trend */}
-      {isLoading ? (
-        <Skeleton className="h-5 w-16 mt-2" />
-      ) : (
-        trend !== null && <TrendBadge value={trend} />
-      )}
     </div>
   );
 }
