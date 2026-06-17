@@ -26,6 +26,7 @@ export interface KpiStats {
   orders_current:   number;
   orders_prev:      number;
   aov_current:      number;
+  aov_prev:         number;
   net_profit:       number;
   stripe_fees:      number;
   active_sites:     number;
