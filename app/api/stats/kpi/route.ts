@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
     queryOrders(supabase, prev.start,    prev.end,    fx.rates, siteId, products),
   ]);
 
-  const aov = currentData.orders > 0 ? currentData.revenue / currentData.orders : 0;
+  const aov     = currentData.orders > 0 ? currentData.revenue / currentData.orders : 0;
+  const aovPrev = prevData.orders    > 0 ? prevData.revenue    / prevData.orders    : 0;
 
   return NextResponse.json({
     base_currency:   fx.baseCurrency,
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
     orders_current:  currentData.orders,
     orders_prev:     prevData.orders,
     aov_current:     aov,
+    aov_prev:        aovPrev,
     net_profit:      currentData.netProfit,
     stripe_fees:     currentData.stripeFees,
     active_sites:    activeSitesRes.count ?? 0,

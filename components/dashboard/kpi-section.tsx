@@ -49,7 +49,7 @@ export function KPISection({ siteId }: KPISectionProps) {
         <KPICard
           label="AOV"
           value={stats?.aov_fmt ?? "—"}
-          trend={null}
+          trend={stats ? parseTrend(stats.trend_aov) : null}
           icon={ReceiptIcon}
           isLoading={loading}
         />

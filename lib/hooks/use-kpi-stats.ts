@@ -13,6 +13,7 @@ interface KpiRaw {
   orders_current:  number;
   orders_prev:     number;
   aov_current:     number;
+  aov_prev:        number;
   net_profit:      number;
   stripe_fees:     number;
   active_sites:    number;
@@ -36,6 +37,7 @@ export interface KpiStats {
   // trends (signed string, e.g. "+12.5" or "-3.2")
   trend_revenue:    string;
   trend_orders:     string;
+  trend_aov:        string;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -59,6 +61,7 @@ function buildStats(raw: KpiRaw): KpiStats {
     orders_current:  raw.orders_current,
     orders_prev:     raw.orders_prev,
     aov_current:     raw.aov_current,
+    aov_prev:        raw.aov_prev,
     net_profit:      raw.net_profit,
     stripe_fees:     raw.stripe_fees,
     active_sites:    raw.active_sites,
@@ -68,6 +71,7 @@ function buildStats(raw: KpiRaw): KpiStats {
     stripe_fees_fmt: formatCurrency(raw.stripe_fees,     bc),
     trend_revenue:   trend(raw.revenue_current, raw.revenue_prev),
     trend_orders:    trend(raw.orders_current,  raw.orders_prev),
+    trend_aov:       trend(raw.aov_current,     raw.aov_prev),
   };
 }
 
