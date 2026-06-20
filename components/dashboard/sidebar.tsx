@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/profit",           label: "Profit",     icon: CircleDollarSignIcon },
   { href: "/settings/general", label: "Opšte",      icon: SlidersHorizontalIcon },
   { href: "/settings/sites",   label: "Sajtovi",    icon: SettingsIcon },
+  { href: "/settings/ads",     label: "Facebook Ads", icon: MegaphoneIcon },
   { href: "/settings/sound",   label: "Zvuk",       icon: BellIcon },
   { href: "/tv",               label: "TV prikaz",  icon: MonitorIcon },
 ];

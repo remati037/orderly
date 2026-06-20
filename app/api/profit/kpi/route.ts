@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { getMappedSpend } from "@/lib/utils/ad-spend";
 import { monthBounds } from "@/lib/utils/tz";
 
 export async function GET() {
@@ -31,7 +32,11 @@ export async function GET() {
   const orders = ordersRes.data ?? [];
   const grossRevenue = orders.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
   const netProfit = orders.reduce((s, o) => s + toBase(o.net_profit ?? 0, o.currency ?? "RSD", fx.rates), 0);
-  const avgMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0;
+
+  // Subtract mapped Facebook ad spend for the same month.
+  const adSpend = await getMappedSpend(supabase, start.split("T")[0], end.split("T")[0], fx.rates);
+  const netProfitAfterAds = netProfit - adSpend.total;
+  const avgMargin = grossRevenue > 0 ? (netProfitAfterAds / grossRevenue) * 100 : 0;
 
   let highestMarginProduct: string | null = null;
   const products = productsRes.data ?? [];
@@ -45,6 +50,8 @@ export async function GET() {
   return NextResponse.json({
     gross_revenue_month: grossRevenue,
     net_profit_month: netProfit,
+    ad_spend_month: Math.round(adSpend.total * 100) / 100,
+    net_profit_after_ads_month: Math.round(netProfitAfterAds * 100) / 100,
     avg_margin_pct: Math.round(avgMargin * 10) / 10,
     highest_margin_product: highestMarginProduct,
   });
