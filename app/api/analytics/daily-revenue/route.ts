@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     return {
       siteId: sid,
       name:   site?.name    ?? sid,
-      color:  site?.color_hex ?? "#1B6EF3",
+      color:  site?.color_hex ?? "#16A34A",
       data:   dateLabels.map((label) => byDateSite[label][sid] ?? 0),
     };
   });

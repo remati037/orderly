@@ -948,7 +948,7 @@ export default function ProfitPage() {
                     style={{
                       height: "100%",
                       borderRadius: 99,
-                      background: "#1B6EF3",
+                      background: "#16A34A",
                       width: `${Math.min(
                         100,
                         (recalcProgress.processed /

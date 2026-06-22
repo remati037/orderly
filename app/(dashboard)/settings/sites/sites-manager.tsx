@@ -82,7 +82,7 @@ interface SiteForm {
 const DEFAULT_FORM: SiteForm = {
   name: "",
   platform: "woocommerce",
-  color_hex: "#1B6EF3",
+  color_hex: "#16A34A",
   project_type: "standard",
   is_active: true,
   url: "",

@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 
 const STYLES = `
 @keyframes lf-row-enter {
-  from { background-color: #EBF2FF; opacity: 0; }
+  from { background-color: #DCFCE7; opacity: 0; }
   to   { background-color: transparent; opacity: 1; }
 }
 @keyframes lf-dot-pulse {

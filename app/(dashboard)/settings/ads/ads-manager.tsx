@@ -56,8 +56,8 @@ function btn(primary = false): React.CSSProperties {
     borderRadius: 7,
     border: "1px solid",
     cursor: "pointer",
-    background: primary ? "#1B6EF3" : "#fff",
-    borderColor: primary ? "#1B6EF3" : "#E4E4E7",
+    background: primary ? "#16A34A" : "#fff",
+    borderColor: primary ? "#16A34A" : "#E4E4E7",
     color: primary ? "#fff" : "#52525B",
   };
 }

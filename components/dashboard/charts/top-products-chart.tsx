@@ -51,8 +51,8 @@ function CustomTooltip({ active, payload }: {
 
 // ── component ──────────────────────────────────────────────────────────────────
 
-const ACCENT = "#1B6EF3";
-const ACCENT_LIGHT = "#EBF2FF";
+const ACCENT = "#16A34A";
+const ACCENT_LIGHT = "#DCFCE7";
 
 interface TopProductsChartProps {
   siteId?: string;
@@ -161,7 +161,7 @@ export function TopProductsChart({ siteId }: TopProductsChartProps) {
               {chartData.map((_, i) => (
                 <Cell
                   key={i}
-                  fill={i === 0 ? ACCENT : `rgba(27,110,243,${0.85 - i * 0.07})`}
+                  fill={i === 0 ? ACCENT : `rgba(22,163,74,${0.85 - i * 0.07})`}
                 />
               ))}
             </Bar>

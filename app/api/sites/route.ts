@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       consumer_key: consumer_key || null,
       consumer_secret: consumer_secret || null,
       thinkific_api_key: thinkific_api_key || null,
-      color_hex: color_hex || "#1B6EF3",
+      color_hex: color_hex || "#16A34A",
       project_type: project_type || "standard",
       is_active: is_active ?? true,
     })

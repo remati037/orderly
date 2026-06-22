@@ -106,7 +106,7 @@ function CustomTooltip({ active, payload, label }: {
   return (
     <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 8, padding: "10px 14px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
       <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#18181B" }}>{label}</p>
-      <p style={{ margin: 0, color: "#1B6EF3" }}>
+      <p style={{ margin: 0, color: "#16A34A" }}>
         <span style={{ fontWeight: 600 }}>MRR: </span>{formatRSD(payload[0].value)}
       </p>
     </div>
@@ -219,8 +219,8 @@ export default function SubscriptionsPage() {
                 <AreaChart data={mrrChart} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="mrrGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1B6EF3" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#1B6EF3" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#16A34A" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#16A34A" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="#F4F4F5" />
@@ -230,7 +230,7 @@ export default function SubscriptionsPage() {
                   <Area
                     type="monotone"
                     dataKey="mrr"
-                    stroke="#1B6EF3"
+                    stroke="#16A34A"
                     strokeWidth={2}
                     fill="url(#mrrGrad)"
                     dot={false}
@@ -256,8 +256,8 @@ export default function SubscriptionsPage() {
                     style={{
                       fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 99,
                       border: "1px solid", cursor: "pointer",
-                      background: filterSite === "all" ? "#1B6EF3" : "transparent",
-                      borderColor: filterSite === "all" ? "#1B6EF3" : "#E4E4E7",
+                      background: filterSite === "all" ? "#16A34A" : "transparent",
+                      borderColor: filterSite === "all" ? "#16A34A" : "#E4E4E7",
                       color: filterSite === "all" ? "#fff" : "#71717A",
                     }}
                   >
@@ -270,8 +270,8 @@ export default function SubscriptionsPage() {
                       style={{
                         fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 99,
                         border: "1px solid", cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
-                        background: filterSite === site.id ? "#1B6EF3" : "transparent",
-                        borderColor: filterSite === site.id ? "#1B6EF3" : "#E4E4E7",
+                        background: filterSite === site.id ? "#16A34A" : "transparent",
+                        borderColor: filterSite === site.id ? "#16A34A" : "#E4E4E7",
                         color: filterSite === site.id ? "#fff" : "#71717A",
                       }}
                     >

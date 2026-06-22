@@ -88,7 +88,7 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
         </span>
         <span style={{ fontSize: 12, color: "#A1A1AA" }}>
           Podesi cilj u{" "}
-          <Link href="/settings/sites" style={{ color: "#1B6EF3", textDecoration: "underline" }}>
+          <Link href="/settings/sites" style={{ color: "#16A34A", textDecoration: "underline" }}>
             Podešavanjima
           </Link>
         </span>
@@ -119,7 +119,7 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
             style={{
               height: "100%",
               borderRadius: 99,
-              background: reached ? "#16A34A" : "#1B6EF3",
+              background: reached ? "#16A34A" : "#16A34A",
               ["--dgt-pct" as string]: `${pct}%`,
               width: animated ? `${pct}%` : "0%",
               animation: animated ? "dgt-spring 700ms cubic-bezier(0.34,1.56,0.64,1) forwards" : undefined,
@@ -138,8 +138,8 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
         {/* status text */}
         <span style={{
           fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, flexShrink: 0,
-          background: reached ? "#F0FDF4" : "#EBF2FF",
-          color: reached ? "#16A34A" : "#1B6EF3",
+          background: reached ? "#F0FDF4" : "#DCFCE7",
+          color: reached ? "#16A34A" : "#16A34A",
           whiteSpace: "nowrap",
         }}>
           {reached

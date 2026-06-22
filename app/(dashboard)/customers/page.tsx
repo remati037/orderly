@@ -40,7 +40,7 @@ function initials(name: string | null, email: string | null): string {
 }
 
 function avatarColor(str: string): string {
-  const colors = ["#1B6EF3", "#7C3AED", "#DB2777", "#0891B2", "#059669", "#D97706", "#DC2626"];
+  const colors = ["#16A34A", "#7C3AED", "#DB2777", "#0891B2", "#059669", "#D97706", "#DC2626"];
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];

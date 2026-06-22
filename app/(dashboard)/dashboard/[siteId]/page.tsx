@@ -108,7 +108,7 @@ export default async function SiteDashboardPage({ params }: PageProps) {
               width: 12,
               height: 12,
               borderRadius: "50%",
-              background: site.color_hex ?? "#1B6EF3",
+              background: site.color_hex ?? "#16A34A",
               flexShrink: 0,
             }} />
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>

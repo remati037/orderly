@@ -65,7 +65,7 @@ function initials(name: string | null, email: string): string {
 }
 
 function avatarColor(str: string): string {
-  const colors = ["#1B6EF3", "#7C3AED", "#DB2777", "#0891B2", "#059669", "#D97706", "#DC2626"];
+  const colors = ["#16A34A", "#7C3AED", "#DB2777", "#0891B2", "#059669", "#D97706", "#DC2626"];
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
@@ -172,7 +172,7 @@ export default function CustomerProfilePage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 240, gap: 12 }}>
         <p style={{ fontSize: 15, color: "#18181B", fontWeight: 600 }}>Kupac nije pronađen</p>
-        <button onClick={() => router.push("/customers")} style={{ fontSize: 13, color: "#1B6EF3", background: "none", border: "none", cursor: "pointer" }}>
+        <button onClick={() => router.push("/customers")} style={{ fontSize: 13, color: "#16A34A", background: "none", border: "none", cursor: "pointer" }}>
           ← Nazad na listu
         </button>
       </div>

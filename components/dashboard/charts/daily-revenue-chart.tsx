@@ -152,8 +152,8 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 borderRadius: 6,
                 border: "1px solid",
                 cursor: "pointer",
-                background: days === p.value ? "#1B6EF3" : "transparent",
-                borderColor: days === p.value ? "#1B6EF3" : "#E4E4E7",
+                background: days === p.value ? "#16A34A" : "transparent",
+                borderColor: days === p.value ? "#16A34A" : "#E4E4E7",
                 color: days === p.value ? "#fff" : "#71717A",
                 transition: "all 120ms",
               }}

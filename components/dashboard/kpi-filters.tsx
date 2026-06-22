@@ -19,9 +19,9 @@ interface Site {
 // ── constants ──────────────────────────────────────────────────────────────────
 
 const ACTIVE_STYLE: React.CSSProperties = {
-  borderColor: "#1B6EF3",
-  color: "#1B6EF3",
-  background: "#EBF2FF",
+  borderColor: "#16A34A",
+  color: "#16A34A",
+  background: "#DCFCE7",
 };
 
 const PRESETS = [

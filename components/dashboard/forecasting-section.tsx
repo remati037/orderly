@@ -232,7 +232,7 @@ export function ForecastingSection() {
                       type="monotone"
                       dataKey="actual"
                       name="Stvarni prihod"
-                      stroke="#1B6EF3"
+                      stroke="#16A34A"
                       strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 3 }}
@@ -242,7 +242,7 @@ export function ForecastingSection() {
                       type="monotone"
                       dataKey="forecast"
                       name="Prognoza"
-                      stroke="#1B6EF3"
+                      stroke="#16A34A"
                       strokeWidth={2}
                       strokeDasharray="6 4"
                       strokeOpacity={0.55}

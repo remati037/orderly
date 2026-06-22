@@ -55,7 +55,7 @@ export async function GET() {
       product_type: item.product_type ?? "physical",
       site_id: siteId,
       site_name: site?.name ?? siteId,
-      site_color: site?.color_hex ?? "#1B6EF3",
+      site_color: site?.color_hex ?? "#16A34A",
       cost_percent: override?.cost_percent ?? null,
       cost_fixed: override?.cost_fixed ?? null,
     });

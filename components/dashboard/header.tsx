@@ -39,8 +39,8 @@ export function DashboardHeader() {
                 height: 32,
                 borderRadius: 6,
                 border: "none",
-                background: isMuted ? "transparent" : "#EBF2FF",
-                color: isMuted ? "#A1A1AA" : "#1B6EF3",
+                background: isMuted ? "transparent" : "#DCFCE7",
+                color: isMuted ? "#A1A1AA" : "#16A34A",
                 cursor: "pointer",
                 transition: "background 120ms, color 120ms",
               }}

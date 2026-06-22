@@ -12,25 +12,16 @@ function Skeleton({ className }: { className?: string }) {
   );
 }
 
-// ── trend badge ────────────────────────────────────────────────────────────────
+// ── trend text ─────────────────────────────────────────────────────────────────
 
-function TrendBadge({ value }: { value: number }) {
+function TrendText({ value }: { value: number }) {
   const positive = value >= 0;
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        fontSize: 12,
-        fontWeight: 500,
-        padding: "2px 8px",
-        borderRadius: 99,
-        marginTop: 8,
-        background: positive ? "#F0FDF4" : "#FEF2F2",
-        color: positive ? "#16A34A" : "#DC2626",
-      }}
-    >
-      {positive ? "↑" : "↓"}&nbsp;{Math.abs(value).toFixed(1)}%
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12 }}>
+      <span style={{ fontWeight: 600, color: positive ? "#16A34A" : "#DC2626" }}>
+        {positive ? "↑" : "↓"} {Math.abs(value).toFixed(1)}%
+      </span>
+      <span style={{ color: "#A1A1AA" }}>vs prošli mesec</span>
     </span>
   );
 }
@@ -61,8 +52,8 @@ export function KPICard({
       style={{
         background: "#fff",
         border: "1px solid #E4E4E7",
-        borderRadius: 12,
-        padding: "20px 22px",
+        borderRadius: 14,
+        padding: "18px 20px",
         boxShadow: "var(--shadow-sm)",
         transition: "box-shadow 180ms cubic-bezier(0.4,0,0.2,1), transform 180ms cubic-bezier(0.4,0,0.2,1), border-color 180ms cubic-bezier(0.4,0,0.2,1)",
         cursor: "default",
@@ -80,54 +71,63 @@ export function KPICard({
         el.style.borderColor = "#E4E4E7";
       }}
     >
-      {/* Top row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {/* Top row: icon chip + label */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            background: "#DCFCE7",
+            flexShrink: 0,
+          }}
+        >
+          <Icon style={{ width: 16, height: 16, color: "#16A34A" }} />
+        </span>
         {isLoading ? (
           <Skeleton className="h-3 w-24" />
         ) : (
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
               color: "#71717A",
             }}
           >
             {label}
           </span>
         )}
-        <Icon style={{ width: 16, height: 16, color: "#A1A1AA", flexShrink: 0 }} />
       </div>
 
       {/* Value + trend on the left, 7-day sparkline on the right */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginTop: 12 }}>
         <div style={{ minWidth: 0 }}>
           {/* Value */}
-          <div style={{ marginTop: 6 }}>
-            {isLoading ? (
-              <Skeleton className="h-8 w-32 mt-1" />
-            ) : (
-              <span
-                style={{
-                  display: "block",
-                  fontSize: 28,
-                  fontWeight: 700,
-                  letterSpacing: "-0.03em",
-                  color: "#18181B",
-                  lineHeight: 1.1,
-                }}
-              >
-                {value}
-              </span>
-            )}
-          </div>
+          {isLoading ? (
+            <Skeleton className="h-8 w-32" />
+          ) : (
+            <span
+              style={{
+                display: "block",
+                fontSize: 28,
+                fontWeight: 700,
+                letterSpacing: "-0.03em",
+                color: "#18181B",
+                lineHeight: 1.1,
+              }}
+            >
+              {value}
+            </span>
+          )}
 
           {/* Trend */}
           {isLoading ? (
-            <Skeleton className="h-5 w-16 mt-2" />
+            <Skeleton className="h-5 w-28 mt-2" />
           ) : (
-            trend !== null && <TrendBadge value={trend} />
+            trend !== null && <TrendText value={trend} />
           )}
         </div>
 

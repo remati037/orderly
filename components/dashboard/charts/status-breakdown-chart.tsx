@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   failed:     { label: "Failed",      color: "#DC2626" },
 };
 
-const FALLBACK_COLORS = ["#1B6EF3", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#6B7280"];
+const FALLBACK_COLORS = ["#16A34A", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#6B7280"];
 
 interface BreakdownItem {
   status: string;

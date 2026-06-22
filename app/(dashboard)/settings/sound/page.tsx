@@ -155,12 +155,12 @@ function UploadZone({
         onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
         onClick={() => !uploading && inputRef.current?.click()}
         style={{
-          border: `2px dashed ${dragging ? "#1B6EF3" : "#E4E4E7"}`,
+          border: `2px dashed ${dragging ? "#16A34A" : "#E4E4E7"}`,
           borderRadius: 8,
           padding: "16px 12px",
           textAlign: "center",
           cursor: uploading ? "wait" : "pointer",
-          background: dragging ? "#EBF2FF" : "#FAFAFA",
+          background: dragging ? "#DCFCE7" : "#FAFAFA",
           transition: "all 150ms",
         }}
       >
@@ -346,7 +346,7 @@ export default function SoundSettingsPage() {
               max={100}
               value={global.volume}
               onChange={(e) => setGlobal((p) => ({ ...p, volume: Number(e.target.value) }))}
-              style={{ flex: 1, accentColor: "#1B6EF3" }}
+              style={{ flex: 1, accentColor: "#16A34A" }}
             />
             <Volume2Icon style={{ width: 14, height: 14, color: "#A1A1AA", flexShrink: 0 }} />
           </div>
@@ -373,7 +373,7 @@ export default function SoundSettingsPage() {
                       ? p.triggerStatuses.filter((s) => s !== status)
                       : [...p.triggerStatuses, status],
                   }))}
-                  style={{ width: 15, height: 15, accentColor: "#1B6EF3", cursor: "pointer" }}
+                  style={{ width: 15, height: 15, accentColor: "#16A34A", cursor: "pointer" }}
                 />
                 <span style={{ fontSize: 13, color: "#18181B" }}>{label}</span>
               </label>
@@ -420,7 +420,7 @@ export default function SoundSettingsPage() {
                           ...prev,
                           [site.id]: { ...ov, useCustom: e.target.checked },
                         }))}
-                        style={{ width: 14, height: 14, accentColor: "#1B6EF3", cursor: "pointer" }}
+                        style={{ width: 14, height: 14, accentColor: "#16A34A", cursor: "pointer" }}
                       />
                       <span style={{ fontSize: 12, color: "#52525B" }}>Prilagođeni zvuk</span>
                     </label>
