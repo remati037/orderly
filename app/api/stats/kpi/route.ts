@@ -71,25 +71,8 @@ async function queryOrders(
 
 interface Bounds { start: string; end: string }
 
-// The window currently being measured, per date preset.
-function currentBounds(preset: string, from: string | null, to: string | null): Bounds {
-  switch (preset) {
-    case "yesterday":  return dayBounds(-1);
-    case "this_week":  return weekBounds(0);
-    case "this_month": return monthBounds(0);
-    case "this_year":  return yearBounds(0);
-    case "custom":
-      if (from && to) {
-        const b = customBounds(from, to);
-        return { start: b.start, end: b.end };
-      }
-      return dayBounds(0);
-    default: // "today" — start of day → now (partial day)
-      return todayComparisonBounds().current;
-  }
-}
-
-// The comparison window: the same window shifted back one day or one month.
+// Shift a window back one day or one month (used only for the "today" view,
+// where the comparison basis is user-selectable).
 function shiftBack(b: Bounds, compare: string): Bounds {
   const shift = (iso: string): string => {
     const d = new Date(iso);
@@ -98,6 +81,40 @@ function shiftBack(b: Bounds, compare: string): Bounds {
     return d.toISOString();
   };
   return { start: shift(b.start), end: shift(b.end) };
+}
+
+// Current window + its natural comparison window for each preset.
+// "today" uses the day/month compare toggle; every other preset compares to
+// its own previous period (month→prev month, week→prev week, …).
+function periodBounds(
+  preset: string,
+  from: string | null,
+  to: string | null,
+  compare: string
+): { current: Bounds; prev: Bounds } {
+  switch (preset) {
+    case "yesterday":
+      return { current: dayBounds(-1), prev: dayBounds(-2) };
+    case "this_week":
+      return { current: weekBounds(0), prev: weekBounds(-1) };
+    case "this_month":
+      return { current: monthBounds(0), prev: monthBounds(-1) };
+    case "this_year":
+      return { current: yearBounds(0), prev: yearBounds(-1) };
+    case "custom":
+      if (from && to) {
+        const b = customBounds(from, to);
+        return {
+          current: { start: b.start,     end: b.end     },
+          prev:    { start: b.prevStart, end: b.prevEnd },
+        };
+      }
+      return { current: dayBounds(0), prev: dayBounds(-1) };
+    default: { // "today" — partial day, comparison basis is selectable
+      const current = todayComparisonBounds().current;
+      return { current, prev: shiftBack(current, compare) };
+    }
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -121,8 +138,7 @@ export async function GET(request: NextRequest) {
     supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
-  const current = currentBounds(preset, from, to);
-  const prev    = shiftBack(current, compare);
+  const { current, prev } = periodBounds(preset, from, to, compare);
 
   const [currentData, prevData] = await Promise.all([
     queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),
