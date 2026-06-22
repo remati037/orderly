@@ -40,6 +40,7 @@ function useKpiFilters() {
   const params   = useSearchParams();
 
   const preset        = params.get("kpi_preset") ?? "today";
+  const compare       = params.get("kpi_compare") === "month" ? "month" : "day";
   const from          = params.get("kpi_from") ?? "";
   const to            = params.get("kpi_to") ?? "";
   const siteId        = params.get("kpi_site") ?? "";
@@ -65,7 +66,7 @@ function useKpiFilters() {
 
   function reset() {
     const p = new URLSearchParams(params.toString());
-    ["kpi_preset", "kpi_from", "kpi_to", "kpi_site", "kpi_products"].forEach(
+    ["kpi_preset", "kpi_compare", "kpi_from", "kpi_to", "kpi_site", "kpi_products"].forEach(
       (k) => p.delete(k),
     );
     router.replace(p.size ? `${pathname}?${p.toString()}` : pathname, {
@@ -73,7 +74,57 @@ function useKpiFilters() {
     });
   }
 
-  return { preset, from, to, siteId, products, hasActive, push, reset };
+  return { preset, compare, from, to, siteId, products, hasActive, push, reset };
+}
+
+// ── CompareToggle ──────────────────────────────────────────────────────────────
+
+function CompareToggle({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const OPTIONS = [
+    { value: "day",   label: "vs prošli dan" },
+    { value: "month", label: "vs prošli mesec" },
+  ];
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        border: "1px solid #E4E4E7",
+        borderRadius: 8,
+        padding: 2,
+        background: "#fff",
+        gap: 2,
+      }}
+    >
+      {OPTIONS.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            style={{
+              fontSize: 12.5,
+              fontWeight: active ? 600 : 500,
+              padding: "5px 11px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              background: active ? "#DCFCE7" : "transparent",
+              color: active ? "#15803D" : "#71717A",
+              transition: "background 120ms, color 120ms",
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -424,6 +475,11 @@ export function KpiFilters() {
         from={f.from}
         to={f.to}
         onSelect={(updates) => f.push(updates as Record<string, string | null>)}
+      />
+
+      <CompareToggle
+        value={f.compare}
+        onChange={(v) => f.push({ kpi_compare: v === "month" ? "month" : null })}
       />
 
       <SiteSelect

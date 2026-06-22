@@ -69,28 +69,35 @@ async function queryOrders(
   return error || !data ? EMPTY : sumOrders(data as OrderRow[], rates);
 }
 
-function periodBounds(preset: string, from: string | null, to: string | null) {
+interface Bounds { start: string; end: string }
+
+// The window currently being measured, per date preset.
+function currentBounds(preset: string, from: string | null, to: string | null): Bounds {
   switch (preset) {
-    case "yesterday":
-      return { current: dayBounds(-1), prev: dayBounds(-2) };
-    case "this_week":
-      return { current: weekBounds(0), prev: weekBounds(-1) };
-    case "this_month":
-      return { current: monthBounds(0), prev: monthBounds(-1) };
-    case "this_year":
-      return { current: yearBounds(0), prev: yearBounds(-1) };
+    case "yesterday":  return dayBounds(-1);
+    case "this_week":  return weekBounds(0);
+    case "this_month": return monthBounds(0);
+    case "this_year":  return yearBounds(0);
     case "custom":
       if (from && to) {
         const b = customBounds(from, to);
-        return {
-          current: { start: b.start,    end: b.end     },
-          prev:    { start: b.prevStart, end: b.prevEnd },
-        };
+        return { start: b.start, end: b.end };
       }
-      return { current: dayBounds(0), prev: dayBounds(-1) };
-    default: // "today"
-      return todayComparisonBounds();
+      return dayBounds(0);
+    default: // "today" — start of day → now (partial day)
+      return todayComparisonBounds().current;
   }
+}
+
+// The comparison window: the same window shifted back one day or one month.
+function shiftBack(b: Bounds, compare: string): Bounds {
+  const shift = (iso: string): string => {
+    const d = new Date(iso);
+    if (compare === "month") d.setMonth(d.getMonth() - 1);
+    else d.setDate(d.getDate() - 1); // default: previous day
+    return d.toISOString();
+  };
+  return { start: shift(b.start), end: shift(b.end) };
 }
 
 export async function GET(request: NextRequest) {
@@ -100,6 +107,7 @@ export async function GET(request: NextRequest) {
 
   const sp            = new URL(request.url).searchParams;
   const preset        = sp.get("preset") ?? "today";
+  const compare       = sp.get("compare") === "month" ? "month" : "day";
   const from          = sp.get("from");
   const to            = sp.get("to");
   const siteId        = sp.get("siteId");
@@ -113,7 +121,8 @@ export async function GET(request: NextRequest) {
     supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
-  const { current, prev } = periodBounds(preset, from, to);
+  const current = currentBounds(preset, from, to);
+  const prev    = shiftBack(current, compare);
 
   const [currentData, prevData] = await Promise.all([
     queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),

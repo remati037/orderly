@@ -90,17 +90,19 @@ export function useKpiStats(forceSiteId?: string): {
   stats: KpiStats | null;
   isLoading: boolean;
   error: Error | null;
+  compareLabel: string;
 } {
   const sp = useSearchParams();
 
   const preset        = sp.get("kpi_preset") ?? "today";
+  const compare       = sp.get("kpi_compare") === "month" ? "month" : "day";
   const from          = sp.get("kpi_from");
   const to            = sp.get("kpi_to");
   const siteId        = forceSiteId ?? sp.get("kpi_site");
   const productsParam = sp.get("kpi_products");
   const products      = productsParam ? productsParam.split(",").filter(Boolean) : [];
 
-  const params = new URLSearchParams({ preset });
+  const params = new URLSearchParams({ preset, compare });
   if (from)            params.set("from",     from);
   if (to)              params.set("to",       to);
   if (siteId)          params.set("siteId",   siteId);
@@ -117,5 +119,6 @@ export function useKpiStats(forceSiteId?: string): {
     stats: data ? buildStats(data) : null,
     isLoading,
     error: error ?? null,
+    compareLabel: compare === "month" ? "prošli mesec" : "prošli dan",
   };
 }

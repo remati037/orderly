@@ -24,7 +24,7 @@ interface KPISectionProps {
 }
 
 export function KPISection({ siteId }: KPISectionProps) {
-  const { stats, isLoading } = useKpiStats(siteId);
+  const { stats, isLoading, compareLabel } = useKpiStats(siteId);
   const { data: spark } = useSparklines(siteId);
   const loading = isLoading || !stats;
 
@@ -41,6 +41,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           icon={TrendingUpIcon}
           isLoading={loading}
           sparkline={spark?.revenue}
+          compareLabel={compareLabel}
         />
         <KPICard
           label="Porudžbine"
@@ -49,6 +50,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           icon={ShoppingBagIcon}
           isLoading={loading}
           sparkline={spark?.orders}
+          compareLabel={compareLabel}
         />
         <KPICard
           label="AOV"
@@ -57,6 +59,7 @@ export function KPISection({ siteId }: KPISectionProps) {
           icon={ReceiptIcon}
           isLoading={loading}
           sparkline={spark?.aov}
+          compareLabel={compareLabel}
         />
         <KPICard
           label="Neto zarada"

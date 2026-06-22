@@ -14,14 +14,14 @@ function Skeleton({ className }: { className?: string }) {
 
 // ── trend text ─────────────────────────────────────────────────────────────────
 
-function TrendText({ value }: { value: number }) {
+function TrendText({ value, compareLabel }: { value: number; compareLabel: string }) {
   const positive = value >= 0;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12 }}>
       <span style={{ fontWeight: 600, color: positive ? "#16A34A" : "#DC2626" }}>
         {positive ? "↑" : "↓"} {Math.abs(value).toFixed(1)}%
       </span>
-      <span style={{ color: "#A1A1AA" }}>vs prošli mesec</span>
+      <span style={{ color: "#A1A1AA" }}>vs {compareLabel}</span>
     </span>
   );
 }
@@ -35,6 +35,7 @@ interface KPICardProps {
   icon: LucideIcon;
   isLoading: boolean;
   sparkline?: number[];
+  compareLabel?: string;
 }
 
 export function KPICard({
@@ -44,6 +45,7 @@ export function KPICard({
   icon: Icon,
   isLoading,
   sparkline,
+  compareLabel = "prošli dan",
 }: KPICardProps) {
   const sparkColor = trend == null || trend >= 0 ? "#16A34A" : "#DC2626";
   return (
@@ -127,7 +129,7 @@ export function KPICard({
           {isLoading ? (
             <Skeleton className="h-5 w-28 mt-2" />
           ) : (
-            trend !== null && <TrendText value={trend} />
+            trend !== null && <TrendText value={trend} compareLabel={compareLabel} />
           )}
         </div>
 
