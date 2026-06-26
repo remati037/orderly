@@ -45,7 +45,7 @@ export function KPICard({
   icon: Icon,
   isLoading,
   sparkline,
-  compareLabel = "prošli dan",
+  compareLabel = "juče",
 }: KPICardProps) {
   const sparkColor = trend == null || trend >= 0 ? "#16A34A" : "#DC2626";
   return (

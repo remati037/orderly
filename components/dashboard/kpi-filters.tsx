@@ -87,7 +87,7 @@ function CompareToggle({
   onChange: (v: string) => void;
 }) {
   const OPTIONS = [
-    { value: "day",   label: "vs prošli dan" },
+    { value: "day",   label: "vs juče" },
     { value: "month", label: "vs prošli mesec" },
   ];
   return (

@@ -119,6 +119,6 @@ export function useKpiStats(forceSiteId?: string): {
     stats: data ? buildStats(data) : null,
     isLoading,
     error: error ?? null,
-    compareLabel: compare === "month" ? "prošli mesec" : "prošli dan",
+    compareLabel: compare === "month" ? "prošli mesec" : "juče",
   };
 }
