@@ -3,8 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds, todayComparisonBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
-
-const EXCLUDED_STATUSES = ["cancelled", "refunded", "failed"];
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 interface PeriodResult {
   revenue: number;
@@ -51,7 +50,7 @@ async function queryOrders(
       .select("total, net_profit, currency, payment_method, order_items!inner(product_name)")
       .gte("created_at", from)
       .lt("created_at", to)
-      .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`)
+      .in("status", COUNTED_STATUSES)
       .in("order_items.product_name", products);
     if (siteId) q = q.eq("site_id", siteId);
     const { data, error } = (await q) as { data: OrderRow[] | null; error: unknown };
@@ -63,7 +62,7 @@ async function queryOrders(
     .select("total, net_profit, currency, payment_method")
     .gte("created_at", from)
     .lt("created_at", to)
-    .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
+    .in("status", COUNTED_STATUSES);
   if (siteId) q = q.eq("site_id", siteId);
   const { data, error } = await q;
   return error || !data ? EMPTY : sumOrders(data as OrderRow[], rates);

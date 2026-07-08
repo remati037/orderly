@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 // ── Holt's linear exponential smoothing ───────────────────────────────────────
@@ -60,7 +61,7 @@ export async function GET() {
     .from("orders")
     .select("total, currency, created_at")
     .gte("created_at", from.toISOString())
-    .not("status", "in", "(cancelled,refunded,failed)")
+    .in("status", COUNTED_STATUSES)
     .order("created_at");
 
   // Aggregate daily totals

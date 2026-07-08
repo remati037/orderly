@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
 import { monthBounds } from "@/lib/utils/tz";
@@ -22,7 +23,7 @@ export async function GET() {
       .select("total, net_profit, currency")
       .gte("created_at", start)
       .lt("created_at", end)
-      .not("status", "in", "(cancelled,refunded,failed)"),
+      .in("status", COUNTED_STATUSES),
     supabase
       .from("products")
       .select("name, cost_percent")

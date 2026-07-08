@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 const BATCH_SIZE = 100;
 
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     supabase
       .from("orders")
       .select("*", { count: "exact", head: true })
-      .not("status", "in", "(cancelled,refunded,failed)"),
+      .in("status", COUNTED_STATUSES),
   ]);
 
   const total = countRes.count ?? 0;
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   const ordersRes = await supabase
     .from("orders")
     .select("id, site_id, total, payment_method, woo_data")
-    .not("status", "in", "(cancelled,refunded,failed)")
+    .in("status", COUNTED_STATUSES)
     .order("created_at")
     .range(from, from + BATCH_SIZE - 1);
 

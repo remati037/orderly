@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { DEFAULT_RATES, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     .from("orders")
     .select("customer_email, site_id, sites(name, color_hex, platform)")
     .in("customer_email", emails)
-    .not("status", "in", "(cancelled,refunded,failed)");
+    .in("status", COUNTED_STATUSES);
 
   // Aggregate: email → siteId → { count, name, color, platform }
   type SiteInfo = { count: number; name: string; color: string; platform: string };

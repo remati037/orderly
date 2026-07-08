@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("order_items")
     .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency)")
-    .not("order.status", "in", "(cancelled,refunded)");
+    .in("order.status", COUNTED_STATUSES);
 
   if (siteId) query = query.eq("order.site_id", siteId);
   if (from) query = query.gte("order.created_at", from);

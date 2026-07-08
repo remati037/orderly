@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -34,7 +35,7 @@ export async function GET() {
       .from("orders")
       .select("customer_email, created_at")
       .gte("created_at", lookbackStart.toISOString())
-      .not("status", "in", "(cancelled,refunded,failed)")
+      .in("status", COUNTED_STATUSES)
       .not("customer_email", "is", null),
   ]);
 

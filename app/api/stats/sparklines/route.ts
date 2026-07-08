@@ -3,8 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds } from "@/lib/utils/tz";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
-const EXCLUDED_STATUSES = ["cancelled", "refunded", "failed"];
 const TZ = "Europe/Belgrade";
 
 type OrderRow = {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       .from("orders")
       .select("total, currency, created_at, order_items!inner(product_name)")
       .gte("created_at", from)
-      .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`)
+      .in("status", COUNTED_STATUSES)
       .in("order_items.product_name", products);
     if (siteId) q = q.eq("site_id", siteId);
     const { data } = (await q) as { data: OrderRow[] | null };
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       .from("orders")
       .select("total, currency, created_at")
       .gte("created_at", from)
-      .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
+      .in("status", COUNTED_STATUSES);
     if (siteId) q = q.eq("site_id", siteId);
     const { data } = await q;
     rows = (data as OrderRow[]) ?? [];
