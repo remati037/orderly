@@ -1,9 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+// /tv used to be public. It renders live revenue, and being public was the only
+// reason the `anon` role needed read access to `orders`. It now requires a login
+// like every other page; the office TV signs in once and the session persists.
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/tv(.*)",
   "/api/webhook/woo/(.*)",
   "/api/webhook/thinkific/(.*)",
 ]);
