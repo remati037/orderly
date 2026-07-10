@@ -31,11 +31,15 @@ export async function getMember(): Promise<Member | null> {
 
   const admin = adminClient();
 
-  const { data: linked } = await admin
+  const { data: linked, error: lookupError } = await admin
     .from("team_members")
     .select("*")
     .eq("auth_user_id", user.id)
     .maybeSingle();
+
+  // A failure here (missing column, bad service-role key) would otherwise fall
+  // through and look identical to "this user isn't on the team".
+  if (lookupError) console.error("[auth] team_members lookup failed:", lookupError.message);
 
   if (linked) return linked.is_active ? (linked as Member) : null;
 
@@ -68,7 +72,7 @@ export async function getMember(): Promise<Member | null> {
     .select("*", { count: "exact", head: true });
 
   if ((count ?? 0) === 0 && email) {
-    const { data: created } = await admin
+    const { data: created, error } = await admin
       .from("team_members")
       .insert({
         auth_user_id: user.id,
@@ -79,6 +83,10 @@ export async function getMember(): Promise<Member | null> {
       })
       .select()
       .single();
+
+    // A silent null here reads as "no access" with no clue why.
+    if (error) console.error("[auth] owner bootstrap failed:", error.message);
+
     return (created as Member) ?? null;
   }
 
