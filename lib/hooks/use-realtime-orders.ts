@@ -111,7 +111,6 @@ export function useRealtimeOrders({
 
   // Shared row mapper used by both the initial fetch and the visibility refetch
   function mapRows(data: Record<string, unknown>[]): RealtimeOrder[] {
-    console.log(data);
     return data.map((row) => {
       const sites = row.sites as { name: string; color_hex: string } | null;
       const items = row.order_items as Array<{ product_name: string }> | null;
@@ -159,7 +158,9 @@ export function useRealtimeOrders({
 
       const { data } = await supabaseBrowser
         .from("orders")
-        .select("*, sites(name, color_hex), order_items(product_name)")
+        // Explicit column list — never `*`. This runs with the public anon key,
+        // which must not read woo_data, net_profit, customer_email or item costs.
+        .select("id, site_id, woo_order_id, source, status, total, currency, customer_name, customer_city, product_type, payment_type, created_at, updated_at, sites(name, color_hex), order_items(product_name)")
         .gte("created_at", startOfTodayISO())
         .not("status", "in", "(cancelled,refunded,failed)")
         .order("created_at", { ascending: false })
@@ -335,7 +336,9 @@ export function useRealtimeOrders({
 
       const { data } = await supabaseBrowser
         .from("orders")
-        .select("*, sites(name, color_hex), order_items(product_name)")
+        // Explicit column list — never `*`. This runs with the public anon key,
+        // which must not read woo_data, net_profit, customer_email or item costs.
+        .select("id, site_id, woo_order_id, source, status, total, currency, customer_name, customer_city, product_type, payment_type, created_at, updated_at, sites(name, color_hex), order_items(product_name)")
         .gte("created_at", startOfTodayISO())
         .not("status", "in", "(cancelled,refunded,failed)")
         .order("created_at", { ascending: false })
