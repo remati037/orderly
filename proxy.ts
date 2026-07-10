@@ -1,20 +1,55 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-// /tv used to be public. It renders live revenue, and being public was the only
-// reason the `anon` role needed read access to `orders`. It now requires a login
-// like every other page; the office TV signs in once and the session persists.
-const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhook/woo/(.*)",
-  "/api/webhook/thinkific/(.*)",
-]);
+// Everything else requires a signed-in Supabase user.
+// /tv is intentionally NOT public — it renders live revenue.
+const PUBLIC_ROUTES = [
+  /^\/sign-in/,
+  /^\/api\/webhook\/woo\//,
+  /^\/api\/webhook\/thinkific\//,
+];
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+export default async function proxy(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Refreshes the session cookie as a side effect — must run on every request.
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isPublic = PUBLIC_ROUTES.some((r) => r.test(path));
+
+  if (!user && !isPublic) {
+    // API routes answer with 401 rather than an HTML redirect.
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/sign-in";
+    url.searchParams.set("redirect", path);
+    return NextResponse.redirect(url);
   }
-});
+
+  return response;
+}
 
 export const config = {
   matcher: [

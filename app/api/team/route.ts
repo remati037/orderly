@@ -9,14 +9,16 @@ export async function GET() {
   const supabase = adminClient();
   const { data, error } = await supabase
     .from("team_members")
-    .select("id, clerk_user_id, email, name, role, is_active, created_at")
+    .select("id, auth_user_id, email, name, role, is_active, created_at")
     .order("created_at");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
 }
 
-// Invite a member by email. They get linked to their Clerk account on first sign-in.
+// Register a member by email and role. The login itself is created separately in
+// Supabase Dashboard → Authentication → Users; the two are linked by email on
+// that person's first sign-in.
 export async function POST(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
       role: wanted,
       is_active: true,
     })
-    .select("id, clerk_user_id, email, name, role, is_active, created_at")
+    .select("id, auth_user_id, email, name, role, is_active, created_at")
     .single();
 
   if (error) {
@@ -71,7 +73,7 @@ export async function PATCH(request: NextRequest) {
     .from("team_members")
     .update(patch)
     .eq("id", id)
-    .select("id, clerk_user_id, email, name, role, is_active, created_at")
+    .select("id, auth_user_id, email, name, role, is_active, created_at")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

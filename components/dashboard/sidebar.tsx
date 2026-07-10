@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { Role } from "@/lib/auth/roles";
 
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboardIcon; roles: Role[] }
@@ -40,7 +40,7 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-export function Sidebar({ role }: { role: Role }) {
+export function Sidebar({ role, email }: { role: Role; email: string }) {
   const pathname = usePathname();
 
   // Only show groups that have at least one item this role can reach.
@@ -153,13 +153,24 @@ export function Sidebar({ role }: { role: Role }) {
         style={{
           padding: "12px 16px",
           borderTop: "1px solid #E4E4E7",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
         }}
       >
-        <UserButton />
-        <span style={{ fontSize: 12, color: "#71717A" }}>Account</span>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#52525B",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={email}
+        >
+          {email}
+        </div>
+        <div style={{ fontSize: 11, color: "#A1A1AA", marginBottom: 6 }}>
+          {role === "owner" ? "Vlasnik" : "Agent"}
+        </div>
+        <SignOutButton />
       </div>
     </aside>
   );

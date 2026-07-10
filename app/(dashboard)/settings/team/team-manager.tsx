@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 
 interface TeamMember {
   id: string;
-  clerk_user_id: string | null;
+  auth_user_id: string | null;
   email: string;
   name: string | null;
   role: "owner" | "agent";
@@ -77,7 +77,10 @@ export default function TeamManager() {
       const json = await res.json();
       if (!res.ok) { setMsg(`Greška: ${json.error}`); return; }
       setForm({ email: "", name: "", role: "agent" });
-      setMsg("Član dodat. Pristup dobija čim se prvi put uloguje tim emailom.");
+      setMsg(
+        "Rola dodeljena. Sada napravi nalog za taj email u Supabase → Authentication → Users; " +
+        "povezaće se automatski pri prvom loginu."
+      );
       await load();
     } finally { setBusy(false); }
   }
@@ -109,6 +112,7 @@ export default function TeamManager() {
       </h1>
       <p style={{ fontSize: 13, color: "#71717A", marginBottom: 20 }}>
         Vlasnik vidi sve. Agent vidi samo stranicu Naplata — bez prihoda, profita i podešavanja.
+        Nalog za login se pravi u Supabase → Authentication → Users, a ovde mu dodeljuješ rolu.
       </p>
 
       {msg && (
@@ -167,7 +171,7 @@ export default function TeamManager() {
               <div style={{ fontSize: 12, color: "#A1A1AA" }}>
                 {m.email}
                 {" · "}
-                {m.clerk_user_id ? "aktivan nalog" : "čeka prvi login"}
+                {m.auth_user_id ? "aktivan nalog" : "čeka prvi login"}
               </div>
             </div>
 

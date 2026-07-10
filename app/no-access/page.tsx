@@ -1,4 +1,4 @@
-import { UserButton } from "@clerk/nextjs";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 export default function NoAccessPage() {
   return (
@@ -30,7 +30,7 @@ export default function NoAccessPage() {
           naloga da ti dodeli pristup.
         </p>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <UserButton />
+          <SignOutButton />
         </div>
       </div>
     </div>

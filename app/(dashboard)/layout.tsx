@@ -19,7 +19,7 @@ export default async function DashboardLayout({
       {/* Single always-on Realtime channel + KPI/table refresh trigger */}
       <RealtimeOrdersProvider>
         <div style={{ display: "flex", minHeight: "100vh" }}>
-          <Sidebar role={member.role} />
+          <Sidebar role={member.role} email={member.email} />
 
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
             <DashboardHeader />

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { KPISection } from "@/components/dashboard/kpi-section";
 import { DailyGoalTracker } from "@/components/dashboard/daily-goal-tracker";
@@ -69,10 +68,8 @@ interface PageProps {
   params: Promise<{ siteId: string }>;
 }
 
+// Access is enforced by app/(dashboard)/dashboard/layout.tsx (owner only).
 export default async function SiteDashboardPage({ params }: PageProps) {
-  const { userId } = await auth();
-  if (!userId) return notFound();
-
   const { siteId } = await params;
   const supabase = adminClient();
 

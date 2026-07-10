@@ -1,5 +1,4 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
@@ -20,12 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`h-full antialiased`}>
-        <body className={`${geist.className} font-sans min-h-full flex flex-col`}>
-          <TooltipProvider>{children}</TooltipProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`h-full antialiased`}>
+      <body className={`${geist.className} font-sans min-h-full flex flex-col`}>
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
+    </html>
   );
 }

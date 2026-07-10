@@ -1,12 +1,12 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 
 export type Role = "owner" | "agent";
 
 export interface Member {
   id: string;
-  clerk_user_id: string | null;
+  auth_user_id: string | null;
   email: string;
   name: string | null;
   role: Role;
@@ -14,46 +14,46 @@ export interface Member {
 }
 
 /**
- * Resolves the current Clerk user to a team member.
+ * Resolves the signed-in Supabase user to a team member.
  *
  * Resolution order:
- *  1. Matched by clerk_user_id (already linked).
- *  2. Matched by email (invited by the owner, first sign-in) → links clerk_user_id.
- *  3. Table is empty → bootstrap the very first user as owner, so the app owner
- *     cannot lock themselves out before any member exists.
+ *  1. Matched by auth_user_id (already linked).
+ *  2. Matched by email (row created ahead of time) → links auth_user_id.
+ *  3. Table is empty → bootstrap the first user as owner, so whoever sets the
+ *     app up cannot lock themselves out.
  *
  * Returns null for signed-out users, unknown users, and deactivated members.
  */
 export async function getMember(): Promise<Member | null> {
-  const { userId } = await auth();
-  if (!userId) return null;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const supabase = adminClient();
+  const admin = adminClient();
 
-  const { data: linked } = await supabase
+  const { data: linked } = await admin
     .from("team_members")
     .select("*")
-    .eq("clerk_user_id", userId)
+    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (linked) return linked.is_active ? (linked as Member) : null;
 
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress?.toLowerCase() ?? null;
+  const email = user.email?.toLowerCase() ?? null;
 
-  // Invited by email but not yet linked to a Clerk account.
+  // Row created ahead of time by the owner, not yet linked to an auth user.
   if (email) {
-    const { data: invited } = await supabase
+    const { data: invited } = await admin
       .from("team_members")
       .select("*")
       .ilike("email", email)
-      .is("clerk_user_id", null)
+      .is("auth_user_id", null)
       .maybeSingle();
 
     if (invited) {
-      const { data: updated } = await supabase
+      const { data: updated } = await admin
         .from("team_members")
-        .update({ clerk_user_id: userId, name: user?.fullName ?? invited.name })
+        .update({ auth_user_id: user.id })
         .eq("id", invited.id)
         .select()
         .single();
@@ -63,17 +63,17 @@ export async function getMember(): Promise<Member | null> {
   }
 
   // Bootstrap: no members exist yet → first signed-in user becomes the owner.
-  const { count } = await supabase
+  const { count } = await admin
     .from("team_members")
     .select("*", { count: "exact", head: true });
 
   if ((count ?? 0) === 0 && email) {
-    const { data: created } = await supabase
+    const { data: created } = await admin
       .from("team_members")
       .insert({
-        clerk_user_id: userId,
+        auth_user_id: user.id,
         email,
-        name: user?.fullName ?? null,
+        name: (user.user_metadata?.full_name as string | undefined) ?? null,
         role: "owner",
         is_active: true,
       })
@@ -88,7 +88,7 @@ export async function getMember(): Promise<Member | null> {
 /**
  * API-route guard. Usage:
  *
- *   const { error, member } = await requireRole(["owner"]);
+ *   const { error } = await requireRole(["owner"]);
  *   if (error) return error;
  */
 export async function requireRole(
