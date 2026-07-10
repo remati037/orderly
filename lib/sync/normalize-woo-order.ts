@@ -23,6 +23,7 @@ export interface WooOrder {
     last_name: string;
     email: string;
     city: string;
+    phone?: string;
   };
   line_items: WooLineItem[];
 }
@@ -39,6 +40,7 @@ export interface NormalizedWooOrder {
     customer_name: string;
     customer_email: string;
     customer_city: string;
+    customer_phone: string | null;
     product_type: "digital" | "physical";
     payment_type: "one-time";
     payment_method: string | null;
@@ -136,6 +138,7 @@ export async function normalizeWooOrder(
         `${order.billing.first_name} ${order.billing.last_name}`.trim(),
       customer_email: order.billing.email,
       customer_city: order.billing.city,
+      customer_phone: order.billing.phone || null,
       product_type: detectProductType(lineItems),
       payment_type: "one-time",
       payment_method: order.payment_method ?? null,
