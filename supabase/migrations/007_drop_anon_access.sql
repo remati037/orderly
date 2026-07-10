@@ -1,13 +1,10 @@
 -- =============================================================
 -- Orderly — SECURITY: remove all `anon` read access
 --
--- ⚠️  RUN THIS LAST. Only after:
---       1. Clerk is registered in Supabase → Authentication → Third-Party Auth
---       2. Clerk session token carries the claim  role: "authenticated"
---       3. The deployed app reads data successfully (live feed + /tv work)
---
---     Until then the browser still authenticates as `anon`, and running this
---     migration will make the dashboard and /tv show no data.
+-- ⚠️  RUN THIS ONLY AFTER you can sign in with Supabase Auth and the live feed
+--     shows orders. That proves the browser now authenticates as the
+--     `authenticated` role. Until then it still falls back to `anon`, and this
+--     migration would leave the dashboard and /tv with no data.
 --
 -- Why: NEXT_PUBLIC_SUPABASE_ANON_KEY ships in the JS bundle, so `anon` means
 -- "anyone on the internet". These policies were exposing every order — totals,
