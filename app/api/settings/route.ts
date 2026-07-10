@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const key = new URL(request.url).searchParams.get("key");
   const supabase = adminClient();
@@ -24,9 +23,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const { key, value } = await request.json();
   if (!key) return NextResponse.json({ error: "key is required" }, { status: 400 });

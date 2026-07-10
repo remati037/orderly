@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
@@ -7,9 +7,8 @@ import { monthBounds } from "@/lib/utils/tz";
 
 // Mapped ad spend per site / product over a period (defaults to current month).
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const sp     = new URL(request.url).searchParams;
   const siteId = sp.get("siteId");

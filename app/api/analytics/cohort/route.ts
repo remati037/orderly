@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
@@ -13,9 +13,8 @@ function addMonths(date: Date, n: number): Date {
 }
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const supabase = adminClient();
 

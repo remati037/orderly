@@ -2,43 +2,51 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import type { Role } from "@/lib/auth/roles";
 
-interface NavItem { href: string; label: string; icon: typeof LayoutDashboardIcon }
+interface NavItem { href: string; label: string; icon: typeof LayoutDashboardIcon; roles: Role[] }
 interface NavGroup { title: string; items: NavItem[] }
 
 const GROUPS: NavGroup[] = [
   {
     title: "Pregled",
     items: [
-      { href: "/dashboard",     label: "Dashboard", icon: LayoutDashboardIcon },
-      { href: "/analytics",     label: "Analitika", icon: BarChart2Icon },
+      { href: "/dashboard",     label: "Dashboard", icon: LayoutDashboardIcon, roles: ["owner"] },
+      { href: "/analytics",     label: "Analitika", icon: BarChart2Icon,       roles: ["owner"] },
     ],
   },
   {
     title: "Prodaja",
     items: [
-      { href: "/customers",     label: "Kupci",     icon: UsersIcon },
-      { href: "/subscriptions", label: "Pretplate", icon: CreditCardIcon },
-      { href: "/profit",        label: "Profit",    icon: CircleDollarSignIcon },
+      { href: "/naplata",       label: "Naplata",   icon: PhoneCallIcon,        roles: ["owner", "agent"] },
+      { href: "/customers",     label: "Kupci",     icon: UsersIcon,            roles: ["owner"] },
+      { href: "/subscriptions", label: "Pretplate", icon: CreditCardIcon,       roles: ["owner"] },
+      { href: "/profit",        label: "Profit",    icon: CircleDollarSignIcon, roles: ["owner"] },
     ],
   },
   {
     title: "Podešavanja",
     items: [
-      { href: "/settings/sites",   label: "Sajtovi",      icon: SettingsIcon },
-      { href: "/settings/ads",     label: "Facebook Ads", icon: MegaphoneIcon },
-      { href: "/settings/general", label: "Opšte",        icon: SlidersHorizontalIcon },
-      { href: "/settings/sound",   label: "Zvuk",         icon: BellIcon },
-      { href: "/tv",               label: "TV prikaz",    icon: MonitorIcon },
+      { href: "/settings/sites",   label: "Sajtovi",      icon: SettingsIcon,          roles: ["owner"] },
+      { href: "/settings/ads",     label: "Facebook Ads", icon: MegaphoneIcon,         roles: ["owner"] },
+      { href: "/settings/team",    label: "Tim",          icon: UserCogIcon,           roles: ["owner"] },
+      { href: "/settings/general", label: "Opšte",        icon: SlidersHorizontalIcon, roles: ["owner"] },
+      { href: "/settings/sound",   label: "Zvuk",         icon: BellIcon,              roles: ["owner"] },
+      { href: "/tv",               label: "TV prikaz",    icon: MonitorIcon,           roles: ["owner"] },
     ],
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+
+  // Only show groups that have at least one item this role can reach.
+  const visibleGroups = GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(role)) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <aside
@@ -95,7 +103,7 @@ export function Sidebar() {
 
       {/* nav */}
       <nav style={{ flex: 1, padding: "12px 10px 0", overflowY: "auto" }}>
-        {GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.title} style={{ marginBottom: 14 }}>
             <div
               style={{

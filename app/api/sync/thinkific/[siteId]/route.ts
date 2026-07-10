@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { syncThinkificSite } from "@/lib/sync/sync-thinkific-site";
 
@@ -7,10 +7,8 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const { siteId } = await params;
   const supabase = adminClient();

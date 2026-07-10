@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 
 // GET: campaigns (with current mapping + last-30d spend) plus the sites and
 // products available as mapping targets.
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const supabase = adminClient();
 
@@ -61,9 +60,8 @@ export async function GET() {
 
 // POST: save the mapping for one campaign.
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const { campaign_id, site_id, product_name } = await request.json();
   if (!campaign_id)

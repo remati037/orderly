@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 const BATCH_SIZE = 100;
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const body = await request.json().catch(() => ({}));
   const from = Math.max(0, Number(body.from ?? 0));

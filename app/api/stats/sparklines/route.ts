@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds } from "@/lib/utils/tz";
@@ -19,9 +19,8 @@ function belgradeDay(iso: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const sp            = new URL(request.url).searchParams;
   const days          = Math.min(30, Math.max(2, Number(sp.get("days") ?? 7)));

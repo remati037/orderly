@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { DEFAULT_RATES, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
   const sort = searchParams.get("sort") ?? "total_spent";

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 
 const ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/wave", "audio/x-wav", "audio/mp3"];
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const formData = await request.formData().catch(() => null);
   if (!formData) return NextResponse.json({ error: "Invalid form data" }, { status: 400 });

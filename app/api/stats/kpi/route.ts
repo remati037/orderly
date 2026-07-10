@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds, todayComparisonBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
@@ -117,9 +117,8 @@ function periodBounds(
 }
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const sp            = new URL(request.url).searchParams;
   const preset        = sp.get("preset") ?? "today";

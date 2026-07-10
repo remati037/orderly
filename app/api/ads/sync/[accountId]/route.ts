@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/roles";
 import { syncMetaAccount } from "@/lib/sync/sync-meta-account";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ accountId: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { error: authError } = await requireRole(["owner"]);
+  if (authError) return authError;
 
   const { accountId } = await params;
   const body = await request.json().catch(() => ({}));
