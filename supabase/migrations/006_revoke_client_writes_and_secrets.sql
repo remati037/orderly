@@ -16,6 +16,10 @@
 --    would, and an `agent` could read store credentials and the Facebook
 --    access token. Lock those columns now.
 --
+-- Safe to run more than once. The ad_accounts block is skipped when migration
+-- 003 has not been applied — the Supabase SQL Editor runs the whole script in
+-- one transaction, so a missing table there would silently roll back everything.
+--
 -- Run in: Supabase Dashboard → SQL Editor → Run
 -- =============================================================
 
@@ -34,11 +38,7 @@ REVOKE SELECT ON public.sites FROM authenticated;
 GRANT  SELECT (id, name, color_hex, is_active, platform, created_at)
   ON public.sites TO authenticated;
 
--- ── 2b. ad_accounts: the Meta access_token must never leave the server ───────
-DROP POLICY IF EXISTS "authenticated_read_all" ON public.ad_accounts;
-REVOKE SELECT ON public.ad_accounts FROM anon, authenticated;
-
--- ── 2c. orders / order_items: mirror the anon column limits for authenticated ─
+-- ── 2b. orders / order_items: mirror the anon column limits ──────────────────
 REVOKE SELECT ON public.orders FROM authenticated;
 GRANT  SELECT (id, site_id, woo_order_id, source, status, total, currency,
                customer_name, customer_city, product_type, payment_type,
@@ -48,3 +48,13 @@ GRANT  SELECT (id, site_id, woo_order_id, source, status, total, currency,
 REVOKE SELECT ON public.order_items FROM authenticated;
 GRANT  SELECT (id, order_id, product_name, product_type, quantity, created_at)
   ON public.order_items TO authenticated;
+
+-- ── 2c. ad_accounts: the Meta access_token must never leave the server ───────
+--     Only runs if migration 003 has been applied.
+DO $$
+BEGIN
+  IF to_regclass('public.ad_accounts') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "authenticated_read_all" ON public.ad_accounts';
+    EXECUTE 'REVOKE SELECT ON public.ad_accounts FROM anon, authenticated';
+  END IF;
+END $$;
