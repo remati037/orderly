@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   /^\/sign-in/,
   /^\/api\/webhook\/woo\//,
   /^\/api\/webhook\/thinkific\//,
+  /^\/api\/webhook\/stripe\//,
 ];
 
 export default async function proxy(request: NextRequest) {

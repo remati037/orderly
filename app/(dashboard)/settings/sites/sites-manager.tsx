@@ -13,6 +13,7 @@ import {
   XCircleIcon,
   BuildingIcon,
   AlertTriangleIcon,
+  CreditCardIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ import { cn } from "@/lib/utils";
 interface Site {
   id: string;
   name: string;
-  platform: "woocommerce" | "thinkific";
+  platform: "woocommerce" | "thinkific" | "stripe";
   url: string | null;
   subdomain: string | null;
   consumer_key: string | null;
@@ -68,7 +69,7 @@ interface Site {
 
 interface SiteForm {
   name: string;
-  platform: "woocommerce" | "thinkific";
+  platform: "woocommerce" | "thinkific" | "stripe";
   color_hex: string;
   project_type: "standard" | "subscription" | "digital";
   is_active: boolean;
@@ -149,11 +150,15 @@ function PlatformCard({
   selected,
   onClick,
 }: {
-  platform: "woocommerce" | "thinkific";
+  platform: "woocommerce" | "thinkific" | "stripe";
   selected: boolean;
   onClick: () => void;
 }) {
-  const isWoo = platform === "woocommerce";
+  const meta = {
+    woocommerce: { icon: <ShoppingCartIcon className="size-6" />, label: "WooCommerce" },
+    thinkific:   { icon: <GraduationCapIcon className="size-6" />, label: "Thinkific" },
+    stripe:      { icon: <CreditCardIcon className="size-6" />,    label: "Stripe" },
+  }[platform];
   return (
     <button
       type="button"
@@ -165,12 +170,8 @@ function PlatformCard({
           : "border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
       )}
     >
-      {isWoo ? (
-        <ShoppingCartIcon className="size-6" />
-      ) : (
-        <GraduationCapIcon className="size-6" />
-      )}
-      {isWoo ? "WooCommerce" : "Thinkific"}
+      {meta.icon}
+      {meta.label}
     </button>
   );
 }
@@ -316,10 +317,15 @@ export default function SitesManager() {
         project_type: form.project_type,
         is_active: form.is_active,
         url: form.platform === "woocommerce" ? form.url || null : null,
+        // Stripe reuses these columns: consumer_key = secret key, consumer_secret = webhook secret.
         consumer_key:
-          form.platform === "woocommerce" ? form.consumer_key || null : null,
+          form.platform === "woocommerce" || form.platform === "stripe"
+            ? form.consumer_key || null
+            : null,
         consumer_secret:
-          form.platform === "woocommerce" ? form.consumer_secret || null : null,
+          form.platform === "woocommerce" || form.platform === "stripe"
+            ? form.consumer_secret || null
+            : null,
         subdomain:
           form.platform === "thinkific" ? form.subdomain || null : null,
         thinkific_api_key:
@@ -352,13 +358,17 @@ export default function SitesManager() {
         await loadSites();
         setDialogOpen(false);
 
-        // Fire initial sync in background
-        const syncPath =
-          form.platform === "woocommerce"
-            ? `/api/sync/woo/${newSite.id}`
-            : `/api/sync/thinkific/${newSite.id}`;
-        fetch(syncPath, { method: "POST" });
-        showToast("Sync started, this may take a few minutes", "success");
+        // Stripe has no historical sync — orders arrive via webhook.
+        if (form.platform === "stripe") {
+          showToast("Sajt dodat. Podesi Stripe webhook (vidi uputstvo).", "success");
+        } else {
+          const syncPath =
+            form.platform === "woocommerce"
+              ? `/api/sync/woo/${newSite.id}`
+              : `/api/sync/thinkific/${newSite.id}`;
+          fetch(syncPath, { method: "POST" });
+          showToast("Sync started, this may take a few minutes", "success");
+        }
       }
     } finally {
       setSaving(false);
@@ -492,7 +502,9 @@ export default function SitesManager() {
                   <Badge variant="secondary">
                     {site.platform === "woocommerce"
                       ? "WooCommerce"
-                      : "Thinkific"}
+                      : site.platform === "stripe"
+                        ? "Stripe"
+                        : "Thinkific"}
                   </Badge>
                 </TableCell>
 
@@ -523,20 +535,23 @@ export default function SitesManager() {
 
                 <TableCell>
                   <div className="flex items-center gap-1 justify-end">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={syncing[site.id]}
-                      onClick={() => openSyncDialog(site)}
-                    >
-                      <RefreshCwIcon
-                        className={cn(
-                          "size-3.5",
-                          syncing[site.id] && "animate-spin"
-                        )}
-                      />
-                      <span className="sr-only">Sync</span>
-                    </Button>
+                    {/* Stripe is webhook-only — no historical sync. */}
+                    {site.platform !== "stripe" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={syncing[site.id]}
+                        onClick={() => openSyncDialog(site)}
+                      >
+                        <RefreshCwIcon
+                          className={cn(
+                            "size-3.5",
+                            syncing[site.id] && "animate-spin"
+                          )}
+                        />
+                        <span className="sr-only">Sync</span>
+                      </Button>
+                    )}
 
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -644,7 +659,7 @@ export default function SitesManager() {
             {/* Platform selector — only shown when adding */}
             {!editingSite && (
               <FormField label="Platform">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <PlatformCard
                     platform="woocommerce"
                     selected={form.platform === "woocommerce"}
@@ -654,6 +669,11 @@ export default function SitesManager() {
                     platform="thinkific"
                     selected={form.platform === "thinkific"}
                     onClick={() => setField("platform", "thinkific")}
+                  />
+                  <PlatformCard
+                    platform="stripe"
+                    selected={form.platform === "stripe"}
+                    onClick={() => setField("platform", "stripe")}
                   />
                 </div>
               </FormField>
@@ -777,6 +797,62 @@ export default function SitesManager() {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Stripe fields */}
+            {form.platform === "stripe" && (
+              <div className="border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Stripe
+                </p>
+                <div className="flex flex-col gap-3">
+                  <FormField label="Secret Key" hint="Stripe → Developers → API keys">
+                    <div className="relative">
+                      <Input
+                        type={showSecret ? "text" : "password"}
+                        placeholder="sk_live_..."
+                        value={form.consumer_key}
+                        onChange={(e) => setField("consumer_key", e.target.value)}
+                        className="pr-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecret((s) => !s)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showSecret ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+                      </button>
+                    </div>
+                  </FormField>
+
+                  <FormField
+                    label="Webhook Signing Secret"
+                    hint="Dobijaš ga kad napraviš webhook u Stripe-u (whsec_...)"
+                  >
+                    <Input
+                      type={showSecret ? "text" : "password"}
+                      placeholder="whsec_..."
+                      value={form.consumer_secret}
+                      onChange={(e) => setField("consumer_secret", e.target.value)}
+                    />
+                  </FormField>
+
+                  {editingSite ? (
+                    <FormField label="Webhook URL" hint="Nalepi ovo u Stripe → Developers → Webhooks">
+                      <Input
+                        readOnly
+                        onFocus={(e) => e.currentTarget.select()}
+                        value={`${typeof window !== "undefined" ? window.location.origin : ""}/api/webhook/stripe/${editingSite.id}`}
+                        className="font-mono text-xs"
+                      />
+                    </FormField>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Webhook URL dobijaš posle čuvanja — otvori sajt ponovo za izmenu.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Thinkific fields */}

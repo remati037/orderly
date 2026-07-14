@@ -17,6 +17,7 @@ type OrderRow = {
   net_profit: number | null;
   currency: string | null;
   payment_method: string | null;
+  processor_fee: number | null;
 };
 
 function sumOrders(rows: OrderRow[], rates: Record<string, number>): PeriodResult {
@@ -27,7 +28,9 @@ function sumOrders(rows: OrderRow[], rates: Record<string, number>): PeriodResul
     const isStripe = /stripe/i.test(o.payment_method ?? "");
     revenue   += toBase(total, currency, rates);
     netProfit += toBase(o.net_profit ?? 0, currency, rates);
-    if (isStripe) stripeFees += toBase(total * 0.05, currency, rates);
+    // Use the real Stripe fee when we captured it; otherwise fall back to 5%.
+    if (o.processor_fee != null) stripeFees += toBase(o.processor_fee, currency, rates);
+    else if (isStripe)          stripeFees += toBase(total * 0.05, currency, rates);
   }
   return { revenue, netProfit, orders: rows.length, stripeFees };
 }
@@ -47,7 +50,7 @@ async function queryOrders(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase as any)
       .from("orders")
-      .select("total, net_profit, currency, payment_method, order_items!inner(product_name)")
+      .select("total, net_profit, currency, payment_method, processor_fee, order_items!inner(product_name)")
       .gte("created_at", from)
       .lt("created_at", to)
       .in("status", COUNTED_STATUSES)
@@ -59,7 +62,7 @@ async function queryOrders(
 
   let q = supabase
     .from("orders")
-    .select("total, net_profit, currency, payment_method")
+    .select("total, net_profit, currency, payment_method, processor_fee")
     .gte("created_at", from)
     .lt("created_at", to)
     .in("status", COUNTED_STATUSES);
