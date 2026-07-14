@@ -80,9 +80,9 @@ export async function POST(
   const ev = event as any;
   const obj = ev.data?.object ?? {};
 
-  // Only pull the fee for successful payments.
+  // Only pull the fee for a successful charge.
   const fee =
-    ev.type === "charge.succeeded" || ev.type === "invoice.paid"
+    ev.type === "charge.succeeded"
       ? await fetchProcessorFee(obj, site.consumer_key ?? "")
       : null;
 

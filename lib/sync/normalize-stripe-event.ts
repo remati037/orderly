@@ -40,14 +40,18 @@ export function stripeAmount(amount: number, currency: string): number {
 }
 
 // event.type → our order status. Returns null for events we ignore.
+//
+// We key everything on the *charge*, never the invoice. A subscription renewal
+// fires both `invoice.paid` and `charge.succeeded` for the SAME payment, so
+// handling both would create duplicate orders. Every real payment (one-time or
+// subscription, success or fail) produces exactly one charge, so charge events
+// alone cover everything without duplicates. invoice.* / payment_intent.* are
+// therefore ignored.
 export function mapStripeStatus(eventType: string): string | null {
   switch (eventType) {
     case "charge.succeeded":
-    case "invoice.paid":
       return "completed";
     case "charge.failed":
-    case "payment_intent.payment_failed":
-    case "invoice.payment_failed":
       return "failed";
     case "checkout.session.expired":
       return "checkout-draft";
