@@ -12,6 +12,13 @@
 -- Run in: Supabase Dashboard → SQL Editor → Run
 -- =============================================================
 
+-- ── Convert any legacy 'circle' rows to 'stripe' ─────────────────────────────
+-- A Circle community charges through the owner's Stripe account, and Circle's
+-- own API needs a pricier plan, so we ingest its orders via the Stripe webhook.
+-- The integration mechanism is Stripe; the platform value must reflect that.
+UPDATE public.sites  SET platform = 'stripe' WHERE platform = 'circle';
+UPDATE public.orders SET source   = 'stripe' WHERE source   = 'circle';
+
 -- ── Allow the new platform / source values ───────────────────────────────────
 ALTER TABLE public.sites  DROP CONSTRAINT IF EXISTS sites_platform_check;
 ALTER TABLE public.sites  ADD  CONSTRAINT sites_platform_check
