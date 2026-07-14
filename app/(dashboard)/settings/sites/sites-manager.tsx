@@ -228,6 +228,7 @@ export default function SitesManager() {
   const [form, setForm] = useState<SiteForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
+  const [backfilling, setBackfilling] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [toast, setToast] = useState<{
@@ -384,6 +385,37 @@ export default function SitesManager() {
       showToast("Site deleted", "success");
     } else {
       showToast("Failed to delete site", "error");
+    }
+  }
+
+  // Pages through Stripe's charge history, importing successful ones. Loops on
+  // the server's cursor until Stripe reports no more pages.
+  async function runStripeBackfill(site: Site) {
+    if (!confirm(`Uvezi istoriju uspešnih Stripe transakcija za "${site.name}"?`)) return;
+    setBackfilling(site.id);
+    let cursor: string | null = null;
+    let total = 0;
+    try {
+      for (let guard = 0; guard < 1000; guard++) {
+        const res: Response = await fetch(`/api/sites/${site.id}/stripe-backfill`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ starting_after: cursor }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          showToast(`Uvoz stao: ${json.error}`, "error");
+          return;
+        }
+        total += json.imported;
+        showToast(`Uvezeno ${total}…`, "success");
+        if (json.done || !json.next_cursor) break;
+        cursor = json.next_cursor;
+      }
+      await loadSites();
+      showToast(`Gotovo — uvezeno ${total} transakcija`, "success");
+    } finally {
+      setBackfilling(null);
     }
   }
 
@@ -564,6 +596,14 @@ export default function SitesManager() {
                         <DropdownMenuItem onClick={() => openEditDialog(site)}>
                           Edit
                         </DropdownMenuItem>
+                        {site.platform === "stripe" && (
+                          <DropdownMenuItem
+                            disabled={backfilling === site.id}
+                            onClick={() => runStripeBackfill(site)}
+                          >
+                            {backfilling === site.id ? "Uvoz u toku…" : "Uvezi iz Stripe-a"}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           variant="destructive"
                           onClick={() => handleDelete(site.id)}

@@ -81,7 +81,9 @@ export function normalizeStripeEvent(
     obj.customer_details ??
     { name: obj.customer_name, email: obj.customer_email };
 
-  const isSubscription = event.type.startsWith("invoice.") || !!obj.subscription;
+  // A charge tied to an invoice is a subscription payment.
+  const isSubscription =
+    event.type.startsWith("invoice.") || !!obj.subscription || !!obj.invoice;
 
   // Real fee reduces profit; fall back to the flat 5% card estimate.
   const feeForProfit = processorFee ?? total * 0.05;
