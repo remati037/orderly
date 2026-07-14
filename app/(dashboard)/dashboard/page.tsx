@@ -1,10 +1,7 @@
 import { Suspense } from "react";
 import { KPISection } from "@/components/dashboard/kpi-section";
 import { LiveFeed } from "@/components/dashboard/live-feed";
-import { FilterBar } from "@/components/dashboard/filter-bar";
-import { OrdersTable } from "@/components/dashboard/orders-table";
 import { DailyGoalTracker } from "@/components/dashboard/daily-goal-tracker";
-import { DailyRevenueChart } from "@/components/dashboard/charts/daily-revenue-chart";
 
 // ── date helpers ───────────────────────────────────────────────────────────────
 
@@ -19,11 +16,7 @@ function todaySr(): string {
 
 // ── page ───────────────────────────────────────────────────────────────────────
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-export default async function DashboardPage({ searchParams }: PageProps) {
+export default function DashboardPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
@@ -40,36 +33,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       {/* Daily goal */}
       <DailyGoalTracker />
 
-      {/* KPIs */}
+      {/* KPIs (respect the filter) */}
       <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <KPISection />
       </Suspense>
 
-      {/* Live feed + revenue chart (2:1 split) */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "2fr 1fr",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      {/* Live feed — full width, follows the site/product filter */}
+      <Suspense fallback={<div style={{ height: 200, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <LiveFeed />
-        <DailyRevenueChart />
-      </div>
-
-      {/* Filter bar (sticky) + Orders table */}
-      <Suspense fallback={<div style={{ height: 48, background: "#F4F4F5", borderRadius: 10, animation: "pulse 2s infinite" }} />}>
-        <FilterBar />
-      </Suspense>
-
-      <Suspense fallback={
-        <div style={{
-          background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12,
-          padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13,
-        }}>
-          Učitavanje porudžbina…
-        </div>
-      }>
-        <OrdersTable searchParams={searchParams} />
       </Suspense>
 
     </div>

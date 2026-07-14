@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { Role } from "@/lib/auth/roles";
@@ -14,8 +14,9 @@ const GROUPS: NavGroup[] = [
   {
     title: "Pregled",
     items: [
-      { href: "/dashboard",     label: "Dashboard", icon: LayoutDashboardIcon, roles: ["owner"] },
-      { href: "/analytics",     label: "Analitika", icon: BarChart2Icon,       roles: ["owner"] },
+      { href: "/dashboard",     label: "Dashboard",  icon: LayoutDashboardIcon, roles: ["owner"] },
+      { href: "/porudzbine",    label: "Porudžbine", icon: ShoppingBagIcon,     roles: ["owner"] },
+      { href: "/analytics",     label: "Analitika",  icon: BarChart2Icon,       roles: ["owner"] },
     ],
   },
   {

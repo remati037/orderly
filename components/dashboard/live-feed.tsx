@@ -5,6 +5,7 @@ import type { RealtimeOrder } from "@/lib/hooks/use-realtime-orders";
 import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
 import { RadioIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 // ── animation keyframes injected once ─────────────────────────────────────────
 
@@ -220,6 +221,18 @@ export function LiveFeed() {
   const { recentOrders, newOrderCount, clearNewCount, subscribeToNewOrders } =
     useRealtimeOrdersContext();
 
+  // Follow the dashboard filter for the dimensions that make sense on a live
+  // feed: site and product. Date presets don't apply — the feed is "now".
+  const sp = useSearchParams();
+  const siteId = sp.get("kpi_site");
+  const products = (sp.get("kpi_products") ?? "").split(",").filter(Boolean);
+
+  const filtered = recentOrders.filter((o) => {
+    if (siteId && o.site_id !== siteId) return false;
+    if (products.length && !products.includes(o.product_name ?? "")) return false;
+    return true;
+  });
+
   // Register animation callback with the layout-level channel — no subscription of our own
   useEffect(() => {
     return subscribeToNewOrders((order: RealtimeOrder) => {
@@ -234,7 +247,7 @@ export function LiveFeed() {
     });
   }, [subscribeToNewOrders]);
 
-  const visible = recentOrders.slice(0, MAX_VISIBLE);
+  const visible = filtered.slice(0, MAX_VISIBLE);
 
   return (
     <>
