@@ -6,6 +6,21 @@ import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
 import { RadioIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
+
+const PRESET_LABELS: Record<string, string> = {
+  yesterday:  "juče",
+  this_week:  "ove nedelje",
+  this_month: "ovog meseca",
+  this_year:  "ove godine",
+  custom:     "za izabrani period",
+};
+
+async function feedFetcher(url: string): Promise<{ orders: RealtimeOrder[] }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("feed fetch failed");
+  return res.json();
+}
 
 // ── animation keyframes injected once ─────────────────────────────────────────
 
@@ -221,17 +236,28 @@ export function LiveFeed() {
   const { recentOrders, newOrderCount, clearNewCount, subscribeToNewOrders } =
     useRealtimeOrdersContext();
 
-  // Follow the dashboard filter for the dimensions that make sense on a live
-  // feed: site and product. Date presets don't apply — the feed is "now".
   const sp = useSearchParams();
+  const preset = sp.get("kpi_preset") ?? "today";
+  const from = sp.get("kpi_from");
+  const to = sp.get("kpi_to");
   const siteId = sp.get("kpi_site");
   const products = (sp.get("kpi_products") ?? "").split(",").filter(Boolean);
 
-  const filtered = recentOrders.filter((o) => {
-    if (siteId && o.site_id !== siteId) return false;
-    if (products.length && !products.includes(o.product_name ?? "")) return false;
-    return true;
-  });
+  // "today" (no explicit range) is live via the realtime channel; any other
+  // period is a static fetch — the channel only ever holds today's orders.
+  const isLive = preset === "today" && !from && !to;
+
+  const feedParams = new URLSearchParams({ preset });
+  if (from) feedParams.set("from", from);
+  if (to) feedParams.set("to", to);
+  if (siteId) feedParams.set("siteId", siteId);
+  if (products.length) feedParams.set("products", products.join(","));
+
+  const { data: fetched } = useSWR(
+    isLive ? null : `/api/orders/feed?${feedParams.toString()}`,
+    feedFetcher,
+    { refreshInterval: 30_000 }
+  );
 
   // Register animation callback with the layout-level channel — no subscription of our own
   useEffect(() => {
@@ -247,7 +273,17 @@ export function LiveFeed() {
     });
   }, [subscribeToNewOrders]);
 
-  const visible = filtered.slice(0, MAX_VISIBLE);
+  // Live view filters the realtime set by site/product client-side; other
+  // periods come pre-filtered from the endpoint.
+  const source = isLive
+    ? recentOrders.filter((o) => {
+        if (siteId && o.site_id !== siteId) return false;
+        if (products.length && !products.includes(o.product_name ?? "")) return false;
+        return true;
+      })
+    : fetched?.orders ?? [];
+
+  const visible = source.slice(0, MAX_VISIBLE);
 
   return (
     <>
@@ -279,22 +315,24 @@ export function LiveFeed() {
                 color: "#18181B",
               }}
             >
-              Live feed
+              {isLive ? "Live feed" : `Porudžbine — ${PRESET_LABELS[preset] ?? ""}`}
             </span>
-            {/* pulsing green dot */}
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                backgroundColor: "#22C55E",
-                animation: "lf-dot-pulse 2s ease-in-out infinite",
-                display: "inline-block",
-              }}
-            />
+            {/* pulsing green dot — only in live mode */}
+            {isLive && (
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  backgroundColor: "#22C55E",
+                  animation: "lf-dot-pulse 2s ease-in-out infinite",
+                  display: "inline-block",
+                }}
+              />
+            )}
           </div>
 
-          {newOrderCount > 0 && (
+          {isLive && newOrderCount > 0 && (
             <button
               onClick={clearNewCount}
               style={{
@@ -331,7 +369,7 @@ export function LiveFeed() {
           >
             <RadioIcon style={{ width: 28, height: 28 }} />
             <p style={{ fontSize: 13, margin: 0 }}>
-              Čeka se prva porudžbina...
+              {isLive ? "Čeka se prva porudžbina..." : "Nema porudžbina za izabrani period."}
             </p>
           </div>
         ) : (
