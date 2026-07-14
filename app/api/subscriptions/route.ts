@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
-import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 function monthLabel(offsetMonths: number): string {
   const d = new Date();
@@ -22,7 +21,6 @@ export async function GET() {
   if (authError) return authError;
 
   const supabase = adminClient();
-  const fx = await loadFxSettings(supabase);
 
   const [subsRes, sitesRes] = await Promise.all([
     supabase
@@ -41,7 +39,7 @@ export async function GET() {
   const subscriptionSites = sitesRes.data ?? [];
 
   const activeSubs = subs.filter((s) => s.status === "active");
-  const totalMRR = activeSubs.reduce((s, sub) => s + toBase(sub.mrr ?? 0, "RSD", fx.rates), 0);
+  const totalMRR = activeSubs.reduce((s, sub) => s + (sub.mrr ?? 0), 0);
 
   const now = new Date();
   const thisMonthStart = new Date(
@@ -79,7 +77,7 @@ export async function GET() {
     const end = monthEnd(offset);
     const mrrAtMonth = subs
       .filter((s) => s.started_at < end && s.status === "active")
-      .reduce((sum, s) => sum + toBase(s.mrr ?? 0, "RSD", fx.rates), 0);
+      .reduce((sum, s) => sum + (s.mrr ?? 0), 0);
     return { month: monthLabel(offset), mrr: mrrAtMonth };
   });
 

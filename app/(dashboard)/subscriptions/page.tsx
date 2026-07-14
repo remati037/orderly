@@ -122,6 +122,8 @@ export default function SubscriptionsPage() {
   const [mrrChart, setMrrChart] = useState<MrrPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterSite, setFilterSite] = useState<string>("all");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,6 +143,44 @@ export default function SubscriptionsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Pull all subscriptions from every connected Stripe site, paging until done.
+  const importFromStripe = useCallback(async () => {
+    setImporting(true);
+    setImportMsg("Tražim Stripe sajtove…");
+    try {
+      const sitesRes = await fetch("/api/sites");
+      const sites = sitesRes.ok ? await sitesRes.json() : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stripeSites = (sites as any[]).filter((s) => s.platform === "stripe");
+      if (!stripeSites.length) {
+        setImportMsg("Nema Stripe sajtova.");
+        return;
+      }
+
+      let total = 0;
+      for (const site of stripeSites) {
+        let cursor: string | null = null;
+        for (let guard = 0; guard < 1000; guard++) {
+          const res: Response = await fetch(`/api/sites/${site.id}/stripe-subscriptions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ starting_after: cursor }),
+          });
+          const json = await res.json();
+          if (!res.ok) { setImportMsg(`Greška: ${json.error}`); return; }
+          total += json.imported;
+          setImportMsg(`Uvezeno ${total} pretplata…`);
+          if (json.done || !json.next_cursor) break;
+          cursor = json.next_cursor;
+        }
+      }
+      await load();
+      setImportMsg(`Gotovo — uvezeno ${total} pretplata.`);
+    } finally {
+      setImporting(false);
+    }
+  }, [load]);
+
   const filteredSubs = filterSite === "all"
     ? subscriptions
     : subscriptions.filter((s) => s.site_id === filterSite);
@@ -151,13 +191,31 @@ export default function SubscriptionsPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
-          Pretplate
-        </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
-          MRR, pretplatnici i churn — sajtovi tipa Subscription
-        </p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
+            Pretplate
+          </h1>
+          <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+            MRR, pretplatnici i churn
+          </p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <button
+            onClick={importFromStripe}
+            disabled={importing}
+            style={{
+              fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 8,
+              border: "1px solid #16A34A", background: importing ? "#4ADE80" : "#16A34A",
+              color: "#fff", cursor: importing ? "default" : "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            {importing ? "Uvoz u toku…" : "Uvezi iz Stripe-a"}
+          </button>
+          {importMsg && (
+            <span style={{ fontSize: 12, color: "#71717A" }}>{importMsg}</span>
+          )}
+        </div>
       </div>
 
       {noSubscriptionSites ? (
