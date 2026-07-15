@@ -4,6 +4,29 @@ import { requireRole } from "@/lib/auth/roles";
 
 const STAGES = ["novo", "kontaktiran", "ceka_uplatu", "naplaceno", "otkazano"] as const;
 
+const MAX_AGE_DAYS = 30;
+
+// Human explanation of why an order is stuck. Stripe puts a real message on the
+// charge (stored in woo_data); WooCommerce statuses get a sensible default.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function stuckReason(status: string, wooData: any): string {
+  const wd = wooData ?? {};
+  const stripeMsg =
+    wd.failure_message ||
+    wd.outcome?.seller_message ||
+    wd.outcome?.reason ||
+    (wd.failure_code ? `Stripe kod: ${wd.failure_code}` : null);
+  if (stripeMsg) return String(stripeMsg);
+
+  switch (status) {
+    case "failed":         return "Plaćanje nije uspelo — kartica odbijena ili greška u naplati.";
+    case "on-hold":        return "Čeka uplatu — bankovni transfer ili ručna potvrda.";
+    case "pending":        return "Plaćanje započeto, ali nije završeno.";
+    case "checkout-draft": return "Napuštena korpa — kupac nije završio kupovinu.";
+    default:               return "";
+  }
+}
+
 // Tasks + the members they can be assigned to.
 // Agents may see the order amount (they need it to talk to the customer) but
 // never net_profit — it is not selected here.
@@ -18,7 +41,7 @@ export async function GET() {
       .from("recovery_tasks")
       .select(
         "id, stage, assigned_to, attempts, last_contacted_at, next_follow_up_at, created_at, " +
-        "order:orders!inner(id, woo_order_id, status, total, currency, created_at, " +
+        "order:orders!inner(id, woo_order_id, status, total, currency, created_at, woo_data, " +
         "customer_name, customer_email, customer_phone, sites(name, color_hex), order_items(product_name))"
       )
       .order("created_at", { ascending: false }),
@@ -33,31 +56,37 @@ export async function GET() {
     return NextResponse.json({ error: tasksRes.error.message }, { status: 500 });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tasks = (tasksRes.data ?? []).map((t: any) => {
-    const o = t.order;
-    const site = o?.sites;
-    const createdAt = o?.created_at ? new Date(o.created_at).getTime() : Date.now();
-    return {
-      id: t.id,
-      stage: t.stage,
-      assigned_to: t.assigned_to,
-      attempts: t.attempts,
-      last_contacted_at: t.last_contacted_at,
-      order_id: o?.id,
-      order_number: o?.woo_order_id ?? null,
-      order_status: o?.status,
-      total: Number(o?.total ?? 0),
-      currency: o?.currency ?? "RSD",
-      customer_name: o?.customer_name ?? null,
-      customer_email: o?.customer_email ?? null,
-      customer_phone: o?.customer_phone ?? null,
-      product_name: o?.order_items?.[0]?.product_name ?? null,
-      site_name: site?.name ?? null,
-      site_color: site?.color_hex ?? "#16A34A",
-      order_created_at: o?.created_at ?? null,
-      age_days: Math.floor((Date.now() - createdAt) / 86_400_000),
-    };
-  });
+  const tasks = (tasksRes.data ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((t: any) => {
+      const o = t.order;
+      const site = o?.sites;
+      const createdAt = o?.created_at ? new Date(o.created_at).getTime() : Date.now();
+      return {
+        id: t.id,
+        stage: t.stage,
+        assigned_to: t.assigned_to,
+        attempts: t.attempts,
+        last_contacted_at: t.last_contacted_at,
+        order_id: o?.id,
+        order_number: o?.woo_order_id ?? null,
+        order_status: o?.status,
+        // Derived server-side; raw woo_data (full billing payload) never leaves the API.
+        reason: stuckReason(o?.status, o?.woo_data),
+        total: Number(o?.total ?? 0),
+        currency: o?.currency ?? "RSD",
+        customer_name: o?.customer_name ?? null,
+        customer_email: o?.customer_email ?? null,
+        customer_phone: o?.customer_phone ?? null,
+        product_name: o?.order_items?.[0]?.product_name ?? null,
+        site_name: site?.name ?? null,
+        site_color: site?.color_hex ?? "#16A34A",
+        order_created_at: o?.created_at ?? null,
+        age_days: Math.floor((Date.now() - createdAt) / 86_400_000),
+      };
+    })
+    // Only orders from the last 30 days stay on the board.
+    .filter((t: { age_days: number }) => t.age_days <= MAX_AGE_DAYS);
 
   return NextResponse.json({ tasks, members: membersRes.data ?? [] });
 }

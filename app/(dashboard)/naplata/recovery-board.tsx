@@ -17,6 +17,7 @@ interface Task {
   order_id: string;
   order_number: string | null;
   order_status: string;
+  reason: string;
   total: number;
   currency: string;
   customer_name: string | null;
@@ -62,6 +63,25 @@ function ageColor(days: number): string {
   if (days >= 7) return "#DC2626";
   if (days >= 3) return "#D97706";
   return "#A1A1AA";
+}
+
+const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
+  failed:           { label: "Failed",   bg: "#FEF2F2", color: "#DC2626" },
+  "on-hold":        { label: "On hold",  bg: "#FFF7ED", color: "#C2410C" },
+  pending:          { label: "Pending",  bg: "#EEF2FF", color: "#4338CA" },
+  "checkout-draft": { label: "Napušteno", bg: "#F4F4F5", color: "#52525B" },
+};
+
+function StatusPill({ status }: { status: string }) {
+  const m = STATUS_META[status] ?? { label: status, bg: "#F4F4F5", color: "#52525B" };
+  return (
+    <span style={{
+      fontSize: 10.5, fontWeight: 600, padding: "1px 7px", borderRadius: 99,
+      background: m.bg, color: m.color, whiteSpace: "nowrap",
+    }}>
+      {m.label}
+    </span>
+  );
 }
 
 // ── board ──────────────────────────────────────────────────────────────────────
@@ -146,6 +166,16 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
                     {t.product_name && (
                       <div style={{ fontSize: 11.5, color: "#71717A", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {t.product_name}
+                      </div>
+                    )}
+
+                    {/* why it's stuck */}
+                    <div style={{ marginTop: 7 }}>
+                      <StatusPill status={t.order_status} />
+                    </div>
+                    {t.reason && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#71717A", lineHeight: 1.35 }}>
+                        {t.reason}
                       </div>
                     )}
 
@@ -256,11 +286,22 @@ function TaskDrawer({
           </button>
         </div>
 
-        <div style={{ fontSize: 13, color: "#71717A", marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: "#71717A", marginBottom: 12 }}>
           {formatCurrency(task.total, task.currency)}
           {task.product_name && ` · ${task.product_name}`}
-          <br />
-          Status: <code style={{ fontSize: 12 }}>{task.order_status}</code> · stara {task.age_days} dana
+          {" · stara "}{task.age_days} dana
+        </div>
+
+        {/* why it's stuck */}
+        <div style={{
+          background: "#FAFAFA", border: "1px solid #F4F4F5", borderRadius: 8,
+          padding: "10px 12px", marginBottom: 16,
+          display: "flex", alignItems: "flex-start", gap: 8,
+        }}>
+          <StatusPill status={task.order_status} />
+          <span style={{ fontSize: 12.5, color: "#3F3F46", lineHeight: 1.4 }}>
+            {task.reason || "Bez dodatnog objašnjenja."}
+          </span>
         </div>
 
         {/* contact */}
