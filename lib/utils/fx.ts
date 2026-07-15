@@ -12,10 +12,16 @@ export async function loadFxSettings(supabase: SupabaseClient): Promise<FxSettin
     supabase.from("settings").select("value").eq("key", "base_currency").maybeSingle(),
     supabase.from("settings").select("value").eq("key", "exchange_rates").maybeSingle(),
   ]);
-  return {
-    baseCurrency: (bc?.value as string) ?? "EUR",
-    rates: (ratesRow?.value as Record<string, number>) ?? DEFAULT_RATES,
-  };
+
+  const baseCurrency = (bc?.value as string) ?? "EUR";
+  const rates = { ...((ratesRow?.value as Record<string, number>) ?? DEFAULT_RATES) };
+
+  // Invariant: converting the base currency to itself is always identity. This
+  // guards against a misconfigured rate for the base currency (e.g. EUR stored
+  // as 0.00855), which would otherwise shrink every EUR amount ~117×.
+  rates[baseCurrency] = 1;
+
+  return { baseCurrency, rates };
 }
 
 export function toBase(
