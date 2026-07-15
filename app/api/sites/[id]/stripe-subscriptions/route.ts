@@ -97,6 +97,7 @@ export async function POST(
   const subs: any[] = page.data ?? [];
 
   let imported = 0;
+  let firstError: string | null = null;
   for (const sub of subs) {
     const item = sub.items?.data?.[0];
     const { amount, currency } = monthlyAmount(item);
@@ -120,13 +121,20 @@ export async function POST(
     const { error } = await supabase
       .from("subscriptions")
       .upsert(row, { onConflict: "stripe_subscription_id" });
-    if (!error) imported++;
+    if (error) {
+      if (!firstError) firstError = error.message;
+    } else {
+      imported++;
+    }
   }
 
   const nextCursor = subs.length ? subs[subs.length - 1].id : null;
   return NextResponse.json({
     imported,
     scanned: subs.length,
+    // Surfaced when writes fail (e.g. migration 012 not run → no
+    // stripe_subscription_id column for the ON CONFLICT target).
+    error: imported === 0 && firstError ? firstError : undefined,
     next_cursor: page.has_more ? nextCursor : null,
     done: !page.has_more,
   });

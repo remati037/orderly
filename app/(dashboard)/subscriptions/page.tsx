@@ -168,6 +168,7 @@ export default function SubscriptionsPage() {
           });
           const json = await res.json();
           if (!res.ok) { setImportMsg(`Greška: ${json.error}`); return; }
+          if (json.error) { setImportMsg(`Greška pri upisu: ${json.error}`); return; }
           total += json.imported;
           setImportMsg(`Uvezeno ${total} pretplata…`);
           if (json.done || !json.next_cursor) break;
