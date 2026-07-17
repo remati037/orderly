@@ -8,6 +8,8 @@ const PUBLIC_ROUTES = [
   /^\/api\/webhook\/woo\//,
   /^\/api\/webhook\/thinkific\//,
   /^\/api\/webhook\/stripe\//,
+  // Cron endpoints authenticate themselves with CRON_SECRET, not a user session.
+  /^\/api\/cron\//,
 ];
 
 export default async function proxy(request: NextRequest) {
