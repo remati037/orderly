@@ -447,9 +447,10 @@ function TaskDrawer({
           {task.customer_email && (
             <a
               href={`mailto:${task.customer_email}?subject=${mailSubject}&body=${mailBody}`}
-              style={contactBtn("#52525B")}
+              style={{ ...contactBtn("#52525B"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              title={task.customer_email}
             >
-              <MailIcon style={{ width: 14, height: 14 }} /> Email
+              <MailIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> {task.customer_email}
             </a>
           )}
         </div>
