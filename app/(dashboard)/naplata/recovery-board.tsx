@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PhoneIcon, MailIcon, XIcon } from "lucide-react";
+import { PhoneIcon, MailIcon, XIcon, BellIcon, CheckCircle2Icon } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { supabaseBrowser } from "@/lib/supabase/browser-client";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,9 @@ interface Task {
   site_name: string | null;
   site_color: string;
   age_days: number;
+  wait_ms: number;
+  wait_frozen: boolean;
+  resolved_elsewhere: boolean;
 }
 
 interface Member { id: string; email: string; name: string | null }
@@ -65,6 +69,29 @@ function ageColor(days: number): string {
   return "#A1A1AA";
 }
 
+// Order statuses that open a recovery card (mirrors the DB trigger in
+// 009_recovery_pipeline.sql) — used to recognize "a new card just appeared".
+const NOTIFY_ORDER_STATUSES = new Set(["on-hold", "failed", "pending", "checkout-draft"]);
+
+function formatWait(ms: number): string {
+  const totalMin = Math.max(0, Math.floor(ms / 60_000));
+  if (totalMin < 60) return `${totalMin}m`;
+  const totalH = Math.floor(totalMin / 60);
+  if (totalH < 24) return `${totalH}h ${totalMin % 60}m`;
+  const days = Math.floor(totalH / 24);
+  return `${days}d ${totalH % 24}h`;
+}
+
+// Still ticking (no contact yet): escalates with urgency. Frozen (already
+// contacted): neutral blue — it's a record, not something to act on.
+function waitColor(ms: number, frozen: boolean): string {
+  if (frozen) return "#2563EB";
+  const hours = ms / 3_600_000;
+  if (hours >= 4) return "#DC2626";
+  if (hours >= 1) return "#D97706";
+  return "#A1A1AA";
+}
+
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
   failed:           { label: "Failed",   bg: "#FEF2F2", color: "#DC2626" },
   "on-hold":        { label: "On hold",  bg: "#FFF7ED", color: "#C2410C" },
@@ -91,6 +118,8 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
   const [members, setMembers] = useState<Member[]>([]);
   const [open, setOpen] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifPermission, setNotifPermission] =
+    useState<NotificationPermission | "unsupported">("default");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/recovery");
@@ -103,6 +132,52 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Read current browser permission once on mount.
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotifPermission("unsupported");
+      return;
+    }
+    setNotifPermission(Notification.permission);
+  }, []);
+
+  function requestNotifPermission() {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    Notification.requestPermission().then(setNotifPermission);
+  }
+
+  // Dedicated Realtime subscription for this board — deliberately separate from
+  // the shared orders channel (used by TV/Live Feed), which skips `failed`
+  // inserts on purpose. Naplata needs exactly those.
+  useEffect(() => {
+    const channel = supabaseBrowser
+      .channel("naplata-new-cards")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const row = payload.new as {
+            status?: string;
+            customer_name?: string | null;
+            total?: number;
+            currency?: string;
+          };
+          if (!row.status || !NOTIFY_ORDER_STATUSES.has(row.status)) return;
+
+          load();
+
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            new Notification("Nova kartica za naplatu", {
+              body: `${row.customer_name || "Nepoznat kupac"} — ${formatCurrency(row.total ?? 0, row.currency ?? "RSD")}`,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabaseBrowser.removeChannel(channel); };
+  }, [load]);
 
   async function patch(id: string, body: Record<string, unknown>) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...body } as Task : t)));
@@ -133,6 +208,26 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
           </>
         )}
       </p>
+
+      {notifPermission === "default" && (
+        <div style={{
+          ...CARD, cursor: "default", display: "flex", alignItems: "center",
+          justifyContent: "space-between", gap: 12, padding: "10px 14px",
+        }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#3F3F46" }}>
+            <BellIcon style={{ width: 14, height: 14 }} /> Uključi obaveštenja za nove kartice naplate
+          </span>
+          <button
+            onClick={requestNotifPermission}
+            style={{
+              fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 7,
+              border: "1px solid #16A34A", background: "#16A34A", color: "#fff", cursor: "pointer",
+            }}
+          >
+            Uključi
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <p style={{ fontSize: 13, color: "#A1A1AA" }}>Učitavanje…</p>
@@ -179,6 +274,16 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
                       </div>
                     )}
 
+                    {t.resolved_elsewhere && (
+                      <div style={{
+                        marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 10.5, fontWeight: 700, padding: "3px 7px", borderRadius: 6,
+                        background: "#DCFCE7", color: "#15803D",
+                      }}>
+                        <CheckCircle2Icon style={{ width: 11, height: 11 }} /> Prošla druga porudžbina — ne zvati
+                      </div>
+                    )}
+
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                       {t.site_name && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#71717A" }}>
@@ -188,6 +293,16 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
                       )}
                       <span style={{ fontSize: 11, fontWeight: 600, color: ageColor(t.age_days) }}>
                         {t.age_days}d
+                      </span>
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 11, fontWeight: 600, color: waitColor(t.wait_ms, t.wait_frozen),
+                      }}>
+                        <span style={{
+                          width: 7, height: 7, borderRadius: "50%",
+                          background: waitColor(t.wait_ms, t.wait_frozen),
+                        }} />
+                        {formatWait(t.wait_ms)}{t.wait_frozen ? " (pozvan)" : ""}
                       </span>
                       {t.attempts > 0 && (
                         <span style={{ fontSize: 11, color: "#A1A1AA" }}>{t.attempts}× kontakt</span>
@@ -290,7 +405,21 @@ function TaskDrawer({
           {formatCurrency(task.total, task.currency)}
           {task.product_name && ` · ${task.product_name}`}
           {" · stara "}{task.age_days} dana
+          {" · čeka poziv "}{formatWait(task.wait_ms)}{task.wait_frozen ? " (pozvan)" : ""}
         </div>
+
+        {task.resolved_elsewhere && (
+          <div style={{
+            background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8,
+            padding: "10px 12px", marginBottom: 12,
+            display: "flex", alignItems: "flex-start", gap: 8,
+          }}>
+            <CheckCircle2Icon style={{ width: 15, height: 15, color: "#16A34A", flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 12.5, color: "#15803D", lineHeight: 1.4, fontWeight: 600 }}>
+              Kupac je platio drugu porudžbinu istog dana — ne treba zvati.
+            </span>
+          </div>
+        )}
 
         {/* why it's stuck */}
         <div style={{

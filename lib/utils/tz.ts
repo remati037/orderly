@@ -26,6 +26,18 @@ export function dayBounds(offsetDays = 0) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+// Same as dayBounds, but for an arbitrary date rather than "today ± offset" —
+// used to find same-calendar-day orders around a specific timestamp.
+export function dayBoundsForDate(date: Date) {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: TZ })
+    .format(date)
+    .split("-")
+    .map(Number);
+  const start = tzMidnight(y, m - 1, d);
+  const end = new Date(start.getTime() + 86_400_000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 // "Today so far" vs "same elapsed time yesterday" — avoids comparing partial today to full yesterday.
 export function todayComparisonBounds() {
   const now = new Date();
