@@ -3,8 +3,9 @@
 import { useRealtimeOrdersContext } from "@/lib/contexts/realtime-orders-context";
 import type { RealtimeOrder } from "@/lib/hooks/use-realtime-orders";
 import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
+import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
 import { RadioIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 
@@ -119,9 +120,11 @@ function formatAmount(total: number, currency: string): string {
 function OrderRow({
   order,
   isFresh,
+  seq,
 }: {
   order: RealtimeOrder;
   isFresh: boolean;
+  seq?: number | null;
 }) {
 
   return (
@@ -176,14 +179,24 @@ function OrderRow({
         style={{
           flex: 2,
           minWidth: 0,
-          fontSize: 12,
-          color: "#71717A",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
         }}
       >
-        {order.product_name ?? order.site_name}
+        <span
+          style={{
+            minWidth: 0,
+            fontSize: 12,
+            color: "#71717A",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {order.product_name ?? order.site_name}
+        </span>
+        {!!seq && <SubscriptionDots seq={seq} />}
       </span>
 
       {/* product type tag */}
@@ -285,6 +298,41 @@ export function LiveFeed() {
 
   const visible = source.slice(0, MAX_VISIBLE);
 
+  // The realtime path never fills in subscription_seq (see the type comment) —
+  // fetch it per order client-side. requestedRef dedupes so a null result
+  // (not a subscription product, or the customer's first payment) isn't
+  // re-fetched forever just because it never earns an entry in seqMap.
+  const [seqMap, setSeqMap] = useState<Record<string, number>>({});
+  const requestedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const toFetch = visible.filter(
+      (o) => o.subscription_seq == null && !requestedRef.current.has(o.id)
+    );
+    if (!toFetch.length) return;
+    toFetch.forEach((o) => requestedRef.current.add(o.id));
+
+    (async () => {
+      const entries = await Promise.all(
+        toFetch.map(async (o) => {
+          try {
+            const res = await fetch(`/api/orders/${o.id}/subscription-seq`);
+            if (!res.ok) return null;
+            const json = await res.json();
+            return json.seq ? ([o.id, json.seq as number] as const) : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      setSeqMap((prev) => {
+        const next = { ...prev };
+        for (const e of entries) if (e) next[e[0]] = e[1];
+        return next;
+      });
+    })();
+  }, [visible]);
+
   return (
     <>
       <style>{STYLES}</style>
@@ -379,6 +427,7 @@ export function LiveFeed() {
                 key={order.id}
                 order={order}
                 isFresh={freshIds.has(order.id)}
+                seq={order.subscription_seq ?? seqMap[order.id]}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PhoneIcon, MailIcon, XIcon, BellIcon, CheckCircle2Icon } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
+import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ interface Task {
   wait_ms: number;
   wait_frozen: boolean;
   resolved_elsewhere: boolean;
+  subscription_seq: number | null;
 }
 
 interface Member { id: string; email: string; name: string | null }
@@ -259,8 +261,11 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
                     </div>
 
                     {t.product_name && (
-                      <div style={{ fontSize: 11.5, color: "#71717A", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {t.product_name}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, minWidth: 0 }}>
+                        <span style={{ fontSize: 11.5, color: "#71717A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.product_name}
+                        </span>
+                        {t.subscription_seq && <SubscriptionDots seq={t.subscription_seq} />}
                       </div>
                     )}
 
@@ -401,11 +406,14 @@ function TaskDrawer({
           </button>
         </div>
 
-        <div style={{ fontSize: 13, color: "#71717A", marginBottom: 12 }}>
-          {formatCurrency(task.total, task.currency)}
-          {task.product_name && ` · ${task.product_name}`}
-          {" · stara "}{task.age_days} dana
-          {" · čeka poziv "}{formatWait(task.wait_ms)}{task.wait_frozen ? " (pozvan)" : ""}
+        <div style={{ fontSize: 13, color: "#71717A", marginBottom: 12, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+          <span>
+            {formatCurrency(task.total, task.currency)}
+            {task.product_name && ` · ${task.product_name}`}
+            {" · stara "}{task.age_days} dana
+            {" · čeka poziv "}{formatWait(task.wait_ms)}{task.wait_frozen ? " (pozvan)" : ""}
+          </span>
+          {task.subscription_seq && <SubscriptionDots seq={task.subscription_seq} />}
         </div>
 
         {task.resolved_elsewhere && (

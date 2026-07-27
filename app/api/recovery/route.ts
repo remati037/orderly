@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth/roles";
 import { dayBoundsForDate } from "@/lib/utils/tz";
+import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 
 const STAGES = ["novo", "kontaktiran", "ceka_uplatu", "naplaceno", "otkazano"] as const;
 
@@ -94,6 +95,18 @@ export async function GET() {
     return list.some((iso) => iso >= start && iso < end);
   }
 
+  const subscriptionSeq = await computeSubscriptionOrdinals(
+    supabase,
+    rows
+      .filter((t) => t.order)
+      .map((t) => ({
+        id: t.order.id as string,
+        customer_email: t.order.customer_email ?? null,
+        product_name: t.order.order_items?.[0]?.product_name ?? null,
+        created_at: t.order.created_at as string,
+      }))
+  );
+
   const tasks = rows
     .map((t) => {
       const o = t.order;
@@ -126,6 +139,7 @@ export async function GET() {
         wait_ms: (contactedAt ?? Date.now()) - taskCreatedAt,
         wait_frozen: contactedAt !== null,
         resolved_elsewhere: o?.status === "failed" && hasSameDaySuccess(o?.customer_email ?? null, o?.created_at),
+        subscription_seq: o?.id ? subscriptionSeq.get(o.id) ?? null : null,
       };
     })
     // Only orders from the last 30 days stay on the board.

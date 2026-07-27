@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { dayBounds, weekBounds, monthBounds, yearBounds, customBounds } from "@/lib/utils/tz";
+import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 
 const EXCLUDED = "(cancelled,refunded,failed)";
 const LIMIT = 30;
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
   const supabase = adminClient();
 
   const select =
-    "id, site_id, status, total, currency, customer_name, product_type, created_at, " +
+    "id, site_id, status, total, currency, customer_name, customer_email, product_type, created_at, " +
     "sites(name, color_hex), order_items!inner(product_name)";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,7 +60,19 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const orders = (data ?? []).map((o: any) => ({
+  const rows = (data ?? []) as any[];
+
+  const subscriptionSeq = await computeSubscriptionOrdinals(
+    supabase,
+    rows.map((o) => ({
+      id: o.id as string,
+      customer_email: (o.customer_email as string | null) ?? null,
+      product_name: o.order_items?.[0]?.product_name ?? null,
+      created_at: o.created_at as string,
+    }))
+  );
+
+  const orders = rows.map((o) => ({
     id: o.id,
     site_id: o.site_id,
     status: o.status,
@@ -71,6 +84,7 @@ export async function GET(request: NextRequest) {
     site_name: o.sites?.name ?? "",
     site_color: o.sites?.color_hex ?? "#16A34A",
     is_late: false,
+    subscription_seq: subscriptionSeq.get(o.id) ?? null,
   }));
 
   return NextResponse.json({ orders });

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatCurrency } from "@/lib/utils/currency";
 import { toBase } from "@/lib/utils/fx";
+import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -135,10 +136,12 @@ function OrderDetail({
   order,
   baseCurrency,
   exchangeRates,
+  subscriptionSeq,
 }: {
   order: OrderRow;
   baseCurrency: string;
   exchangeRates: Record<string, number>;
+  subscriptionSeq?: number | null;
 }) {
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
@@ -196,8 +199,9 @@ function OrderDetail({
             {order.order_items.map((item, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ fontWeight: 500, color: "#18181B", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {item.product_name}
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "#18181B", overflow: "hidden" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product_name}</span>
+                    {i === 0 && subscriptionSeq && <SubscriptionDots seq={subscriptionSeq} />}
                   </span>
                   <span style={{ fontSize: 11, color: "#A1A1AA" }}>{item.quantity}× po {formatAmount(item.price / item.quantity, order.currency)}</span>
                 </div>
@@ -293,11 +297,13 @@ function TableRow({
   onClick,
   baseCurrency,
   exchangeRates,
+  subscriptionSeq,
 }: {
   order: OrderRow;
   onClick: () => void;
   baseCurrency: string;
   exchangeRates: Record<string, number>;
+  subscriptionSeq?: number | null;
 }) {
   const firstItem  = order.order_items[0];
   const extraItems = order.order_items.length - 1;
@@ -357,12 +363,15 @@ function TableRow({
       <td style={{ padding: "10px 16px", verticalAlign: "middle", maxWidth: 200 }}>
         {firstItem ? (
           <div style={{ minWidth: 0 }}>
-            <span style={{
-              display: "block", fontSize: 12, color: "#52525B",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
-              {firstItem.product_name}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+              <span style={{
+                fontSize: 12, color: "#52525B",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {firstItem.product_name}
+              </span>
+              {subscriptionSeq && <SubscriptionDots seq={subscriptionSeq} />}
+            </div>
             {extraItems > 0 && (
               <span style={{ fontSize: 11, color: "#A1A1AA" }}>+{extraItems} još</span>
             )}
@@ -415,12 +424,14 @@ interface Props {
   orders: OrderRow[];
   baseCurrency?: string;
   exchangeRates?: Record<string, number>;
+  subscriptionSeq?: Record<string, number>;
 }
 
 export function OrdersTableClient({
   orders,
   baseCurrency = "EUR",
   exchangeRates = {},
+  subscriptionSeq = {},
 }: Props) {
   const [selected, setSelected] = useState<OrderRow | null>(null);
   const [open, setOpen] = useState(false);
@@ -471,6 +482,7 @@ export function OrdersTableClient({
                   onClick={() => openSheet(order)}
                   baseCurrency={baseCurrency}
                   exchangeRates={exchangeRates}
+                  subscriptionSeq={subscriptionSeq[order.id]}
                 />
               ))
             )}
@@ -496,6 +508,7 @@ export function OrdersTableClient({
                 order={selected}
                 baseCurrency={baseCurrency}
                 exchangeRates={exchangeRates}
+                subscriptionSeq={subscriptionSeq[selected.id]}
               />
             </>
           )}

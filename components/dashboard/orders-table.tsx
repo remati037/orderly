@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
+import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 import { OrdersTableClient, type OrderRow } from "./orders-table-client";
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -121,6 +122,17 @@ export async function OrdersTable({ searchParams }: Props) {
   const { data, count, error } = await query;
 
   const orders  = (data ?? []) as unknown as OrderRow[];
+
+  const subscriptionSeqMap = await computeSubscriptionOrdinals(
+    supabase,
+    orders.map((o) => ({
+      id: o.id,
+      customer_email: o.customer_email ?? null,
+      product_name: o.order_items?.[0]?.product_name ?? null,
+      created_at: o.created_at,
+    }))
+  );
+  const subscriptionSeq = Object.fromEntries(subscriptionSeqMap);
   const total   = count ?? 0;
   const pages   = Math.ceil(total / PAGE_SIZE);
   const from    = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -161,6 +173,7 @@ export async function OrdersTable({ searchParams }: Props) {
             orders={orders}
             baseCurrency={fx.baseCurrency}
             exchangeRates={fx.rates}
+            subscriptionSeq={subscriptionSeq}
           />
 
           {/* pagination */}

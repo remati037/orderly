@@ -27,6 +27,9 @@ export interface RealtimeOrder {
   site_color: string;
   product_name: string | null;
   is_late: boolean;
+  // Only populated by /api/orders/feed (non-live periods). The realtime path
+  // leaves this undefined — Live Feed fetches it itself per order when needed.
+  subscription_seq?: number | null;
 }
 
 interface SiteInfo {
