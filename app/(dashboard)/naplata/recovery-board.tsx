@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PhoneIcon, MailIcon, XIcon, BellIcon, CheckCircle2Icon } from "lucide-react";
+import { PhoneIcon, MailIcon, XIcon, BellIcon, CheckCircle2Icon, CopyIcon, CheckIcon, SearchIcon, TimerIcon } from "lucide-react";
+import {
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid,
+} from "recharts";
 import { formatCurrency } from "@/lib/utils/currency";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
 import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
@@ -28,6 +31,7 @@ interface Task {
   product_name: string | null;
   site_name: string | null;
   site_color: string;
+  order_created_at: string | null;
   age_days: number;
   wait_ms: number;
   wait_frozen: boolean;
@@ -94,6 +98,57 @@ function waitColor(ms: number, frozen: boolean): string {
   return "#A1A1AA";
 }
 
+// Buckets tasks by the Belgrade calendar day the underlying order appeared,
+// and how many of that day's cards have since been contacted (wait_frozen).
+// Computed client-side from the already-loaded board — no extra API call.
+interface DayStat { day: string; label: string; total: number; contacted: number; pct: number }
+
+function buildDailyStats(tasks: Task[], daysToShow: number): DayStat[] {
+  const byDay = new Map<string, { total: number; contacted: number }>();
+  for (const t of tasks) {
+    if (!t.order_created_at) continue;
+    const day = new Date(t.order_created_at).toLocaleDateString("sv-SE", { timeZone: "Europe/Belgrade" });
+    const entry = byDay.get(day) ?? { total: 0, contacted: 0 };
+    entry.total += 1;
+    if (t.wait_frozen) entry.contacted += 1;
+    byDay.set(day, entry);
+  }
+  return Array.from(byDay.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-daysToShow)
+    .map(([day, { total, contacted }]) => ({
+      day,
+      label: day.slice(5).split("-").reverse().join("."), // "07-28" -> "28.07"
+      total,
+      contacted,
+      pct: total > 0 ? Math.round((contacted / total) * 1000) / 10 : 0,
+    }));
+}
+
+function DailyContactChart({ data }: { data: DayStat[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={180}>
+      <ComposedChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+        <CartesianGrid vertical={false} stroke="#F4F4F5" />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="count" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false}
+          domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+        <Tooltip
+          contentStyle={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 8, fontSize: 12 }}
+          formatter={(value, name) => {
+            if (name === "% kontaktirano") return [`${value}%`, name];
+            return [value, name];
+          }}
+        />
+        <Bar yAxisId="count" dataKey="total" name="Ukupno" fill="#E4E4E7" radius={[3, 3, 0, 0]} barSize={14} />
+        <Bar yAxisId="count" dataKey="contacted" name="Kontaktirano" fill="#16A34A" radius={[3, 3, 0, 0]} barSize={14} />
+        <Line yAxisId="pct" dataKey="pct" name="% kontaktirano" stroke="#2563EB" strokeWidth={2} dot={{ r: 2 }} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
   failed:           { label: "Failed",   bg: "#FEF2F2", color: "#DC2626" },
   "on-hold":        { label: "On hold",  bg: "#FFF7ED", color: "#C2410C" },
@@ -122,6 +177,7 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
   const [loading, setLoading] = useState(true);
   const [notifPermission, setNotifPermission] =
     useState<NotificationPermission | "unsupported">("default");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/recovery");
@@ -195,6 +251,18 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
     .filter((t) => t.stage !== "naplaceno" && t.stage !== "otkazano")
     .reduce((s, t) => s + t.total, 0);
 
+  const q = search.trim().toLowerCase();
+  const filteredTasks = !q ? tasks : tasks.filter((t) =>
+    [t.customer_name, t.customer_email, t.customer_phone, t.product_name, t.order_number]
+      .some((field) => field?.toLowerCase().includes(q))
+  );
+
+  const contactedTasks = tasks.filter((t) => t.wait_frozen);
+  const avgContactMs = contactedTasks.length > 0
+    ? contactedTasks.reduce((s, t) => s + t.wait_ms, 0) / contactedTasks.length
+    : null;
+  const dailyStats = buildDailyStats(tasks, 14);
+
   return (
     <div>
       <h1 style={{ fontSize: 20, fontWeight: 700, color: "#18181B", marginBottom: 4 }}>
@@ -210,6 +278,33 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
           </>
         )}
       </p>
+
+      {tasks.length > 0 && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+          <div style={{ ...CARD, cursor: "default", flex: "0 0 200px", padding: "14px 16px" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: "#71717A", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+              <TimerIcon style={{ width: 13, height: 13 }} /> Prosek do kontakta
+            </span>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "#18181B" }}>
+              {avgContactMs !== null ? formatWait(avgContactMs) : "—"}
+            </span>
+            <div style={{ fontSize: 11.5, color: "#A1A1AA", marginTop: 2 }}>
+              na osnovu {contactedTasks.length} kontaktiranih kartica
+            </div>
+          </div>
+
+          <div style={{ ...CARD, cursor: "default", flex: "1 1 380px", padding: "14px 16px 6px" }}>
+            <span style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#71717A", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+              Kontaktirano po danu (poslednjih 14 dana)
+            </span>
+            {dailyStats.length > 0 ? (
+              <DailyContactChart data={dailyStats} />
+            ) : (
+              <p style={{ fontSize: 12.5, color: "#A1A1AA", padding: "16px 0" }}>Nema podataka.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {notifPermission === "default" && (
         <div style={{
@@ -231,16 +326,38 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
         </div>
       )}
 
+      {tasks.length > 0 && (
+        <div style={{ position: "relative", marginBottom: 14, maxWidth: 320 }}>
+          <SearchIcon style={{
+            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+            width: 14, height: 14, color: "#A1A1AA", pointerEvents: "none",
+          }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pretraži po imenu, mejlu, telefonu, proizvodu…"
+            style={{
+              width: "100%", fontSize: 13, padding: "8px 10px 8px 32px",
+              border: "1px solid #E4E4E7", borderRadius: 8, outline: "none",
+            }}
+          />
+        </div>
+      )}
+
       {loading ? (
         <p style={{ fontSize: 13, color: "#A1A1AA" }}>Učitavanje…</p>
       ) : tasks.length === 0 ? (
         <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "#71717A" }}>
           Nema neplaćenih porudžbina. 🎉
         </div>
+      ) : filteredTasks.length === 0 ? (
+        <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "#71717A" }}>
+          Nema kartica koje odgovaraju pretrazi.
+        </div>
       ) : (
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start", overflowX: "auto", paddingBottom: 8 }}>
           {COLUMNS.map((col) => {
-            const items = tasks.filter((t) => t.stage === col.stage);
+            const items = filteredTasks.filter((t) => t.stage === col.stage);
             return (
               <div key={col.stage} style={{ flex: "1 0 240px", minWidth: 240 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, padding: "0 2px" }}>
@@ -348,6 +465,15 @@ function TaskDrawer({
   onChanged: () => void;
 }) {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  function copyEmail() {
+    if (!task.customer_email) return;
+    navigator.clipboard.writeText(task.customer_email).then(() => {
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 1500);
+    });
+  }
   const [body, setBody] = useState("");
   const [channel, setChannel] = useState<Note["channel"]>("telefon");
   const [busy, setBusy] = useState(false);
@@ -453,13 +579,28 @@ function TaskDrawer({
             </span>
           )}
           {task.customer_email && (
-            <a
-              href={`mailto:${task.customer_email}?subject=${mailSubject}&body=${mailBody}`}
-              style={{ ...contactBtn("#52525B"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              title={task.customer_email}
-            >
-              <MailIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> {task.customer_email}
-            </a>
+            <>
+              <a
+                href={`mailto:${task.customer_email}?subject=${mailSubject}&body=${mailBody}`}
+                style={{ ...contactBtn("#52525B"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+                title={task.customer_email}
+              >
+                <MailIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> {task.customer_email}
+              </a>
+              <button
+                onClick={copyEmail}
+                title="Kopiraj email"
+                style={{
+                  ...contactBtn(emailCopied ? "#16A34A" : "#52525B"),
+                  flexShrink: 0,
+                  background: "#fff",
+                  cursor: "pointer",
+                  padding: "8px 10px",
+                }}
+              >
+                {emailCopied ? <CheckIcon style={{ width: 14, height: 14 }} /> : <CopyIcon style={{ width: 14, height: 14 }} />}
+              </button>
+            </>
           )}
         </div>
 
