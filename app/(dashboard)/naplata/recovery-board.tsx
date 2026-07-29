@@ -8,6 +8,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
 import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
+import ProcessingCallsList from "./processing-calls-list";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -178,6 +179,7 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
   const [notifPermission, setNotifPermission] =
     useState<NotificationPermission | "unsupported">("default");
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"naplata" | "pozivi">("naplata");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/recovery");
@@ -279,6 +281,30 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
         )}
       </p>
 
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid #F4F4F5" }}>
+        {([
+          { key: "naplata", label: "Naplata" },
+          { key: "pozivi", label: "Pozivi" },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              fontSize: 13, fontWeight: 600, padding: "8px 4px", marginBottom: -1,
+              border: "none", borderBottom: tab === t.key ? "2px solid #16A34A" : "2px solid transparent",
+              background: "transparent", cursor: "pointer",
+              color: tab === t.key ? "#16A34A" : "#71717A",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "pozivi" ? (
+        <ProcessingCallsList />
+      ) : (
+      <>
       {tasks.length > 0 && (
         <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
           <div style={{ ...CARD, cursor: "default", flex: "0 0 200px", padding: "14px 16px" }}>
@@ -436,6 +462,8 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
             );
           })}
         </div>
+      )}
+      </>
       )}
 
       {open && (
