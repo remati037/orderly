@@ -51,6 +51,21 @@ export function todayComparisonBounds() {
   };
 }
 
+// "This month so far" vs "same elapsed days last month" — same idea as
+// todayComparisonBounds, so a comparison on day 3 of the month doesn't stack
+// 3 days of revenue against a full 31-day previous month.
+export function monthToDateComparisonBounds() {
+  const now = new Date();
+  const { y, m } = todayInTZ();
+  const monthStart = tzMidnight(y, m, 1);
+  const prevMonthStart = tzMidnight(y, m - 1, 1);
+  const prevMonthSameTime = new Date(prevMonthStart.getTime() + (now.getTime() - monthStart.getTime()));
+  return {
+    current:        { start: monthStart.toISOString(),     end: now.toISOString()               },
+    prevSamePeriod: { start: prevMonthStart.toISOString(), end: prevMonthSameTime.toISOString()  },
+  };
+}
+
 export function weekBounds(offsetWeeks = 0) {
   const { y, m, d } = todayInTZ();
   const dow = (new Date(Date.UTC(y, m, d)).getUTCDay() + 6) % 7; // Mon=0…Sun=6

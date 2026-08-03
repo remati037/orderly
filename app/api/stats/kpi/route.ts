@@ -91,11 +91,14 @@ export async function GET(request: NextRequest) {
     supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
-  const { current, prev } = periodBounds(preset, from, to, compare);
+  const { current, prev, prevSamePeriod } = periodBounds(preset, from, to, compare);
 
-  const [currentData, prevData] = await Promise.all([
+  const [currentData, prevData, prevSamePeriodData] = await Promise.all([
     queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),
     queryOrders(supabase, prev.start,    prev.end,    fx.rates, siteId, products),
+    prevSamePeriod
+      ? queryOrders(supabase, prevSamePeriod.start, prevSamePeriod.end, fx.rates, siteId, products)
+      : null,
   ]);
 
   const aov     = currentData.orders > 0 ? currentData.revenue / currentData.orders : 0;
@@ -105,6 +108,10 @@ export async function GET(request: NextRequest) {
     base_currency:   fx.baseCurrency,
     revenue_current: currentData.revenue,
     revenue_prev:    prevData.revenue,
+    // Only set for presets where "current" is a partial period (currently
+    // this_month) — the fair basis for a trend %, vs. revenue_prev which is
+    // the full previous period (e.g. the whole previous month).
+    revenue_prev_same_period: prevSamePeriodData?.revenue ?? null,
     orders_current:  currentData.orders,
     orders_prev:     prevData.orders,
     aov_current:     aov,

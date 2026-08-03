@@ -13,7 +13,11 @@ function monthName(offsetMonths = 0): string {
 async function fetcher(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error("fetch failed");
-  return res.json() as Promise<{ revenue_current: number; revenue_prev: number }>;
+  return res.json() as Promise<{
+    revenue_current: number;
+    revenue_prev: number;
+    revenue_prev_same_period: number | null;
+  }>;
 }
 
 interface MonthlyComparisonCardProps {
@@ -43,9 +47,14 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
 
   const current = data.revenue_current;
   const previous = data.revenue_prev;
-  const pct = previous === 0
+  // Comparing today's partial month against a full previous month always
+  // looks like a crash early in the month — the trend % and progress bar
+  // use the same-elapsed-days figure instead. revenue_prev (full month)
+  // still drives the "last month" column, since that total is what it is.
+  const previousFair = data.revenue_prev_same_period ?? previous;
+  const pct = previousFair === 0
     ? (current > 0 ? 100 : 0)
-    : ((current - previous) / previous) * 100;
+    : ((current - previousFair) / previousFair) * 100;
   const positive = pct >= 0;
   const absPct = Math.abs(pct);
 
@@ -66,7 +75,15 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
           <p style={{ fontSize: 11, color: "#A1A1AA", margin: "0 0 4px", textTransform: "capitalize" }}>
             {monthName(0)}
           </p>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#18181B", margin: 0, letterSpacing: "-0.02em" }}>
+          <p
+            title={data.revenue_prev_same_period !== null
+              ? `${monthName(-1)} do istog dana: ${formatRSD(data.revenue_prev_same_period)}`
+              : undefined}
+            style={{
+              fontSize: 22, fontWeight: 700, color: "#18181B", margin: 0, letterSpacing: "-0.02em",
+              cursor: data.revenue_prev_same_period !== null ? "help" : "default",
+            }}
+          >
             {formatRSD(current)}
           </p>
         </div>
@@ -101,17 +118,17 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
           {positive ? "+" : "-"}{absPct.toFixed(1)}%
         </span>
         <span style={{ fontSize: 12, color: "#A1A1AA" }}>
-          vs. prošlog meseca
+          {data.revenue_prev_same_period !== null ? "vs. prošlog meseca do sada" : "vs. prošlog meseca"}
         </span>
       </div>
 
-      {/* mini progress vs last month */}
-      {previous > 0 && (
+      {/* mini progress vs last month, same elapsed period */}
+      {previousFair > 0 && (
         <div style={{ marginTop: 12 }}>
           <div style={{ height: 4, borderRadius: 99, background: "#F4F4F5", overflow: "hidden" }}>
             <div style={{
               height: "100%",
-              width: `${Math.min(100, (current / previous) * 100)}%`,
+              width: `${Math.min(100, (current / previousFair) * 100)}%`,
               borderRadius: 99,
               background: positive ? "#16A34A" : "#DC2626",
               transition: "width 600ms cubic-bezier(0.4,0,0.2,1)",

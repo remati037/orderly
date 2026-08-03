@@ -1,4 +1,4 @@
-import { dayBounds, todayComparisonBounds, weekBounds, monthBounds, yearBounds, customBounds } from "./tz";
+import { dayBounds, todayComparisonBounds, monthToDateComparisonBounds, weekBounds, monthBounds, yearBounds, customBounds } from "./tz";
 
 export interface Bounds { start: string; end: string }
 
@@ -22,14 +22,19 @@ export function periodBounds(
   from: string | null,
   to: string | null,
   compare: string
-): { current: Bounds; prev: Bounds } {
+): { current: Bounds; prev: Bounds; prevSamePeriod?: Bounds } {
   switch (preset) {
     case "yesterday":
       return { current: dayBounds(-1), prev: dayBounds(-2) };
     case "this_week":
       return { current: weekBounds(0), prev: weekBounds(-1) };
-    case "this_month":
-      return { current: monthBounds(0), prev: monthBounds(-1) };
+    case "this_month": {
+      // `prev` stays the FULL previous month (used for the "last month total"
+      // display); `prevSamePeriod` is capped at the same elapsed days, so a
+      // trend % computed against it isn't comparing 3 days to 31.
+      const { current, prevSamePeriod } = monthToDateComparisonBounds();
+      return { current, prev: monthBounds(-1), prevSamePeriod };
+    }
     case "this_year":
       return { current: yearBounds(0), prev: yearBounds(-1) };
     case "custom":
