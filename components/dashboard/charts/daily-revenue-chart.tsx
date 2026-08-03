@@ -5,12 +5,15 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
   Legend,
   CartesianGrid,
 } from "recharts";
+import { LineChartIcon, BarChart3Icon } from "lucide-react";
 import { formatRSD } from "@/lib/hooks/use-kpi-stats";
 
 // ── types ──────────────────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hiddenSites, setHiddenSites] = useState<Set<string>>(new Set());
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -140,8 +144,32 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
         <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
           Dnevni prihod
         </span>
-        <div style={{ display: "flex", gap: 4 }}>
-          {PRESETS.map((p) => (
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {([
+              { type: "line" as const, label: "Linija", icon: LineChartIcon },
+              { type: "bar" as const, label: "Stacked bar", icon: BarChart3Icon },
+            ]).map((o) => (
+              <button
+                key={o.type}
+                onClick={() => setChartType(o.type)}
+                title={o.label}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
+                  border: "1px solid", cursor: "pointer",
+                  background: chartType === o.type ? "#16A34A" : "transparent",
+                  borderColor: chartType === o.type ? "#16A34A" : "#E4E4E7",
+                  color: chartType === o.type ? "#fff" : "#71717A",
+                  transition: "all 120ms",
+                }}
+              >
+                <o.icon style={{ width: 12, height: 12 }} />
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {PRESETS.map((p) => (
             <button
               key={p.value}
               onClick={() => setDays(p.value)}
@@ -160,7 +188,8 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
             >
               {p.label}
             </button>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -176,6 +205,41 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
         }}>
           Učitavanje…
         </div>
+      ) : chartType === "bar" ? (
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="#F4F4F5" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              axisLine={false}
+              tickLine={false}
+              interval={Math.floor((chartData.length - 1) / 6)}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `${Math.round(v / 1000)}k`}
+              width={36}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              onClick={handleLegendClick}
+              wrapperStyle={{ fontSize: 12, cursor: "pointer", paddingTop: 8 }}
+            />
+            {(data?.series ?? []).map((s) => (
+              <Bar
+                key={s.siteId}
+                stackId="revenue"
+                dataKey={s.name}
+                fill={s.color}
+                hide={hiddenSites.has(s.name)}
+                radius={0}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
