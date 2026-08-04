@@ -8,14 +8,18 @@ export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner", "agent"]);
   if (authError) return authError;
 
-  const taskId = new URL(request.url).searchParams.get("taskId");
-  if (!taskId) return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+  // A merged card (see /api/recovery GET) can fold in several retry attempts —
+  // taskId may be a comma-separated list so the drawer shows notes logged
+  // against any of them, not just the latest.
+  const taskIdParam = new URL(request.url).searchParams.get("taskId");
+  if (!taskIdParam) return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+  const taskIds = taskIdParam.split(",").filter(Boolean);
 
   const supabase = adminClient();
   const { data, error } = await supabase
     .from("recovery_notes")
     .select("id, channel, body, created_at, author:team_members(email, name)")
-    .eq("task_id", taskId)
+    .in("task_id", taskIds)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

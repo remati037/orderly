@@ -38,6 +38,8 @@ interface Task {
   wait_frozen: boolean;
   resolved_elsewhere: boolean;
   subscription_seq: number | null;
+  linked_task_ids: string[];
+  retry_count: number;
 }
 
 interface Member { id: string; email: string; name: string | null }
@@ -239,12 +241,15 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
     return () => { supabaseBrowser.removeChannel(channel); };
   }, [load]);
 
-  async function patch(id: string, body: Record<string, unknown>) {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...body } as Task : t)));
+  async function patch(task: Task, body: Record<string, unknown>) {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...body } as Task : t)));
     await fetch("/api/recovery", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, ...body }),
+      // linked_task_ids: a merged card can fold in several Stripe-retry
+      // attempts (see /api/recovery GET) — apply the change to all of them so
+      // a later retry doesn't drop back below the stage already set here.
+      body: JSON.stringify({ id: task.id, linked_task_ids: task.linked_task_ids, ...body }),
     });
     load();
   }
@@ -413,8 +418,19 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
                     )}
 
                     {/* why it's stuck */}
-                    <div style={{ marginTop: 7 }}>
+                    <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 5 }}>
                       <StatusPill status={t.order_status} />
+                      {t.retry_count > 1 && (
+                        <span
+                          title={`Stripe je ${t.retry_count}× pokušao naplatu — kartice spojene, ovo je najnoviji pokušaj`}
+                          style={{
+                            fontSize: 10.5, fontWeight: 600, padding: "1px 6px", borderRadius: 99,
+                            background: "#F4F4F5", color: "#71717A",
+                          }}
+                        >
+                          ×{t.retry_count} pokušaja
+                        </span>
+                      )}
                     </div>
                     {t.reason && (
                       <div style={{ marginTop: 4, fontSize: 11, color: "#71717A", lineHeight: 1.35 }}>
@@ -489,7 +505,7 @@ function TaskDrawer({
   members: Member[];
   currentMemberId: string;
   onClose: () => void;
-  onPatch: (id: string, body: Record<string, unknown>) => void;
+  onPatch: (task: Task, body: Record<string, unknown>) => void;
   onChanged: () => void;
 }) {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -507,9 +523,10 @@ function TaskDrawer({
   const [busy, setBusy] = useState(false);
 
   const loadNotes = useCallback(async () => {
-    const res = await fetch(`/api/recovery/notes?taskId=${task.id}`);
+    const ids = (task.linked_task_ids?.length ? task.linked_task_ids : [task.id]).join(",");
+    const res = await fetch(`/api/recovery/notes?taskId=${ids}`);
     if (res.ok) setNotes((await res.json()).notes ?? []);
-  }, [task.id]);
+  }, [task.id, task.linked_task_ids]);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
 
@@ -569,6 +586,15 @@ function TaskDrawer({
           </span>
           {task.subscription_seq && <SubscriptionDots seq={task.subscription_seq} />}
         </div>
+
+        {task.retry_count > 1 && (
+          <div style={{
+            background: "#F4F4F5", borderRadius: 8, padding: "8px 12px", marginBottom: 12,
+            fontSize: 12.5, color: "#52525B",
+          }}>
+            Stripe je pokušao naplatu <strong>{task.retry_count}×</strong> — ova kartica objedinjuje sve pokušaje, ispod su beleške iz svih poziva.
+          </div>
+        )}
 
         {task.resolved_elsewhere && (
           <div style={{
@@ -637,14 +663,14 @@ function TaskDrawer({
           <div>
             <label style={LABEL}>Faza</label>
             <select style={INPUT} value={task.stage}
-              onChange={(e) => onPatch(task.id, { stage: e.target.value })}>
+              onChange={(e) => onPatch(task, { stage: e.target.value })}>
               {COLUMNS.map((c) => <option key={c.stage} value={c.stage}>{c.label}</option>)}
             </select>
           </div>
           <div>
             <label style={LABEL}>Zadužen</label>
             <select style={INPUT} value={task.assigned_to ?? ""}
-              onChange={(e) => onPatch(task.id, { assigned_to: e.target.value || null })}>
+              onChange={(e) => onPatch(task, { assigned_to: e.target.value || null })}>
               <option value="">— niko —</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>

@@ -107,19 +107,58 @@ export async function GET() {
       }))
   );
 
-  const tasks = rows
-    .map((t) => {
-      const o = t.order;
+  // Stripe retries a failed subscription charge every ~1-3 days. Each retry is a
+  // brand new order (see normalize-stripe-event.ts — keyed on the charge, never
+  // the invoice), so it gets its own recovery_task and lands back in "Novo" even
+  // though the customer was already contacted about the previous attempt. Group
+  // by (customer_email, product_name) and merge same-group tasks into one card so
+  // retries don't reset contact history or clutter the board — and so "how many
+  // unique people did we call" is just the number of groups.
+  const STAGE_RANK: Record<string, number> = {
+    novo: 0, kontaktiran: 1, ceka_uplatu: 2, otkazano: 3, naplaceno: 4,
+  };
+
+  const groups = new Map<string, typeof rows>();
+  for (const t of rows) {
+    const email = t.order?.customer_email?.toLowerCase();
+    const product = t.order?.order_items?.[0]?.product_name;
+    const key = email && product ? `${email}|${product}` : `solo:${t.id}`;
+    const list = groups.get(key) ?? [];
+    list.push(t);
+    groups.set(key, list);
+  }
+
+  const tasks = Array.from(groups.values())
+    .map((members) => {
+      // Latest order/attempt drives everything the agent acts on right now.
+      const sorted = [...members].sort(
+        (a, b) => new Date(a.order?.created_at ?? 0).getTime() - new Date(b.order?.created_at ?? 0).getTime()
+      );
+      const canonical = sorted[sorted.length - 1];
+      const o = canonical.order;
       const site = o?.sites;
+
+      const earliestTaskCreatedAt = Math.min(
+        ...sorted.map((m) => (m.created_at ? new Date(m.created_at).getTime() : Date.now()))
+      );
+      const contactTimes = sorted
+        .map((m) => (m.last_contacted_at ? new Date(m.last_contacted_at).getTime() : null))
+        .filter((ms): ms is number => ms !== null);
+      const earliestContactedAt = contactTimes.length ? Math.min(...contactTimes) : null;
+      const totalAttempts = sorted.reduce((s, m) => s + (m.attempts ?? 0), 0);
+      const mergedStage = sorted.reduce(
+        (best, m) => (STAGE_RANK[m.stage] > STAGE_RANK[best] ? m.stage : best),
+        sorted[0].stage
+      );
+
       const createdAt = o?.created_at ? new Date(o.created_at).getTime() : Date.now();
-      const taskCreatedAt = t.created_at ? new Date(t.created_at).getTime() : Date.now();
-      const contactedAt = t.last_contacted_at ? new Date(t.last_contacted_at).getTime() : null;
+
       return {
-        id: t.id,
-        stage: t.stage,
-        assigned_to: t.assigned_to,
-        attempts: t.attempts,
-        last_contacted_at: t.last_contacted_at,
+        id: canonical.id,
+        stage: mergedStage,
+        assigned_to: canonical.assigned_to,
+        attempts: totalAttempts,
+        last_contacted_at: earliestContactedAt !== null ? new Date(earliestContactedAt).toISOString() : null,
         order_id: o?.id,
         order_number: o?.woo_order_id ?? null,
         order_status: o?.status,
@@ -135,11 +174,15 @@ export async function GET() {
         site_color: site?.color_hex ?? "#16A34A",
         order_created_at: o?.created_at ?? null,
         age_days: Math.floor((Date.now() - createdAt) / 86_400_000),
-        // Time waiting for a call: ticks until first contact, then freezes for good.
-        wait_ms: (contactedAt ?? Date.now()) - taskCreatedAt,
-        wait_frozen: contactedAt !== null,
+        // Time waiting for a call: from the FIRST attempt, not the latest retry.
+        wait_ms: (earliestContactedAt ?? Date.now()) - earliestTaskCreatedAt,
+        wait_frozen: earliestContactedAt !== null,
         resolved_elsewhere: o?.status === "failed" && hasSameDaySuccess(o?.customer_email ?? null, o?.created_at),
         subscription_seq: o?.id ? subscriptionSeq.get(o.id) ?? null : null,
+        // Every recovery_tasks row folded into this card — used to fetch the full
+        // note history and to apply stage/assignment changes to the whole group.
+        linked_task_ids: sorted.map((m) => m.id),
+        retry_count: sorted.length,
       };
     })
     // Only orders from the last 30 days stay on the board.
@@ -148,12 +191,15 @@ export async function GET() {
   return NextResponse.json({ tasks, members: membersRes.data ?? [] });
 }
 
-// Move a task between stages, or (re)assign it.
+// Move a task between stages, or (re)assign it. A card on the board can
+// represent several merged retry attempts (see GET) — pass linked_task_ids to
+// apply the change to the whole group, so a later retry doesn't un-merge back
+// to a lower stage than what the agent already set.
 export async function PATCH(request: NextRequest) {
   const { error: authError } = await requireRole(["owner", "agent"]);
   if (authError) return authError;
 
-  const { id, stage, assigned_to } = await request.json();
+  const { id, stage, assigned_to, linked_task_ids } = await request.json();
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -169,8 +215,10 @@ export async function PATCH(request: NextRequest) {
   if (Object.keys(patch).length === 1)
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
 
+  const ids: string[] = Array.isArray(linked_task_ids) && linked_task_ids.length ? linked_task_ids : [id];
+
   const supabase = adminClient();
-  const { error } = await supabase.from("recovery_tasks").update(patch).eq("id", id);
+  const { error } = await supabase.from("recovery_tasks").update(patch).in("id", ids);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
