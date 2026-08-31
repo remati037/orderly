@@ -40,19 +40,24 @@ CREATE TABLE IF NOT EXISTS ad_campaign_map (
 );
 
 -- =============================================================
--- Row Level Security
+-- Row Level Security — server-only, like recovery_tasks/processing_calls.
+-- Every consumer (Settings → Facebook Ads, the sync job, /api/profit/kpi's
+-- ad-spend subtraction) already goes through an API route on the service
+-- role; the browser client never queries these tables directly. No
+-- `authenticated` policy at all, on purpose — ad_accounts.access_token is a
+-- live Meta System User token and must never be reachable from the browser.
 -- =============================================================
 ALTER TABLE ad_accounts     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ad_spend        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ad_campaign_map ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "authenticated_read_all" ON ad_accounts     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated_read_all" ON ad_spend        FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated_read_all" ON ad_campaign_map FOR SELECT TO authenticated USING (true);
-
 CREATE POLICY "service_role_all" ON ad_accounts     FOR ALL TO service_role USING (true);
 CREATE POLICY "service_role_all" ON ad_spend        FOR ALL TO service_role USING (true);
 CREATE POLICY "service_role_all" ON ad_campaign_map FOR ALL TO service_role USING (true);
+
+REVOKE ALL ON public.ad_accounts     FROM anon, authenticated;
+REVOKE ALL ON public.ad_spend        FROM anon, authenticated;
+REVOKE ALL ON public.ad_campaign_map FROM anon, authenticated;
 
 -- =============================================================
 -- Indexes
