@@ -4,12 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 
+interface BreakdownSegment {
+  kind: "onetime" | "new" | "renewal";
+  label: string;
+  color: string;
+  revenue: number;
+  pct: number;
+}
+
 interface BreakdownItem {
   site_id: string;
   name: string;
   color: string;
   revenue: number;
   pct: number;
+  segments: BreakdownSegment[];
 }
 
 interface BreakdownData {
@@ -21,6 +30,8 @@ interface BreakdownData {
 // Proportional revenue-by-site strip shown under the Dashboard KPIs — follows
 // the same date/product filters as KPISection (kpi_preset/kpi_from/kpi_to/
 // kpi_products), so it always reflects the same period as the metrics above it.
+// Each site is one legend entry; its one-time / new-subscription / renewal
+// split shows up as shades of the site color inside that site's bar segment.
 export function SiteRevenueBar() {
   const sp = useSearchParams();
   const [data, setData] = useState<BreakdownData | null>(null);
@@ -54,6 +65,7 @@ export function SiteRevenueBar() {
 
   const breakdown = data?.breakdown ?? [];
   const total = data?.total ?? 0;
+  const currency = data?.base_currency ?? "EUR";
 
   // Nothing to show for an empty period — don't take up space with an empty card.
   if (!breakdown.length || total <= 0) return null;
@@ -67,27 +79,58 @@ export function SiteRevenueBar() {
         Prihod po sajtu
       </span>
 
+      {/* 2px gaps separate sites; shades inside a group separate the buckets. */}
       <div style={{
-        display: "flex", height: 10, borderRadius: 999, overflow: "hidden",
+        display: "flex", gap: 2, height: 10, borderRadius: 999, overflow: "hidden",
         background: "#F4F4F5", marginBottom: 12,
       }}>
         {breakdown.map((b) => (
-          <div
-            key={b.site_id}
-            title={`${b.name} — ${b.pct}%`}
-            style={{ width: `${(b.revenue / total) * 100}%`, background: b.color }}
-          />
+          <div key={b.site_id} style={{ display: "flex", flex: `${b.revenue} 1 0` }}>
+            {b.segments.map((s) => (
+              <div
+                key={s.kind}
+                title={`${b.name} — ${s.label}: ${s.pct}%`}
+                style={{ flex: `${s.revenue} 1 0`, background: s.color }}
+              />
+            ))}
+          </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 22px" }}>
         {breakdown.map((b) => (
-          <div key={b.site_id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
-            <span style={{ color: "#3F3F46", fontWeight: 600 }}>{b.name}</span>
-            <span style={{ color: "#A1A1AA" }}>
-              {b.pct}% · {formatCurrency(b.revenue, data?.base_currency ?? "EUR")}
-            </span>
+          <div key={b.site_id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
+              <span style={{
+                display: "flex", width: 10, height: 10, borderRadius: "50%",
+                overflow: "hidden", flexShrink: 0,
+              }}>
+                {b.segments.map((s) => (
+                  <span key={s.kind} style={{ flex: `${s.revenue} 1 0`, background: s.color }} />
+                ))}
+              </span>
+              <span style={{ color: "#3F3F46", fontWeight: 600 }}>{b.name}</span>
+              <span style={{ color: "#A1A1AA" }}>
+                {b.pct}% · {formatCurrency(b.revenue, currency)}
+              </span>
+            </div>
+
+            {b.segments.length > 1 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", paddingLeft: 16 }}>
+                {b.segments.map((s) => (
+                  <span key={s.kind} style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontSize: 11.5, color: "#A1A1AA",
+                  }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: s.color, flexShrink: 0,
+                    }} />
+                    {s.label} {s.pct}% · {formatCurrency(s.revenue, currency)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -51,6 +51,16 @@ interface ProfitKPI {
   highest_margin_product: string | null;
 }
 
+interface AdPerformanceRow {
+  site_id: string;
+  site_name: string;
+  site_color: string;
+  product_name: string | null;
+  spend: number;
+  revenue: number;
+  roas: number | null;
+}
+
 type CostMode = "percent" | "fixed";
 
 interface ProductEdit {
@@ -246,6 +256,8 @@ export default function ProfitPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [kpi, setKpi] = useState<ProfitKPI | null>(null);
+  const [adPerf, setAdPerf] = useState<AdPerformanceRow[]>([]);
+  const [adPerfTotal, setAdPerfTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Site margin edits: siteId → pending string value
@@ -279,18 +291,22 @@ export default function ProfitPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sitesRes, productsRes, kpiRes] = await Promise.all([
+      const [sitesRes, productsRes, kpiRes, adPerfRes] = await Promise.all([
         fetch("/api/sites"),
         fetch("/api/profit/products"),
         fetch("/api/profit/kpi"),
+        fetch("/api/profit/ad-performance"),
       ]);
-      const [sitesData, productsData, kpiData] = await Promise.all([
+      const [sitesData, productsData, kpiData, adPerfData] = await Promise.all([
         sitesRes.json(),
         productsRes.json(),
         kpiRes.json(),
+        adPerfRes.json(),
       ]);
 
       setSites(sitesData ?? []);
+      setAdPerf(adPerfData.rows ?? []);
+      setAdPerfTotal(adPerfData.total_spend ?? 0);
 
       const prods: Product[] = productsData.products ?? [];
       setProducts(prods);
@@ -570,6 +586,68 @@ export default function ProfitPage() {
             icon={TrophyIcon}
           />
         </div>
+
+        {/* Section 0 — Facebook Ads spend by product */}
+        <SectionBox
+          title="Potrošnja na reklame po proizvodu"
+          description={`Mapirana Facebook Ads potrošnja i prihod koji je doneo, ovaj mesec · ukupno ${formatRSD(adPerfTotal)}`}
+        >
+          {loading ? (
+            <div style={{ padding: 32, textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+              Učitavanje...
+            </div>
+          ) : adPerf.length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+              Nema mapirane potrošnje — poveži nalog i mapiraj kampanje u Podešavanja → Facebook Ads
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sajt</TableHead>
+                    <TableHead>Proizvod</TableHead>
+                    <TableHead>Potrošnja</TableHead>
+                    <TableHead>Prihod</TableHead>
+                    <TableHead>ROAS</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adPerf.map((row) => (
+                    <TableRow key={`${row.site_id}::${row.product_name ?? ""}`}>
+                      <TableCell>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: row.site_color, flexShrink: 0, display: "inline-block" }} />
+                          <span style={{ fontSize: 13 }}>{row.site_name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span style={{ fontSize: 13, color: row.product_name ? "#18181B" : "#A1A1AA" }}>
+                          {row.product_name ?? "Ceo sajt"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "#DC2626" }}>
+                          {formatRSD(row.spend)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "#16A34A" }}>
+                          {formatRSD(row.revenue)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+                          {row.roas !== null ? `${row.roas}×` : "—"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </SectionBox>
 
         {/* Section 1 — Site default margins */}
         <SectionBox
