@@ -141,14 +141,30 @@ export function useRealtimeOrders({
     });
   }
 
+  // Realtime payloads carry the full orders row; keep only the fields the feed
+  // renders so things like net_profit / customer_email / woo_data never sit in
+  // client state (same shape as mapRows, which selects only safe columns).
   function enrichFromCache(
     row: Record<string, unknown>,
     siteId: string
   ): Omit<RealtimeOrder, "product_name" | "is_late"> {
     const info = sitesCache.current.get(siteId);
-    console.log(info);
     return {
-      ...(row as Omit<RealtimeOrder, "site_name" | "site_color" | "product_name" | "is_late">),
+      id: row.id as string,
+      site_id: row.site_id as string,
+      woo_order_id: (row.woo_order_id as string | null) ?? null,
+      source: row.source as string,
+      status: row.status as string,
+      total: row.total as number,
+      net_profit: null,
+      currency: row.currency as string,
+      customer_name: (row.customer_name as string | null) ?? null,
+      customer_email: null,
+      customer_city: (row.customer_city as string | null) ?? null,
+      product_type: row.product_type as string,
+      payment_type: row.payment_type as string,
+      created_at: row.created_at as string,
+      updated_at: (row.updated_at as string | null) ?? null,
       site_name: info?.name ?? "Nepoznat sajt",
       site_color: info?.color_hex ?? "#888888",
     };
@@ -197,7 +213,6 @@ export function useRealtimeOrders({
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "orders" },
           (payload) => {
-            console.log("Realtime event: INSERT orders", payload);
             const newRow = payload.new as Record<string, unknown>;
             const siteId = newRow.site_id as string;
             const createdAt = newRow.created_at as string;
@@ -214,15 +229,7 @@ export function useRealtimeOrders({
             // Play sound — all values read via refs so they're always current
             if (!silentRef.current) {
               const { isMuted, shouldPlay, playSound, settings } = soundCtxRef.current;
-              console.log("[Sound] New order received — status:", orderStatus, "| isMuted:", isMuted, "| shouldPlay:", shouldPlay(orderStatus));
-              if (!isMuted && shouldPlay(orderStatus)) {
-                console.log("[Sound] Playing sound for order status:", orderStatus);
-                playSound(settings.volume);
-              } else if (isMuted) {
-                console.log("[Sound] Sound skipped: muted");
-              } else {
-                console.log("[Sound] Sound skipped: status", orderStatus, "not in triggerStatuses");
-              }
+              if (!isMuted && shouldPlay(orderStatus)) playSound(settings.volume);
             }
 
             setRecentOrders((prev) => {
@@ -256,7 +263,6 @@ export function useRealtimeOrders({
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "orders" },
           (payload) => {
-            console.log("Realtime event: UPDATE orders", payload);
             const updated = payload.new as Record<string, unknown>;
             const id = updated.id as string;
             const nextStatus = updated.status as string;
@@ -271,7 +277,6 @@ export function useRealtimeOrders({
         )
         .subscribe((status, err) => {
           lastStatus = status;
-          console.log("Realtime status:", status);
           if (err) console.error("Realtime subscription error:", err);
 
           if (status === "SUBSCRIBED") {
@@ -292,7 +297,6 @@ export function useRealtimeOrders({
             isMounted
           ) {
             isReconnecting = true;
-            console.log(`Realtime: ${status} — reconnecting in ${RECONNECT_DELAY_MS}ms`);
             reconnectTimer = setTimeout(() => {
               if (!isMounted) return;
               reconnectTimer = null;
@@ -307,14 +311,12 @@ export function useRealtimeOrders({
     }
 
     currentChannel = createChannel();
-    console.log(`Realtime: subscribed to ${channelNameRef.current} channel`);
 
     // Heartbeat: only acts after the channel was SUBSCRIBED at least once,
     // ensuring we don't misfire during the initial handshake
     const heartbeat = setInterval(() => {
       if (!isMounted || !subscribedOnce || isReconnecting) return;
       if (lastStatus !== "SUBSCRIBED") {
-        console.log("Realtime heartbeat: channel not SUBSCRIBED, recreating");
         isReconnecting = true;
         supabaseBrowser.removeChannel(currentChannel);
         currentChannel = createChannel();
@@ -335,7 +337,6 @@ export function useRealtimeOrders({
   useEffect(() => {
     async function handleVisibilityChange() {
       if (document.visibilityState !== "visible") return;
-      console.log("Realtime: tab visible — refetching today's orders");
 
       const { data } = await supabaseBrowser
         .from("orders")

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { PUBLIC_SITE_COLUMNS, siteUpdateFromBody } from "@/lib/utils/site-columns";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,9 +16,9 @@ export async function PATCH(
 
   const { data: site, error } = await supabase
     .from("sites")
-    .update(body)
+    .update(siteUpdateFromBody(body))
     .eq("id", id)
-    .select()
+    .select(PUBLIC_SITE_COLUMNS)
     .single();
 
   if (error)

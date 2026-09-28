@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { PUBLIC_SITE_COLUMNS, secretFlags } from "@/lib/utils/site-columns";
 
 export async function GET() {
   const { error: authError } = await requireRole(["owner"]);
@@ -10,7 +11,7 @@ export async function GET() {
 
   const { data: sites, error } = await supabase
     .from("sites")
-    .select("*")
+    .select(`${PUBLIC_SITE_COLUMNS}, consumer_key, consumer_secret, thinkific_api_key`)
     .order("created_at");
 
   if (error)
@@ -38,8 +39,9 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    (sites ?? []).map((site) => ({
+    (sites ?? []).map(({ consumer_key, consumer_secret, thinkific_api_key, ...site }) => ({
       ...site,
+      ...secretFlags({ consumer_key, consumer_secret, thinkific_api_key }),
       last_sync: latestSync[site.id] ?? null,
     }))
   );
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
       project_type: project_type || "standard",
       is_active: is_active ?? true,
     })
-    .select()
+    .select(PUBLIC_SITE_COLUMNS)
     .single();
 
   if (error)

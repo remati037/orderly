@@ -57,9 +57,10 @@ interface Site {
   platform: "woocommerce" | "thinkific" | "stripe";
   url: string | null;
   subdomain: string | null;
-  consumer_key: string | null;
-  consumer_secret: string | null;
-  thinkific_api_key: string | null;
+  // Credentials never reach the browser — only whether each one is stored.
+  has_consumer_key: boolean;
+  has_consumer_secret: boolean;
+  has_thinkific_api_key: boolean;
   color_hex: string;
   project_type: "standard" | "subscription" | "digital";
   is_active: boolean;
@@ -289,14 +290,22 @@ export default function SitesManager() {
       project_type: site.project_type,
       is_active: site.is_active,
       url: site.url ?? "",
-      consumer_key: site.consumer_key ?? "",
-      consumer_secret: site.consumer_secret ?? "",
+      // Left empty on edit: an empty field keeps the stored credential.
+      consumer_key: "",
+      consumer_secret: "",
       subdomain: site.subdomain ?? "",
-      thinkific_api_key: site.thinkific_api_key ?? "",
+      thinkific_api_key: "",
     });
     setShowSecret(false);
     setShowApiKey(false);
     setDialogOpen(true);
+  }
+
+  function savedPlaceholder(
+    flag: "has_consumer_key" | "has_consumer_secret" | "has_thinkific_api_key",
+    fallback: string
+  ): string {
+    return editingSite?.[flag] ? "•••••• sačuvano — ostavi prazno da zadržiš" : fallback;
   }
 
   function handleDialogOpenChange(open: boolean) {
@@ -811,7 +820,7 @@ export default function SitesManager() {
 
                     <FormField label="Consumer Key">
                       <Input
-                        placeholder="ck_..."
+                        placeholder={savedPlaceholder("has_consumer_key", "ck_...")}
                         value={form.consumer_key}
                         onChange={(e) =>
                           setField("consumer_key", e.target.value)
@@ -823,7 +832,7 @@ export default function SitesManager() {
                       <div className="relative">
                         <Input
                           type={showSecret ? "text" : "password"}
-                          placeholder="cs_..."
+                          placeholder={savedPlaceholder("has_consumer_secret", "cs_...")}
                           value={form.consumer_secret}
                           onChange={(e) =>
                             setField("consumer_secret", e.target.value)
@@ -859,7 +868,7 @@ export default function SitesManager() {
                     <div className="relative">
                       <Input
                         type={showSecret ? "text" : "password"}
-                        placeholder="sk_live_..."
+                        placeholder={savedPlaceholder("has_consumer_key", "sk_live_...")}
                         value={form.consumer_key}
                         onChange={(e) => setField("consumer_key", e.target.value)}
                         className="pr-9"
@@ -880,7 +889,7 @@ export default function SitesManager() {
                   >
                     <Input
                       type={showSecret ? "text" : "password"}
-                      placeholder="whsec_..."
+                      placeholder={savedPlaceholder("has_consumer_secret", "whsec_...")}
                       value={form.consumer_secret}
                       onChange={(e) => setField("consumer_secret", e.target.value)}
                     />
@@ -927,7 +936,7 @@ export default function SitesManager() {
                       <div className="relative">
                         <Input
                           type={showApiKey ? "text" : "password"}
-                          placeholder="API key"
+                          placeholder={savedPlaceholder("has_thinkific_api_key", "API key")}
                           value={form.thinkific_api_key}
                           onChange={(e) =>
                             setField("thinkific_api_key", e.target.value)
