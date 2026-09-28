@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export async function GET() {
   const { error: authError } = await requireRole(["owner"]);
@@ -9,12 +10,13 @@ export async function GET() {
   const supabase = adminClient();
 
   const [itemsRes, overridesRes, sitesRes] = await Promise.all([
-    supabase
-      .from("order_items")
-      .select(
-        "product_name, product_type, order:orders!inner(site_id)"
-      )
-      .not("product_name", "is", null),
+    fetchAll(() =>
+      supabase
+        .from("order_items")
+        .select("product_name, product_type, order:orders!inner(site_id)")
+        .not("product_name", "is", null)
+        .order("id")
+    ),
     supabase.from("products").select("*"),
     supabase.from("sites").select("id, name, color_hex"),
   ]);

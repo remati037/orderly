@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 // GET: campaigns (with current mapping + last-30d spend) plus the sites and
 // products available as mapping targets.
@@ -15,11 +16,14 @@ export async function GET() {
       .from("ad_campaign_map")
       .select("campaign_id, campaign_name, site_id, product_name, ad_account_id"),
     supabase.from("sites").select("id, name, color_hex").order("name"),
-    supabase
-      .from("order_items")
-      .select("product_name, order:orders!inner(site_id)")
-      .not("product_name", "is", null),
-    supabase.from("ad_spend").select("campaign_id, spend"),
+    fetchAll(() =>
+      supabase
+        .from("order_items")
+        .select("product_name, order:orders!inner(site_id)")
+        .not("product_name", "is", null)
+        .order("id")
+    ),
+    fetchAll(() => supabase.from("ad_spend").select("campaign_id, spend").order("id")),
   ]);
 
   // Sum spend per campaign (all-time stored, typically last sync window).

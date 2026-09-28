@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds } from "@/lib/utils/tz";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
@@ -40,25 +41,29 @@ export async function GET(request: NextRequest) {
 
   let rows: OrderRow[] = [];
   if (products?.length) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q = (supabase as any)
-      .from("orders")
-      .select("total, currency, created_at, order_items!inner(product_name)")
-      .gte("created_at", from)
-      .in("status", COUNTED_STATUSES)
-      .in("order_items.product_name", products);
-    if (siteId) q = q.eq("site_id", siteId);
-    const { data } = (await q) as { data: OrderRow[] | null };
-    rows = data ?? [];
+    ({ data: rows } = await fetchAll<OrderRow>(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
+        .from("orders")
+        .select("total, currency, created_at, order_items!inner(product_name)")
+        .gte("created_at", from)
+        .in("status", COUNTED_STATUSES)
+        .in("order_items.product_name", products)
+        .order("id");
+      if (siteId) q = q.eq("site_id", siteId);
+      return q;
+    }));
   } else {
-    let q = supabase
-      .from("orders")
-      .select("total, currency, created_at")
-      .gte("created_at", from)
-      .in("status", COUNTED_STATUSES);
-    if (siteId) q = q.eq("site_id", siteId);
-    const { data } = await q;
-    rows = (data as OrderRow[]) ?? [];
+    ({ data: rows } = await fetchAll<OrderRow>(() => {
+      let q = supabase
+        .from("orders")
+        .select("total, currency, created_at")
+        .gte("created_at", from)
+        .in("status", COUNTED_STATUSES)
+        .order("id");
+      if (siteId) q = q.eq("site_id", siteId);
+      return q;
+    }));
   }
 
   const revByDay   = new Map<string, number>(dayKeys.map((k) => [k, 0]));

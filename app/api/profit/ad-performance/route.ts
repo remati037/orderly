@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
@@ -39,12 +40,15 @@ export async function GET(request: NextRequest) {
 
   // Revenue per (site_id, product_name) for the same window — mirrors
   // /api/analytics/top-products but keyed per-site too, to match spend.byProduct.
-  const { data: items } = await supabase
-    .from("order_items")
-    .select("product_name, price, quantity, order:orders!inner(site_id, status, created_at, currency)")
-    .in("order.status", COUNTED_STATUSES)
-    .gte("order.created_at", from)
-    .lt("order.created_at", to);
+  const { data: items } = await fetchAll(() =>
+    supabase
+      .from("order_items")
+      .select("product_name, price, quantity, order:orders!inner(site_id, status, created_at, currency)")
+      .in("order.status", COUNTED_STATUSES)
+      .gte("order.created_at", from)
+      .lt("order.created_at", to)
+      .order("id")
+  );
 
   const revenueByProduct = new Map<string, number>(); // "site_id::product_name"
   const revenueBySite = new Map<string, number>();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
@@ -56,12 +57,15 @@ export async function GET() {
   from.setDate(from.getDate() - HISTORY_DAYS + 1);
   from.setHours(0, 0, 0, 0);
 
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("total, currency, created_at")
-    .gte("created_at", from.toISOString())
-    .in("status", COUNTED_STATUSES)
-    .order("created_at");
+  const { data: orders } = await fetchAll(() =>
+    supabase
+      .from("orders")
+      .select("total, currency, created_at")
+      .gte("created_at", from.toISOString())
+      .in("status", COUNTED_STATUSES)
+      .order("created_at")
+      .order("id")
+  );
 
   // Aggregate daily totals
   const dailyMap: Record<string, number> = {};

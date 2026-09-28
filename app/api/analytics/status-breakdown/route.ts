@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -13,15 +14,15 @@ export async function GET(request: NextRequest) {
 
   const supabase = adminClient();
 
-  let query = supabase.from("orders").select("status");
-
-  if (siteId) query = query.eq("site_id", siteId);
-  if (from) query = query.gte("created_at", from);
-  if (to) query = query.lt("created_at", to);
-
-  const { data, error } = await query;
+  const { data, error } = await fetchAll(() => {
+    let query = supabase.from("orders").select("status").order("id");
+    if (siteId) query = query.eq("site_id", siteId);
+    if (from) query = query.gte("created_at", from);
+    if (to) query = query.lt("created_at", to);
+    return query;
+  });
   if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 
   const counts: Record<string, number> = {};
   for (const row of data ?? []) {

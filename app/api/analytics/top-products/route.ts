@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
@@ -18,19 +19,20 @@ export async function GET(request: NextRequest) {
 
   const fx = await loadFxSettings(supabase);
 
-  let query = supabase
-    .from("order_items")
-    .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency)")
-    .in("order.status", COUNTED_STATUSES);
-
-  if (siteId) query = query.eq("order.site_id", siteId);
-  if (from) query = query.gte("order.created_at", from);
-  if (to) query = query.lt("order.created_at", to);
-
-  const { data, error } = await query;
+  const { data, error } = await fetchAll(() => {
+    let query = supabase
+      .from("order_items")
+      .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency)")
+      .in("order.status", COUNTED_STATUSES)
+      .order("id");
+    if (siteId) query = query.eq("order.site_id", siteId);
+    if (from) query = query.gte("order.created_at", from);
+    if (to) query = query.lt("order.created_at", to);
+    return query;
+  });
 
   if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 
   // Aggregate by product name
   const map = new Map<string, { name: string; type: string; revenue: number; units: number }>();

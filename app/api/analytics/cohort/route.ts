@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 function monthKey(date: Date): string {
@@ -25,17 +26,23 @@ export async function GET() {
   lookbackStart.setHours(0, 0, 0, 0);
 
   const [customersRes, ordersRes] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("email, first_order_at")
-      .gte("first_order_at", lookbackStart.toISOString())
-      .not("first_order_at", "is", null),
-    supabase
-      .from("orders")
-      .select("customer_email, created_at")
-      .gte("created_at", lookbackStart.toISOString())
-      .in("status", COUNTED_STATUSES)
-      .not("customer_email", "is", null),
+    fetchAll(() =>
+      supabase
+        .from("customers")
+        .select("email, first_order_at")
+        .gte("first_order_at", lookbackStart.toISOString())
+        .not("first_order_at", "is", null)
+        .order("id")
+    ),
+    fetchAll(() =>
+      supabase
+        .from("orders")
+        .select("customer_email, created_at")
+        .gte("created_at", lookbackStart.toISOString())
+        .in("status", COUNTED_STATUSES)
+        .not("customer_email", "is", null)
+        .order("id")
+    ),
   ]);
 
   const customers = customersRes.data ?? [];

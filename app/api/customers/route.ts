@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { DEFAULT_RATES, toBase } from "@/lib/utils/fx";
 
@@ -33,11 +34,14 @@ export async function GET(request: NextRequest) {
   // Get primary site per customer (site with most orders per email)
   const emails = customers.map((c) => c.email).filter(Boolean) as string[];
 
-  const { data: orderSites } = await supabase
-    .from("orders")
-    .select("customer_email, site_id, sites(name, color_hex, platform)")
-    .in("customer_email", emails)
-    .in("status", COUNTED_STATUSES);
+  const { data: orderSites } = await fetchAll(() =>
+    supabase
+      .from("orders")
+      .select("customer_email, site_id, sites(name, color_hex, platform)")
+      .in("customer_email", emails)
+      .in("status", COUNTED_STATUSES)
+      .order("id")
+  );
 
   // Aggregate: email → siteId → { count, name, color, platform }
   type SiteInfo = { count: number; name: string; color: string; platform: string };

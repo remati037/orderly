@@ -1,5 +1,6 @@
 import type { adminClient } from "@/lib/supabase/admin";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 type Supa = ReturnType<typeof adminClient>;
 
@@ -58,19 +59,22 @@ export async function computeSubscriptionOrdinals(
   // aren't normalized to lowercase in the DB, so filtering by an exact .in()
   // list would silently miss same-customer orders stored with different casing.
   // Matching case-insensitively in JS below avoids that trap.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase as any)
-    .from("orders")
-    .select("id, customer_email, created_at, order_items!inner(product_name)")
-    .in("status", COUNTED_STATUSES)
-    .not("customer_email", "is", null)
-    .in("order_items.product_name", Array.from(subNames));
+  const { data } = await fetchAll<Row>(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("orders")
+      .select("id, customer_email, created_at, order_items!inner(product_name)")
+      .in("status", COUNTED_STATUSES)
+      .not("customer_email", "is", null)
+      .in("order_items.product_name", Array.from(subNames))
+      .order("id")
+  );
 
   type Row = { customer_email: string; created_at: string; order_items: { product_name: string }[] | null };
 
   // Timestamps of successful payments per (email, product) — the count basis.
   const successTimes = new Map<string, number[]>();
-  for (const row of (data ?? []) as Row[]) {
+  for (const row of data) {
     const email = row.customer_email?.toLowerCase();
     if (!email || !emails.includes(email)) continue;
     const productName = row.order_items?.[0]?.product_name;

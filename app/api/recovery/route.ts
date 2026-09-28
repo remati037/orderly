@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { requireRole } from "@/lib/auth/roles";
 import { dayBoundsForDate } from "@/lib/utils/tz";
 import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
@@ -72,12 +73,15 @@ export async function GET() {
   if (hasFailedTasks) {
     // Bounded to the board's own window — a task can't be older than MAX_AGE_DAYS.
     const cutoff = new Date(Date.now() - (MAX_AGE_DAYS + 1) * 86_400_000).toISOString();
-    const { data: successOrders } = await supabase
-      .from("orders")
-      .select("customer_email, created_at")
-      .in("status", ["processing", "completed"])
-      .gte("created_at", cutoff)
-      .not("customer_email", "is", null);
+    const { data: successOrders } = await fetchAll(() =>
+      supabase
+        .from("orders")
+        .select("customer_email, created_at")
+        .in("status", ["processing", "completed"])
+        .gte("created_at", cutoff)
+        .not("customer_email", "is", null)
+        .order("id")
+    );
 
     for (const o of successOrders ?? []) {
       const email = (o.customer_email as string).toLowerCase();

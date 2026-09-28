@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
@@ -19,24 +20,25 @@ export async function GET(request: NextRequest) {
   from.setDate(from.getDate() - days + 1);
   from.setHours(0, 0, 0, 0);
 
-  let query = supabase
-    .from("orders")
-    .select("site_id, total, currency, created_at")
-    .gte("created_at", from.toISOString())
-    .in("status", COUNTED_STATUSES)
-    .order("created_at");
-
-  if (siteId) query = query.eq("site_id", siteId);
-
   const [ordersRes, sitesRes] = await Promise.all([
-    query,
+    fetchAll(() => {
+      let query = supabase
+        .from("orders")
+        .select("site_id, total, currency, created_at")
+        .gte("created_at", from.toISOString())
+        .in("status", COUNTED_STATUSES)
+        .order("created_at")
+        .order("id");
+      if (siteId) query = query.eq("site_id", siteId);
+      return query;
+    }),
     supabase.from("sites").select("id, name, color_hex"),
   ]);
 
   if (ordersRes.error)
-    return NextResponse.json({ error: ordersRes.error.message }, { status: 500 });
+    return NextResponse.json({ error: (ordersRes.error as Error).message }, { status: 500 });
 
-  const orders = ordersRes.data ?? [];
+  const orders = ordersRes.data;
   const sites  = sitesRes.data ?? [];
 
   // Build date range labels DD.MM

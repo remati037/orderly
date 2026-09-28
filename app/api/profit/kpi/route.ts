@@ -5,6 +5,7 @@ import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
 import { monthBounds } from "@/lib/utils/tz";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export async function GET() {
   const { error: authError } = await requireRole(["owner"]);
@@ -17,12 +18,15 @@ export async function GET() {
   ]);
 
   const [ordersRes, productsRes] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("total, net_profit, currency")
-      .gte("created_at", start)
-      .lt("created_at", end)
-      .in("status", COUNTED_STATUSES),
+    fetchAll(() =>
+      supabase
+        .from("orders")
+        .select("total, net_profit, currency")
+        .gte("created_at", start)
+        .lt("created_at", end)
+        .in("status", COUNTED_STATUSES)
+        .order("id")
+    ),
     supabase
       .from("products")
       .select("name, cost_percent")

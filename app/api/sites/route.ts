@@ -18,22 +18,23 @@ export async function GET() {
 
   const siteIds = (sites ?? []).map((s) => s.id);
 
-  const { data: syncLogs } = siteIds.length
-    ? await supabase
+  // Latest log per site — one tiny query each instead of pulling the whole
+  // sync_log table (which also got cut off at 1000 rows).
+  const latestLogs = await Promise.all(
+    siteIds.map((id) =>
+      supabase
         .from("sync_log")
         .select("site_id, created_at, status")
-        .in("site_id", siteIds)
+        .eq("site_id", id)
         .order("created_at", { ascending: false })
-    : { data: [] };
+        .limit(1)
+        .maybeSingle()
+    )
+  );
 
   const latestSync: Record<string, { created_at: string; status: string }> = {};
-  for (const log of syncLogs ?? []) {
-    if (!latestSync[log.site_id]) {
-      latestSync[log.site_id] = {
-        created_at: log.created_at,
-        status: log.status,
-      };
-    }
+  for (const { data: log } of latestLogs) {
+    if (log) latestSync[log.site_id] = { created_at: log.created_at, status: log.status };
   }
 
   return NextResponse.json(

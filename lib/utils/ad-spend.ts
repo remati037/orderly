@@ -1,4 +1,5 @@
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { toBase } from "@/lib/utils/fx";
 
 export interface MappedSpend {
@@ -17,15 +18,22 @@ export async function getMappedSpend(
   rates: Record<string, number>,
   siteId?: string | null
 ): Promise<MappedSpend> {
-  const { data: spendRows } = await supabase
-    .from("ad_spend")
-    .select("campaign_id, spend, currency, date")
-    .gte("date", from)
-    .lt("date", to);
-
-  const { data: mapRows } = await supabase
-    .from("ad_campaign_map")
-    .select("campaign_id, site_id, product_name");
+  const [{ data: spendRows }, { data: mapRows }] = await Promise.all([
+    fetchAll(() =>
+      supabase
+        .from("ad_spend")
+        .select("campaign_id, spend, currency, date")
+        .gte("date", from)
+        .lt("date", to)
+        .order("id")
+    ),
+    fetchAll(() =>
+      supabase
+        .from("ad_campaign_map")
+        .select("campaign_id, site_id, product_name")
+        .order("campaign_id")
+    ),
+  ]);
 
   const mapByCampaign = new Map(
     (mapRows ?? []).map((m) => [m.campaign_id, m])

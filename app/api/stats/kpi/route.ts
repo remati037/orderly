@@ -4,6 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { periodBounds } from "@/lib/utils/kpi-period";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 interface PeriodResult {
   revenue: number;
@@ -47,28 +48,34 @@ async function queryOrders(
 ): Promise<PeriodResult> {
   if (products?.length) {
     // Supabase TS cannot infer types for non-literal select strings; cast to any.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q = (supabase as any)
+    const { data, error } = await fetchAll<OrderRow>(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
+        .from("orders")
+        .select("total, net_profit, currency, payment_method, processor_fee, order_items!inner(product_name)")
+        .gte("created_at", from)
+        .lt("created_at", to)
+        .in("status", COUNTED_STATUSES)
+        .in("order_items.product_name", products)
+        .order("id");
+      if (siteId) q = q.eq("site_id", siteId);
+      return q;
+    });
+    return error ? EMPTY : sumOrders(data, rates);
+  }
+
+  const { data, error } = await fetchAll<OrderRow>(() => {
+    let q = supabase
       .from("orders")
-      .select("total, net_profit, currency, payment_method, processor_fee, order_items!inner(product_name)")
+      .select("total, net_profit, currency, payment_method, processor_fee")
       .gte("created_at", from)
       .lt("created_at", to)
       .in("status", COUNTED_STATUSES)
-      .in("order_items.product_name", products);
+      .order("id");
     if (siteId) q = q.eq("site_id", siteId);
-    const { data, error } = (await q) as { data: OrderRow[] | null; error: unknown };
-    return error || !data ? EMPTY : sumOrders(data, rates);
-  }
-
-  let q = supabase
-    .from("orders")
-    .select("total, net_profit, currency, payment_method, processor_fee")
-    .gte("created_at", from)
-    .lt("created_at", to)
-    .in("status", COUNTED_STATUSES);
-  if (siteId) q = q.eq("site_id", siteId);
-  const { data, error } = await q;
-  return error || !data ? EMPTY : sumOrders(data as OrderRow[], rates);
+    return q;
+  });
+  return error ? EMPTY : sumOrders(data, rates);
 }
 
 export async function GET(request: NextRequest) {

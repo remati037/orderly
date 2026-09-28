@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { periodBounds } from "@/lib/utils/kpi-period";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
@@ -79,19 +80,19 @@ export async function GET(request: NextRequest) {
 
   const select = "id, site_id, total, currency, customer_email, created_at, order_items(product_name)";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q = (supabase as any)
-    .from("orders")
-    .select(products?.length ? select.replace("order_items(", "order_items!inner(") : select)
-    .gte("created_at", current.start)
-    .lt("created_at", current.end)
-    .in("status", COUNTED_STATUSES);
-  if (products?.length) q = q.in("order_items.product_name", products);
-
-  const { data, error } = (await q) as { data: OrderRow[] | null; error: { message: string } | null };
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const rows = data ?? [];
+  const { data: rows, error } = await fetchAll<OrderRow>(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (supabase as any)
+      .from("orders")
+      .select(products?.length ? select.replace("order_items(", "order_items!inner(") : select)
+      .gte("created_at", current.start)
+      .lt("created_at", current.end)
+      .in("status", COUNTED_STATUSES)
+      .order("id");
+    if (products?.length) q = q.in("order_items.product_name", products);
+    return q;
+  });
+  if (error) return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 
   const subscriptionSeq = await computeSubscriptionOrdinals(
     supabase,
