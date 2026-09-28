@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { upsertCustomer, logSync } from "./db";
+import { upsertCustomer, upsertThinkificSubscription, logSync } from "./db";
 
 interface ThinkificSite {
   id: string;
@@ -157,27 +157,17 @@ export async function syncThinkificSite(
           await upsertCustomer(
             supabase,
             order.user.email,
-            customerName,
-            order.amount_dollars ?? 0
+            customerName
           );
 
           if (paymentType === "subscription") {
-            const { data: customer } = await supabase
-              .from("customers")
-              .select("id")
-              .eq("email", order.user.email)
-              .maybeSingle();
-
-            await supabase.from("subscriptions").upsert(
-              {
-                site_id: siteId,
-                customer_id: customer?.id ?? null,
-                product_name: order.product_name ?? "",
-                mrr: order.amount_dollars ?? 0,
-                status: "active",
-                started_at: order.created_at,
-              },
-              { onConflict: "id" }
+            await upsertThinkificSubscription(
+              supabase,
+              siteId,
+              order.user.email,
+              order.product_name ?? "",
+              order.amount_dollars ?? 0,
+              order.created_at
             );
           }
           synced++;
@@ -230,8 +220,7 @@ export async function syncThinkificSite(
           await upsertCustomer(
             supabase,
             enrollment.user.email,
-            customerName,
-            0
+            customerName
           );
           synced++;
         }

@@ -123,7 +123,6 @@ export async function POST(
       supabase,
       normalized.customer_email,
       normalized.customer_name ?? "",
-      normalized.status === "completed" ? normalized.total : 0,
       normalized.customer_city ?? undefined
     );
   }

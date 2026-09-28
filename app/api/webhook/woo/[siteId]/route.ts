@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { adminClient } from "@/lib/supabase/admin";
 import { normalizeWooOrder } from "@/lib/sync/normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
+import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 
 export async function POST(
   request: NextRequest,
@@ -31,15 +31,17 @@ export async function POST(
     console.log(`[woo-webhook] Site resolved: "${site.name}" (${siteId})`);
 
     // ── 2. Verify signature ────────────────────────────────────────────────────
-    if (signature && site.consumer_secret) {
-      const expected = crypto
-        .createHmac("sha256", site.consumer_secret)
-        .update(rawBody)
-        .digest("base64");
-      if (expected !== signature) {
-        console.error(`[woo-webhook] Signature mismatch for site "${site.name}" — rejecting payload`);
-        return NextResponse.json({ ok: true }, { status: 200 });
-      }
+    // WooCommerce's delivery ping on webhook creation is unsigned
+    // (form body "webhook_id=123") and must get a 2xx or the webhook won't save.
+    if (!signature && /^webhook_id=\d+$/.test(rawBody.trim())) {
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    if (!verifyHmacSignature(rawBody, signature, site.consumer_secret, "base64")) {
+      console.error(
+        `[woo-webhook] ${signature ? "Signature mismatch" : "Missing signature"} for site "${site.name}" — rejecting payload`
+      );
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     // ── 3. Parse payload ───────────────────────────────────────────────────────
@@ -72,7 +74,6 @@ export async function POST(
         supabase,
         normalized.orderRow.customer_email,
         normalized.orderRow.customer_name,
-        normalized.orderRow.total,
         normalized.orderRow.customer_city
       );
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { upsertCustomer, logSync } from "@/lib/sync/db";
+import { upsertCustomer, upsertThinkificSubscription, logSync } from "@/lib/sync/db";
+import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -37,18 +38,28 @@ export async function POST(
   const supabase = adminClient();
 
   try {
-    const body: ThinkificWebhook = await request.json();
-    const { resource, action, payload } = body;
+    const rawBody = await request.text();
+    const signature = request.headers.get("x-thinkific-hmac-sha256");
 
     const { data: site, error: siteError } = await supabase
       .from("sites")
-      .select("id, platform, default_margin_percent")
+      .select("id, name, platform, default_margin_percent, thinkific_api_key")
       .eq("id", siteId)
       .single();
 
     if (siteError || !site || site.platform !== "thinkific") {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
+
+    if (!verifyHmacSignature(rawBody, signature, site.thinkific_api_key, "hex")) {
+      console.error(
+        `[thinkific-webhook] ${signature ? "Signature mismatch" : "Missing signature"} for site "${site.name}" — rejecting payload`
+      );
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const body: ThinkificWebhook = JSON.parse(rawBody);
+    const { resource, action, payload } = body;
 
     const now = new Date().toISOString();
     const thinkificOrderId = payload.id.toString();
@@ -118,27 +129,11 @@ export async function POST(
       });
 
       if (customerEmail) {
-        await upsertCustomer(supabase, customerEmail, customerName, total);
+        await upsertCustomer(supabase, customerEmail, customerName);
       }
 
-      if (paymentType === "subscription") {
-        const { data: customer } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("email", customerEmail)
-          .maybeSingle();
-
-        await supabase.from("subscriptions").upsert(
-          {
-            site_id: siteId,
-            customer_id: customer?.id ?? null,
-            product_name: productName,
-            mrr: total,
-            status: "active",
-            started_at: now,
-          },
-          { onConflict: "id" }
-        );
+      if (paymentType === "subscription" && customerEmail) {
+        await upsertThinkificSubscription(supabase, siteId, customerEmail, productName, total, now);
       }
 
       await logSync(supabase, siteId, "webhook", "success", 1);
@@ -188,7 +183,7 @@ export async function POST(
       });
 
       if (customerEmail) {
-        await upsertCustomer(supabase, customerEmail, customerName, 0);
+        await upsertCustomer(supabase, customerEmail, customerName);
       }
 
       await logSync(supabase, siteId, "webhook", "success", 1);

@@ -57,7 +57,6 @@ export async function syncWooSite(
             supabase,
             normalized.orderRow.customer_email,
             normalized.orderRow.customer_name,
-            normalized.orderRow.total,
             normalized.orderRow.customer_city
           );
         }

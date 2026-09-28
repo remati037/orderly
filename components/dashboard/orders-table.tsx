@@ -62,7 +62,7 @@ function pageUrl(
   }
   if (page > 1) sp.set("page", String(page));
   const qs = sp.toString();
-  return `/dashboard${qs ? `?${qs}` : ""}`;
+  return `/porudzbine${qs ? `?${qs}` : ""}`;
 }
 
 // ── number formatting ──────────────────────────────────────────────────────────
