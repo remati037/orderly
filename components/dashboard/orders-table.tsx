@@ -1,29 +1,13 @@
 import Link from "next/link";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
-import { dayBounds, monthBounds, customBounds } from "@/lib/utils/tz";
+import { parseOrderFilters, applyOrderFilters } from "@/lib/orders/order-filters";
 import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 import { OrdersTableClient, type OrderRow } from "./orders-table-client";
 
 // ── constants ──────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 25;
-
-// ── date preset helpers ────────────────────────────────────────────────────────
-
-// Belgrade-time boundaries — the server runs in UTC, so local setHours(0) would
-// shift "Danas" / "Ovaj mesec" by 1–2 hours.
-function presetToRange(preset: string): { from: string; to: string } | null {
-  const range = (b: { start: string; end: string }) => ({ from: b.start, to: b.end });
-  switch (preset) {
-    case "today":      return range(dayBounds(0));
-    case "yesterday":  return range(dayBounds(-1));
-    case "7days":      return { from: dayBounds(-6).start, to: dayBounds(0).end };
-    case "month":      return range(monthBounds(0));
-    case "last_month": return range(monthBounds(-1));
-    default:           return null;
-  }
-}
 
 // ── pagination URL helper ──────────────────────────────────────────────────────
 
@@ -61,14 +45,7 @@ export async function OrdersTable({ searchParams }: Props) {
   const params = await searchParams;
 
   const page        = Math.max(1, Number(params.page ?? 1));
-  const sitesParam  = typeof params.sites === "string" ? params.sites : "";
-  const siteIds     = sitesParam.split(",").filter(Boolean);
-  const platform    = typeof params.platform === "string" ? params.platform : undefined;
-  const status      = typeof params.status === "string" ? params.status : undefined;
-  const productType = typeof params.product_type === "string" ? params.product_type : undefined;
-  const datePreset  = typeof params.date_preset === "string" ? params.date_preset : undefined;
-  const dateFrom    = typeof params.date_from === "string" ? params.date_from : undefined;
-  const dateTo      = typeof params.date_to === "string" ? params.date_to : undefined;
+  const filters     = parseOrderFilters(params);
 
   const supabase = adminClient();
   const fx = await loadFxSettings(supabase);
@@ -82,18 +59,7 @@ export async function OrdersTable({ searchParams }: Props) {
     .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
-  if (siteIds.length > 0) query = query.in("site_id", siteIds);
-  if (platform)            query = query.eq("source", platform);
-  if (status)              query = query.eq("status", status);
-  if (productType)         query = query.eq("product_type", productType);
-
-  // Date range
-  const dateRange = datePreset && datePreset !== "custom" ? presetToRange(datePreset) : null;
-  // Custom dates are YYYY-MM-DD in Belgrade time; `to` is exclusive (next midnight).
-  const fromDate  = dateRange?.from ?? (dateFrom ? customBounds(dateFrom, dateFrom).start : undefined);
-  const toDate    = dateRange?.to   ?? (dateTo   ? customBounds(dateTo, dateTo).end       : undefined);
-  if (fromDate) query = query.gte("created_at", fromDate);
-  if (toDate)   query = query.lt("created_at", toDate);
+  query = applyOrderFilters(query, filters);
 
   const { data, count, error } = await query;
 

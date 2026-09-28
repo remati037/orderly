@@ -26,7 +26,10 @@ interface Customer {
   } | null;
 }
 
-type SortKey = keyof Pick<Customer, "total_spent" | "order_count" | "last_order_at" | "ltv_score" | "name">;
+// Server-side sortable columns (ltv_score is computed per row, so it isn't one).
+type SortKey = keyof Pick<Customer, "total_spent" | "order_count" | "last_order_at" | "name">;
+
+const PAGE_SIZE = 50;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,19 +67,6 @@ const SEGMENT_STYLE: Record<string, { bg: string; color: string }> = {
   Regular: { bg: "#F0FDF4", color: "#166534" },
   New:     { bg: "#EEF2FF", color: "#4338CA" },
 };
-
-// ── Sort helpers ──────────────────────────────────────────────────────────────
-
-function sortCustomers(customers: Customer[], key: SortKey, asc: boolean): Customer[] {
-  return [...customers].sort((a, b) => {
-    let va: string | number = a[key] ?? 0;
-    let vb: string | number = b[key] ?? 0;
-    if (typeof va === "string" && typeof vb === "string") {
-      return asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    }
-    return asc ? (va as number) - (vb as number) : (vb as number) - (va as number);
-  });
-}
 
 // ── Header cell ───────────────────────────────────────────────────────────────
 
@@ -117,28 +107,54 @@ function SortHeader({
 export default function CustomersPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("total_spent");
   const [sortAsc, setSortAsc] = useState(false);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  // Debounce the search box into the query that hits the API.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuery(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/customers?sort=${sortKey}&order=${sortAsc ? "asc" : "desc"}`);
-      if (res.ok) setCustomers(await res.json().then((d) => d.customers ?? []));
+      const params = new URLSearchParams({
+        sort: sortKey,
+        order: sortAsc ? "asc" : "desc",
+        page: String(page),
+        limit: String(PAGE_SIZE),
+      });
+      if (query) params.set("q", query);
+      const res = await fetch(`/api/customers?${params}`);
+      if (res.ok) {
+        const d = await res.json();
+        setCustomers(d.customers ?? []);
+        setTotal(d.total ?? 0);
+      }
     } finally {
       setLoading(false);
     }
-  }, [sortKey, sortAsc]);
+  }, [sortKey, sortAsc, page, query]);
 
   useEffect(() => { load(); }, [load]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortAsc((v) => !v);
     else { setSortKey(key); setSortAsc(false); }
+    setPage(1);
   }
 
-  const sorted = sortCustomers(customers, sortKey, sortAsc);
+  const sorted = customers;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -150,9 +166,17 @@ export default function CustomersPage() {
             Kupci
           </h1>
           <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
-            {loading ? "Učitavanje..." : `${customers.length.toLocaleString("sr-RS")} kupaca`}
+            {loading ? "Učitavanje..." : `${total.toLocaleString("sr-RS")} ${query ? "pronađeno" : "kupaca"}`}
           </p>
         </div>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Ime, email ili grad"
+          aria-label="Pretraga kupaca"
+          className="h-8 w-full max-w-[260px] rounded-md border border-input bg-white px-3 text-[13px] outline-none focus:border-ring"
+        />
       </div>
 
       {/* Table */}
@@ -164,7 +188,7 @@ export default function CustomersPage() {
         ) : sorted.length === 0 ? (
           <div style={{ padding: "64px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <UsersIcon style={{ width: 36, height: 36, opacity: 0.3 }} />
-            Nema kupaca — porudžbine će se pojaviti ovde nakon sinhronizacije
+            {query ? `Nema kupaca za „${query}”` : "Nema kupaca — porudžbine će se pojaviti ovde nakon sinhronizacije"}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -176,7 +200,9 @@ export default function CustomersPage() {
                   </th>
                   <SortHeader label="Potrošeno" sortKey="total_spent" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
                   <SortHeader label="Porudžbine" sortKey="order_count" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
-                  <SortHeader label="LTV/mes" sortKey="ltv_score" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
+                  <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
+                    LTV/mes
+                  </th>
                   <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
                     Sajt
                   </th>
@@ -265,6 +291,30 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      {pageCount > 1 && (
+        <nav aria-label="Stranice" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "#71717A" }}>
+          <span>Strana {page} od {pageCount}</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page <= 1 || loading}
+              className="h-8 rounded-md border border-input bg-white px-3 disabled:opacity-40"
+            >
+              ← Nazad
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= pageCount || loading}
+              className="h-8 rounded-md border border-input bg-white px-3 disabled:opacity-40"
+            >
+              Napred →
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

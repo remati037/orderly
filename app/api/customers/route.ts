@@ -12,24 +12,32 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const sort = searchParams.get("sort") ?? "total_spent";
   const order = searchParams.get("order") ?? "desc";
-  const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit") ?? 150)));
+  const pageSize = Math.min(200, Math.max(1, Number(searchParams.get("limit") ?? 50)));
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+  // Characters that are syntax in a PostgREST or=() list are dropped.
+  const q = (searchParams.get("q") ?? "").replace(/[,()*%"\\]/g, " ").trim();
 
   const supabase = adminClient();
 
   const allowedSortFields = ["total_spent", "order_count", "last_order_at", "first_order_at", "name"];
   const safeSort = allowedSortFields.includes(sort) ? sort : "total_spent";
 
-  const { data: customers, error } = await supabase
+  let query = supabase
     .from("customers")
-    .select("id, email, name, city, order_count, total_spent, first_order_at, last_order_at")
-    .order(safeSort, { ascending: order === "asc" })
-    .limit(limit);
+    .select("id, email, name, city, order_count, total_spent, first_order_at, last_order_at", { count: "exact" })
+    .order(safeSort, { ascending: order === "asc", nullsFirst: false })
+    .order("id")
+    .range((page - 1) * pageSize, page * pageSize - 1);
+  if (q) query = query.or(`name.ilike.*${q}*,email.ilike.*${q}*,city.ilike.*${q}*`);
+
+  const { data: customers, count, error } = await query;
 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const total = count ?? 0;
   if (!customers || customers.length === 0)
-    return NextResponse.json({ customers: [] });
+    return NextResponse.json({ customers: [], total, page, page_size: pageSize });
 
   // Get primary site per customer (site with most orders per email)
   const emails = customers.map((c) => c.email).filter(Boolean) as string[];
@@ -97,5 +105,5 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ customers: result });
+  return NextResponse.json({ customers: result, total, page, page_size: pageSize });
 }

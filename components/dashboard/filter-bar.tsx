@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarIcon, ChevronDownIcon, XIcon } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon, DownloadIcon, SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,12 +44,15 @@ const DATE_PRESETS = [
 const PLATFORM_OPTIONS = [
   { value: "woocommerce", label: "WooCommerce" },
   { value: "thinkific",   label: "Thinkific" },
+  { value: "stripe",      label: "Stripe" },
 ];
 
 const STATUS_OPTIONS = [
   { value: "pending",    label: "Na čekanju" },
   { value: "processing", label: "U obradi" },
   { value: "completed",  label: "Završeno" },
+  { value: "on-hold",    label: "Zadržano" },
+  { value: "failed",     label: "Neuspelo" },
   { value: "cancelled",  label: "Otkazano" },
   { value: "refunded",   label: "Refundirano" },
 ];
@@ -74,12 +77,14 @@ function useFilters() {
   const date_preset  = params.get("date_preset") ?? "";
   const date_from    = params.get("date_from") ?? "";
   const date_to      = params.get("date_to") ?? "";
+  const q            = params.get("q") ?? "";
 
   const hasActive =
-    sites.length > 0 || !!platform || !!status || !!product_type || !!date_preset || !!date_from;
+    sites.length > 0 || !!platform || !!status || !!product_type || !!date_preset || !!date_from || !!q;
 
   function push(updates: Record<string, string | string[] | null>) {
     const p = new URLSearchParams(params.toString());
+    p.delete("page"); // a new filter starts from the first page
     for (const [k, v] of Object.entries(updates)) {
       if (!v || (Array.isArray(v) && !v.length)) {
         p.delete(k);
@@ -93,7 +98,8 @@ function useFilters() {
   }
 
   return {
-    sites, platform, status, product_type, date_preset, date_from, date_to,
+    sites, platform, status, product_type, date_preset, date_from, date_to, q,
+    exportHref: `/api/orders/export${params.size ? `?${new URLSearchParams([...params].filter(([k]) => k !== "page"))}` : ""}`,
     hasActive,
     push,
     reset: () => router.replace(pathname, { scroll: false }),
@@ -122,6 +128,43 @@ function dateLabel(preset: string, from: string, to: string): string {
     return f && t ? `${f} – ${t}` : f || t || "Prilagođeno";
   }
   return "Datum";
+}
+
+// ── search ─────────────────────────────────────────────────────────────────────
+
+// Name / email / order number. Pushes to the URL 400ms after the last keystroke.
+function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [text, setText] = useState(value);
+  const [synced, setSynced] = useState(value);
+  if (value !== synced) {
+    // URL changed from outside (e.g. "Resetuj filtere") — follow it.
+    setSynced(value);
+    setText(value);
+  }
+
+  useEffect(() => {
+    if (text.trim() === value) return;
+    const t = setTimeout(() => onChange(text.trim()), 400);
+    return () => clearTimeout(t);
+  }, [text, value, onChange]);
+
+  return (
+    <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 300 }}>
+      <SearchIcon
+        className="size-3.5"
+        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#A1A1AA" }}
+        aria-hidden
+      />
+      <input
+        type="search"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Ime, email ili broj porudžbine"
+        aria-label="Pretraga porudžbina"
+        className="h-8 w-full rounded-md border border-input bg-transparent pl-8 pr-2 text-[13px] outline-none focus:border-ring"
+      />
+    </div>
+  );
 }
 
 // ── site filter ────────────────────────────────────────────────────────────────
@@ -380,6 +423,8 @@ export function FilterBar() {
           alignItems: "center",
         }}
       >
+        <SearchInput value={f.q} onChange={(v) => f.push({ q: v || null })} />
+
         <SiteFilter
           selected={f.sites}
           onToggle={(ids) => f.push({ sites: ids })}
@@ -413,16 +458,22 @@ export function FilterBar() {
           onSelect={(updates) => f.push(updates as Record<string, string | null>)}
         />
 
-        {f.hasActive && (
-          <Button
-            variant="ghost"
-            onClick={f.reset}
-            style={{ fontSize: 13, color: "#71717A", marginLeft: "auto" }}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {f.hasActive && (
+            <Button variant="ghost" onClick={f.reset} style={{ fontSize: 13, color: "#71717A" }}>
+              <XIcon className="size-3.5" />
+              Resetuj filtere
+            </Button>
+          )}
+          <a
+            href={f.exportHref}
+            download
+            className={cn(buttonVariants({ variant: "outline" }), "text-[13px] gap-1.5")}
           >
-            <XIcon className="size-3.5" />
-            Resetuj filtere
-          </Button>
-        )}
+            <DownloadIcon className="size-3.5" />
+            Izvezi CSV
+          </a>
+        </div>
       </div>
     </div>
   );
