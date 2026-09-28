@@ -443,8 +443,17 @@ export default function SitesManager() {
         body: JSON.stringify({ force: true, after }),
       });
       if (res.ok) {
-        const { synced } = await res.json();
-        showToast(`Sync završen — ${synced} porudžbina`, "success");
+        const { synced, failed = 0, removed = 0, complete = true } = await res.json();
+        const extra = [
+          failed ? `${failed} neuspešno` : "",
+          removed ? `${removed} uklonjeno` : "",
+        ].filter(Boolean).join(", ");
+        showToast(
+          complete
+            ? `Sync završen — ${synced} porudžbina${extra ? ` (${extra})` : ""}`
+            : `Sync delimičan — ${synced} porudžbina, WooCommerce API je prekinuo`,
+          complete && !failed ? "success" : "error"
+        );
       } else {
         showToast("Sync nije uspeo", "error");
       }

@@ -45,7 +45,11 @@ export async function GET(request: NextRequest) {
   const [siteResults, metaResults] = await Promise.all([
     Promise.allSettled(
       sites.map((site) => {
-        if (site.platform === "woocommerce") return syncWooSite(supabase, site, "cron", wooAfter);
+        if (site.platform === "woocommerce")
+          return syncWooSite(supabase, site, "cron", wooAfter).then((r) => {
+            if (!r.complete && r.synced === 0) throw new Error(r.error);
+            return r.synced;
+          });
         if (site.platform === "thinkific") return syncThinkificSite(supabase, site, "cron");
         return Promise.resolve(0);
       })

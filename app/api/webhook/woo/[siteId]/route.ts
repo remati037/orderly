@@ -82,7 +82,11 @@ export async function POST(
     console.log(`[woo-webhook] Done — woo_order_id=${order.id} processed successfully`);
   } catch (err) {
     console.error("[woo-webhook] Unhandled error:", err);
+    await logSync(supabase, siteId, "webhook", "error", 0, String(err)).catch(() => {});
   }
 
+  // Always 2xx: WooCommerce doesn't retry failed deliveries, it only counts them
+  // and disables the webhook after 5 in a row. Missed orders are recovered by the
+  // daily /api/cron/sync-all pull instead.
   return NextResponse.json({ ok: true }, { status: 200 });
 }
