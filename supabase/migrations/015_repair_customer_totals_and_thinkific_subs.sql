@@ -27,6 +27,10 @@ WITH agg AS (
   LEFT JOIN public.orders o
     ON o.customer_email = c.email
    AND o.status IN ('completed', 'processing')
+  -- Only customers that still have orders in the table. ~4.7k customers point
+  -- at orders that no longer exist (deleted site / force resync); their totals
+  -- can't be recomputed, so they keep their old values.
+  WHERE EXISTS (SELECT 1 FROM public.orders a WHERE a.customer_email = c.email)
   GROUP BY c.id
 )
 UPDATE public.customers c
