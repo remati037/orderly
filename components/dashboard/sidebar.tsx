@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon, MenuIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Role } from "@/lib/auth/roles";
 
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboardIcon; roles: Role[] }
@@ -41,7 +43,47 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
+// Desktop: fixed-width sticky column. Below md it's hidden and the same
+// content opens from the header's menu button instead (MobileNav).
 export function Sidebar({ role, email }: { role: Role; email: string }) {
+  return (
+    <aside
+      className="hidden md:flex"
+      style={{
+        width: 220,
+        flexShrink: 0,
+        borderRight: "1px solid #E4E4E7",
+        background: "#FAFAFA",
+        flexDirection: "column",
+        height: "100vh",
+        position: "sticky",
+        top: 0,
+      }}
+    >
+      <SidebarContent role={role} email={email} />
+    </aside>
+  );
+}
+
+export function MobileNav({ role, email }: { role: Role; email: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger
+        className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100"
+        aria-label="Otvori meni"
+      >
+        <MenuIcon className="size-5" />
+      </SheetTrigger>
+      <SheetContent side="left" className="max-w-[260px] bg-[#FAFAFA]">
+        <SheetTitle className="sr-only">Navigacija</SheetTitle>
+        <SidebarContent role={role} email={email} onNavigate={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function SidebarContent({ role, email, onNavigate }: { role: Role; email: string; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   // Only show groups that have at least one item this role can reach.
@@ -50,19 +92,7 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
     .filter((g) => g.items.length > 0);
 
   return (
-    <aside
-      style={{
-        width: 220,
-        flexShrink: 0,
-        borderRight: "1px solid #E4E4E7",
-        background: "#FAFAFA",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-      }}
-    >
+    <>
       {/* logo */}
       <div
         style={{
@@ -124,6 +154,8 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
                 <Link
                   key={href}
                   href={href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -173,6 +205,6 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
         </div>
         <SignOutButton />
       </div>
-    </aside>
+    </>
   );
 }

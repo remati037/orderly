@@ -40,18 +40,20 @@ function SheetOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
 function SheetContent({
   className,
   children,
+  side = "right",
   ...props
-}: DialogPrimitive.Popup.Props) {
+}: DialogPrimitive.Popup.Props & { side?: "left" | "right" }) {
   return (
     <SheetPortal>
       <SheetOverlay />
       <DialogPrimitive.Popup
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col bg-background shadow-2xl outline-none sm:max-w-[480px]",
+          "fixed inset-y-0 z-50 flex h-full w-full flex-col bg-background shadow-2xl outline-none sm:max-w-[480px]",
           "duration-300",
-          "data-open:animate-in data-open:slide-in-from-right",
-          "data-closed:animate-out data-closed:slide-out-to-right",
+          side === "right"
+            ? "right-0 data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right"
+            : "left-0 data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left",
           className
         )}
         {...props}

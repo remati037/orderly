@@ -7,9 +7,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSoundContext } from "@/lib/contexts/sound-context";
+import { useRealtimeOrdersContext } from "@/lib/contexts/realtime-orders-context";
+import { MobileNav } from "./sidebar";
+import type { Role } from "@/lib/auth/roles";
 
-export function DashboardHeader() {
+export function DashboardHeader({ role, email }: { role: Role; email: string }) {
   const { isMuted, setMuted, unlockAudio } = useSoundContext();
+  const { isConnected } = useRealtimeOrdersContext();
 
   return (
     <header
@@ -19,12 +23,22 @@ export function DashboardHeader() {
         background: "#fff",
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-end",
-        padding: "0 24px",
+        padding: "0 16px",
         flexShrink: 0,
         gap: 4,
       }}
     >
+      <MobileNav role={role} email={email} />
+
+      {/* Whether live updates are flowing — numbers may be stale when offline. */}
+      <span
+        style={{ marginLeft: "auto", marginRight: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: isConnected ? "#16A34A" : "#A1A1AA" }}
+        title={isConnected ? "Podaci se osvežavaju uživo" : "Veza za osvežavanje uživo je prekinuta"}
+      >
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: isConnected ? "#22C55E" : "#D4D4D8" }} />
+        {isConnected ? "Uživo" : "Van mreže"}
+      </span>
+
       <Tooltip>
         <TooltipTrigger
           onClick={() => { unlockAudio(); setMuted(!isMuted); }}

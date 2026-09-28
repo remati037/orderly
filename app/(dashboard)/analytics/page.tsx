@@ -29,23 +29,13 @@ export default function AnalyticsPage() {
       <KPISection />
 
       {/* Monthly comparison + Daily revenue (3:1 split) */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 320px",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]" style={{ gap: 16, alignItems: "start" }}>
         <DailyRevenueChart />
         <MonthlyComparisonCard />
       </div>
 
       {/* Status breakdown + Top products */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 16, alignItems: "start" }}>
         <StatusBreakdownChart />
         <TopProductsChart />
       </div>

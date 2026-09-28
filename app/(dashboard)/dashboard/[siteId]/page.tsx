@@ -132,23 +132,13 @@ export default async function SiteDashboardPage({ params }: PageProps) {
       <KPISection siteId={siteId} />
 
       {/* Revenue + Monthly comparison */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 320px",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]" style={{ gap: 16, alignItems: "start" }}>
         <DailyRevenueChart siteId={siteId} />
         <MonthlyComparisonCard siteId={siteId} />
       </div>
 
       {/* Status breakdown + Top products */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 16, alignItems: "start" }}>
         <StatusBreakdownChart siteId={siteId} />
         <TopProductsChart siteId={siteId} />
       </div>

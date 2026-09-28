@@ -22,15 +22,11 @@ export default async function DashboardLayout({
           <Sidebar role={member.role} email={member.email} />
 
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-            <DashboardHeader />
+            <DashboardHeader role={member.role} email={member.email} />
 
             <main
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "24px 28px",
-                background: "#F9F9F9",
-              }}
+              className="px-4 py-4 md:px-7 md:py-6"
+              style={{ flex: 1, overflowY: "auto", background: "#F9F9F9" }}
             >
               {children}
             </main>
