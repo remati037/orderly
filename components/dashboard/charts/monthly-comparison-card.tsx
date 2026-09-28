@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { TrendingUpIcon, TrendingDownIcon } from "lucide-react";
 import { formatRSD } from "@/lib/hooks/use-kpi-stats";
+import { LoadError } from "@/components/dashboard/load-error";
 
 function monthName(offsetMonths = 0): string {
   const d = new Date();
@@ -28,7 +29,9 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
   const url = siteId
     ? `/api/stats/kpi?preset=this_month&siteId=${siteId}`
     : "/api/stats/kpi?preset=this_month";
-  const { data, isLoading } = useSWR(url, fetcher, { refreshInterval: 30_000 });
+  const { data, isLoading, error, mutate } = useSWR(url, fetcher, { refreshInterval: 30_000 });
+
+  if (error && !data) return <LoadError onRetry={() => mutate()} />;
 
   if (isLoading || !data) {
     return (

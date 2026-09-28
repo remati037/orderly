@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
+import { dayBounds, monthBounds, customBounds } from "@/lib/utils/tz";
 import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 import { OrdersTableClient, type OrderRow } from "./orders-table-client";
 
@@ -10,43 +11,17 @@ const PAGE_SIZE = 25;
 
 // ── date preset helpers ────────────────────────────────────────────────────────
 
-function dayStart(offsetDays = 0): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + offsetDays);
-  return d;
-}
-
+// Belgrade-time boundaries — the server runs in UTC, so local setHours(0) would
+// shift "Danas" / "Ovaj mesec" by 1–2 hours.
 function presetToRange(preset: string): { from: string; to: string } | null {
-  const now = new Date();
+  const range = (b: { start: string; end: string }) => ({ from: b.start, to: b.end });
   switch (preset) {
-    case "today": {
-      const s = dayStart(0);
-      const e = dayStart(1);
-      return { from: s.toISOString(), to: e.toISOString() };
-    }
-    case "yesterday": {
-      const s = dayStart(-1);
-      const e = dayStart(0);
-      return { from: s.toISOString(), to: e.toISOString() };
-    }
-    case "7days": {
-      const s = dayStart(-6);
-      const e = dayStart(1);
-      return { from: s.toISOString(), to: e.toISOString() };
-    }
-    case "month": {
-      const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const e = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-      return { from: s, to: e };
-    }
-    case "last_month": {
-      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-      const e = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      return { from: s, to: e };
-    }
-    default:
-      return null;
+    case "today":      return range(dayBounds(0));
+    case "yesterday":  return range(dayBounds(-1));
+    case "7days":      return { from: dayBounds(-6).start, to: dayBounds(0).end };
+    case "month":      return range(monthBounds(0));
+    case "last_month": return range(monthBounds(-1));
+    default:           return null;
   }
 }
 
@@ -114,10 +89,11 @@ export async function OrdersTable({ searchParams }: Props) {
 
   // Date range
   const dateRange = datePreset && datePreset !== "custom" ? presetToRange(datePreset) : null;
-  const fromDate  = dateRange?.from ?? (dateFrom ? `${dateFrom}T00:00:00.000Z` : undefined);
-  const toDate    = dateRange?.to   ?? (dateTo   ? `${dateTo}T23:59:59.999Z`   : undefined);
+  // Custom dates are YYYY-MM-DD in Belgrade time; `to` is exclusive (next midnight).
+  const fromDate  = dateRange?.from ?? (dateFrom ? customBounds(dateFrom, dateFrom).start : undefined);
+  const toDate    = dateRange?.to   ?? (dateTo   ? customBounds(dateTo, dateTo).end       : undefined);
   if (fromDate) query = query.gte("created_at", fromDate);
-  if (toDate)   query = query.lte("created_at", toDate);
+  if (toDate)   query = query.lt("created_at", toDate);
 
   const { data, count, error } = await query;
 

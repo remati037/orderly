@@ -363,7 +363,7 @@ export function LiveFeed() {
                 color: "#18181B",
               }}
             >
-              {isLive ? "Live feed" : `Porudžbine — ${PRESET_LABELS[preset] ?? ""}`}
+              {isLive ? "Uživo" : `Porudžbine — ${PRESET_LABELS[preset] ?? ""}`}
             </span>
             {/* pulsing green dot — only in live mode */}
             {isLive && (
@@ -397,7 +397,7 @@ export function LiveFeed() {
                 letterSpacing: "0.01em",
               }}
             >
-              {newOrderCount} new
+              {newOrderCount} novih
             </button>
           )}
         </div>

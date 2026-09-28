@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { KPICard } from "./kpi-card";
 import { KpiFilters } from "./kpi-filters";
+import { LoadError } from "./load-error";
 import { useKpiStats } from "@/lib/hooks/use-kpi-stats";
 import { useSparklines } from "@/lib/hooks/use-sparklines";
 
@@ -24,14 +25,20 @@ interface KPISectionProps {
 }
 
 export function KPISection({ siteId }: KPISectionProps) {
-  const { stats, isLoading, compareLabel } = useKpiStats(siteId);
+  const { stats, isLoading, error, retry, compareLabel } = useKpiStats(siteId);
   const { data: spark } = useSparklines(siteId);
-  const loading = isLoading || !stats;
+  const loading = isLoading || (!stats && !error);
 
   return (
     <div>
       {/* Filters only on the main dashboard, not on site-specific pages */}
       {!siteId && <KpiFilters />}
+
+      {error && !stats && (
+        <div style={{ marginBottom: 12 }}>
+          <LoadError onRetry={retry} compact />
+        </div>
+      )}
 
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KPICard

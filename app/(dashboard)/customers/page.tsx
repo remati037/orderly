@@ -57,6 +57,8 @@ function relativeTime(dateStr: string | null): string {
   return `pre ${Math.floor(days / 365)} god`;
 }
 
+const SEGMENT_LABEL: Record<Customer["segment"], string> = { VIP: "VIP", Regular: "Redovan", New: "Nov" };
+
 const SEGMENT_STYLE: Record<string, { bg: string; color: string }> = {
   VIP:     { bg: "#FFF7ED", color: "#C2410C" },
   Regular: { bg: "#F0FDF4", color: "#166534" },
@@ -219,7 +221,7 @@ export default function CustomersPage() {
                             fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99,
                             background: seg.bg, color: seg.color, flexShrink: 0,
                           }}>
-                            {c.segment}
+                            {SEGMENT_LABEL[c.segment]}
                           </span>
                         </div>
                       </td>

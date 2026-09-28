@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
-import { useRealtimeOrders, RealtimeOrder } from "@/lib/hooks/use-realtime-orders";
+import { useRealtimeOrders } from "@/lib/hooks/use-realtime-orders";
 import { TVSoundProvider } from "@/lib/contexts/sound-context";
 import { formatCurrency } from "@/lib/utils/currency";
 import { toBase } from "@/lib/utils/fx";
@@ -37,6 +38,14 @@ const STATUS_COLORS: Record<string, string> = {
   failed:     "#ef4444",
 };
 
+interface TodayStats {
+  revenue: number;
+  orders: number;
+  hourly: number[];
+  current_hour: number;
+  last_order_at: string | null;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   completed:  "Završeno",
   processing: "Obrada",
@@ -61,29 +70,6 @@ function dateStr(d: Date) {
 function orderTimeStr(iso: string) {
   const d = new Date(iso);
   return `${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
-}
-
-function buildHourlyBars(
-  orders: RealtimeOrder[],
-  rates: Record<string, number>,
-  siteId: string | null
-): HourlyBar[] {
-  const currentHour = new Date().getHours();
-  const relevant = siteId ? orders.filter((o) => o.site_id === siteId) : orders;
-  const bars: HourlyBar[] = [];
-
-  for (let h = 0; h <= currentHour; h++) {
-    const revenue = relevant
-      .filter((o) => {
-        if (["cancelled", "refunded"].includes(o.status)) return false;
-        return new Date(o.created_at).getHours() === h;
-      })
-      .reduce((s, o) => s + toBase(o.total, o.currency, rates), 0);
-
-    bars.push({ hour: `${padTwo(h)}`, revenue, current: h === currentHour });
-  }
-
-  return bars;
 }
 
 export default function TVContent() {
@@ -181,26 +167,36 @@ function TVContentInner() {
 
   const activeSite = activeSiteId ? sites.find((s) => s.id === activeSiteId) ?? null : null;
 
-  // Derived data
-  const filteredOrders = useMemo(() => {
-    const valid = recentOrders.filter((o) => !["cancelled", "refunded"].includes(o.status));
-    return activeSiteId ? valid.filter((o) => o.site_id === activeSiteId) : valid;
-  }, [recentOrders, activeSiteId]);
-
-  const revenueToday = useMemo(
-    () => filteredOrders.reduce((s, o) => s + toBase(o.total, o.currency, fxRates), 0),
-    [filteredOrders, fxRates]
+  // Today's totals come from the server (every order of the Belgrade day, same
+  // counted statuses as the KPIs). The realtime feed is capped at 50 rows, so it
+  // only drives the list/ticker and triggers a refetch when something changes.
+  const { data: today, mutate: refreshToday } = useSWR<TodayStats>(
+    `/api/stats/today${activeSiteId ? `?siteId=${activeSiteId}` : ""}`,
+    (url: string) => fetch(url).then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }),
+    { refreshInterval: 60_000, keepPreviousData: true }
   );
+  useEffect(() => {
+    const t = setTimeout(() => refreshToday(), 1_500);
+    return () => clearTimeout(t);
+  }, [recentOrders, refreshToday]);
 
-  const ordersToday = filteredOrders.length;
+  const revenueToday = today?.revenue ?? 0;
+  const ordersToday = today?.orders ?? 0;
   const goalPct = dailyGoal && dailyGoal > 0
     ? Math.min(100, Math.round((revenueToday / dailyGoal) * 100))
     : null;
 
-  const hourlyBars = useMemo(
-    () => buildHourlyBars(recentOrders, fxRates, activeSiteId),
-    [recentOrders, fxRates, activeSiteId]
-  );
+  const hourlyBars: HourlyBar[] = useMemo(() => {
+    if (!today) return [];
+    return today.hourly.slice(0, today.current_hour + 1).map((revenue, h) => ({
+      hour: padTwo(h),
+      revenue,
+      current: h === today.current_hour,
+    }));
+  }, [today]);
 
   const feedOrders = useMemo(() => {
     const src = activeSiteId
@@ -210,21 +206,14 @@ function TVContentInner() {
   }, [recentOrders, activeSiteId]);
 
   // Anomaly detection
-  const [showAnomaly, setShowAnomaly] = useState(false);
-  useEffect(() => {
+  const showAnomaly = useMemo(() => {
     const h = now.getHours();
-    if (h < 8 || h >= 22) { setShowAnomaly(false); return; }
-
-    if (filteredOrders.length === 0) {
-      const workdayStart = new Date(now);
-      workdayStart.setHours(8, 0, 0, 0);
-      setShowAnomaly((now.getTime() - workdayStart.getTime()) / 3_600_000 >= anomalyHours);
-      return;
-    }
-
-    const msSinceLast = now.getTime() - new Date(filteredOrders[0].created_at).getTime();
-    setShowAnomaly(msSinceLast / 3_600_000 >= anomalyHours);
-  }, [filteredOrders, now, anomalyHours]);
+    if (!today || h < 8 || h >= 22) return false;
+    const since = today.last_order_at
+      ? new Date(today.last_order_at)
+      : new Date(new Date(now).setHours(8, 0, 0, 0));
+    return (now.getTime() - since.getTime()) / 3_600_000 >= anomalyHours;
+  }, [today, now, anomalyHours]);
 
   // Ticker text
   const tickerOrders = useMemo(
@@ -280,7 +269,7 @@ function TVContentInner() {
                 }}
               />
               <span className={isConnected ? "text-green-400" : "text-red-400"}>
-                {isConnected ? "LIVE" : "OFFLINE"}
+                {isConnected ? "UŽIVO" : "VEZA PREKINUTA"}
               </span>
             </div>
             <span

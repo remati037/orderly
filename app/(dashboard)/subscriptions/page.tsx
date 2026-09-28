@@ -228,7 +228,7 @@ export default function SubscriptionsPage() {
             Nema sajtova sa pretplatama
           </p>
           <p style={{ fontSize: 13, color: "#A1A1AA", margin: "8px 0 0" }}>
-            Podesi tip projekta na "Subscription" u podešavanjima sajta da bi video statistike ovde
+            Podesi tip projekta na „Pretplata” u podešavanjima sajta da bi video statistike ovde
           </p>
         </div>
       ) : (

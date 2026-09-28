@@ -104,3 +104,17 @@ export function customBounds(fromDate: string, toDate: string) {
     prevEnd:   start.toISOString(),
   };
 }
+
+// "DD.MM" label of the Belgrade calendar day an instant falls on.
+export function belgradeDayLabel(date: Date | string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "2-digit", month: "2-digit" })
+    .formatToParts(new Date(date));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("day")}.${get("month")}`;
+}
+
+// Belgrade calendar day-of-month and month length for "now".
+export function belgradeMonthProgress() {
+  const { y, m, d } = todayInTZ();
+  return { dayOfMonth: d, daysInMonth: new Date(Date.UTC(y, m + 1, 0)).getUTCDate() };
+}

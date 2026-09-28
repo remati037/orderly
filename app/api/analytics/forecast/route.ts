@@ -4,6 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { dayBounds, monthBounds, belgradeDayLabel, belgradeMonthProgress } from "@/lib/utils/tz";
 
 // ── Holt's linear exponential smoothing ───────────────────────────────────────
 
@@ -39,10 +40,6 @@ function holtForecast(
   return { smoothed, forecast };
 }
 
-function dateLabel(d: Date): string {
-  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export async function GET() {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -53,15 +50,14 @@ export async function GET() {
   const HISTORY_DAYS = 90;
   const FORECAST_DAYS = 30;
 
-  const from = new Date();
-  from.setDate(from.getDate() - HISTORY_DAYS + 1);
-  from.setHours(0, 0, 0, 0);
+  // Belgrade calendar days — the server runs in UTC.
+  const from = dayBounds(-(HISTORY_DAYS - 1)).start;
 
   const { data: orders } = await fetchAll(() =>
     supabase
       .from("orders")
       .select("total, currency, created_at")
-      .gte("created_at", from.toISOString())
+      .gte("created_at", from)
       .in("status", COUNTED_STATUSES)
       .order("created_at")
       .order("id")
@@ -69,15 +65,10 @@ export async function GET() {
 
   // Aggregate daily totals
   const dailyMap: Record<string, number> = {};
-  for (let i = 0; i < HISTORY_DAYS; i++) {
-    const d = new Date(from);
-    d.setDate(from.getDate() + i);
-    dailyMap[dateLabel(d)] = 0;
-  }
+  for (let i = HISTORY_DAYS - 1; i >= 0; i--) dailyMap[belgradeDayLabel(dayBounds(-i).start)] = 0;
 
   for (const order of orders ?? []) {
-    const d = new Date(order.created_at);
-    const label = dateLabel(d);
+    const label = belgradeDayLabel(order.created_at);
     if (label in dailyMap) {
       dailyMap[label] = (dailyMap[label] ?? 0) + toBase(order.total ?? 0, order.currency ?? "RSD", fx.rates);
     }
@@ -94,24 +85,18 @@ export async function GET() {
   );
 
   // Build forecast labels (days after today)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const forecastLabels = Array.from({ length: FORECAST_DAYS }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i + 1);
-    return dateLabel(d);
-  });
+  const forecastLabels = Array.from({ length: FORECAST_DAYS }, (_, i) =>
+    belgradeDayLabel(dayBounds(i + 1).start)
+  );
 
   // Projected revenue for current month:
   // realized so far this month + forecast for remaining days
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  const daysInMonth = (monthEnd.getTime() - monthStart.getTime()) / 86_400_000;
-  const dayOfMonth = today.getDate();
+  const monthStart = monthBounds(0).start;
+  const { dayOfMonth, daysInMonth } = belgradeMonthProgress();
   const remainingDays = daysInMonth - dayOfMonth;
 
   const realizedThisMonth = (orders ?? [])
-    .filter((o) => new Date(o.created_at) >= monthStart)
+    .filter((o) => new Date(o.created_at) >= new Date(monthStart))
     .reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
 
   const avgForecastDaily = forecast.slice(0, Math.ceil(remainingDays)).reduce((s, v, _, arr) => s + v / arr.length, 0);

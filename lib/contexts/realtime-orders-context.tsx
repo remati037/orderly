@@ -43,16 +43,19 @@ export function RealtimeOrdersProvider({ children }: { children: ReactNode }) {
   // Set of callbacks registered by page-level components (e.g. LiveFeed animation)
   const newOrderCallbacksRef = useRef(new Set<(order: RealtimeOrder) => void>());
 
-  // On any order change: immediately revalidate KPI SWR cache, then debounce
-  // router.refresh() so the server-component OrdersTable re-renders silently.
+  // On any order change: revalidate every stats/analytics SWR key (KPIs,
+  // sparklines, charts) and router.refresh() the server-rendered OrdersTable.
+  // Debounced so a burst of webhook/sync events causes one refetch, not N.
   const triggerRefresh = useCallback(() => {
-    mutate(
-      (key) => typeof key === "string" && key.startsWith("/api/stats/kpi"),
-      undefined,
-      { revalidate: true }
-    );
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => router.refresh(), 2_000);
+    debounceRef.current = setTimeout(() => {
+      mutate(
+        (key) => typeof key === "string" && (key.startsWith("/api/stats/") || key.startsWith("/api/analytics/")),
+        undefined,
+        { revalidate: true }
+      );
+      router.refresh();
+    }, 1_500);
   }, [router]);
 
   // Fired on INSERT — forward to all registered page callbacks + trigger refresh

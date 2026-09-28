@@ -57,7 +57,7 @@ const STATUS_OPTIONS = [
 const PRODUCT_TYPE_OPTIONS = [
   { value: "physical",     label: "Fizički" },
   { value: "digital",      label: "Digitalni" },
-  { value: "subscription", label: "Subscription" },
+  { value: "subscription", label: "Pretplata" },
 ];
 
 // ── filter state ───────────────────────────────────────────────────────────────

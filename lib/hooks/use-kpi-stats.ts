@@ -90,6 +90,7 @@ export function useKpiStats(forceSiteId?: string): {
   stats: KpiStats | null;
   isLoading: boolean;
   error: Error | null;
+  retry: () => void;
   compareLabel: string;
 } {
   const sp = useSearchParams();
@@ -110,7 +111,7 @@ export function useKpiStats(forceSiteId?: string): {
 
   const url = `/api/stats/kpi?${params.toString()}`;
 
-  const { data, error, isLoading } = useSWR<KpiRaw>(url, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<KpiRaw>(url, fetcher, {
     refreshInterval: 30_000,
     revalidateOnFocus: true,
   });
@@ -119,6 +120,7 @@ export function useKpiStats(forceSiteId?: string): {
     stats: data ? buildStats(data) : null,
     isLoading,
     error: error ?? null,
+    retry: () => { mutate(); },
     compareLabel: compare === "month" ? "prošli mesec" : "juče",
   };
 }

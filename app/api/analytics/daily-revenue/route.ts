@@ -4,6 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { dayBounds, belgradeDayLabel } from "@/lib/utils/tz";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -16,16 +17,15 @@ export async function GET(request: NextRequest) {
   const supabase = adminClient();
   const fx = await loadFxSettings(supabase);
 
-  const from = new Date();
-  from.setDate(from.getDate() - days + 1);
-  from.setHours(0, 0, 0, 0);
+  // Belgrade calendar days — the server runs in UTC.
+  const from = dayBounds(-(days - 1)).start;
 
   const [ordersRes, sitesRes] = await Promise.all([
     fetchAll(() => {
       let query = supabase
         .from("orders")
         .select("site_id, total, currency, created_at")
-        .gte("created_at", from.toISOString())
+        .gte("created_at", from)
         .in("status", COUNTED_STATUSES)
         .order("created_at")
         .order("id");
@@ -43,13 +43,7 @@ export async function GET(request: NextRequest) {
 
   // Build date range labels DD.MM
   const dateLabels: string[] = [];
-  for (let i = 0; i < days; i++) {
-    const d = new Date(from);
-    d.setDate(from.getDate() + i);
-    dateLabels.push(
-      `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`
-    );
-  }
+  for (let i = days - 1; i >= 0; i--) dateLabels.push(belgradeDayLabel(dayBounds(-i).start));
 
   const siteMap = new Map(sites.map((s) => [s.id, s]));
 
@@ -58,8 +52,7 @@ export async function GET(request: NextRequest) {
   for (const label of dateLabels) byDateSite[label] = {};
 
   for (const order of orders) {
-    const d = new Date(order.created_at);
-    const label = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = belgradeDayLabel(order.created_at);
     if (!byDateSite[label]) continue;
     const converted = toBase(order.total ?? 0, order.currency ?? "RSD", fx.rates);
     byDateSite[label][order.site_id] = (byDateSite[label][order.site_id] ?? 0) + converted;

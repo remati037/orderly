@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import useSWR from "swr";
+import { jsonFetcher } from "@/lib/hooks/json-fetcher";
+import { LoadError } from "@/components/dashboard/load-error";
+import { useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -31,17 +34,6 @@ interface RevenueData {
   totals: number[];
 }
 
-// ── date picker helpers ────────────────────────────────────────────────────────
-
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function nDaysAgoStr(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n + 1);
-  return d.toISOString().split("T")[0];
-}
 
 // ── custom tooltip ─────────────────────────────────────────────────────────────
 
@@ -79,24 +71,16 @@ interface DailyRevenueChartProps {
 
 export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
   const [days, setDays] = useState(30);
-  const [data, setData] = useState<RevenueData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [hiddenSites, setHiddenSites] = useState<Set<string>>(new Set());
   const [chartType, setChartType] = useState<"line" | "bar">("line");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ days: String(days) });
-      if (siteId) params.set("siteId", siteId);
-      const res = await fetch(`/api/analytics/daily-revenue?${params}`);
-      if (res.ok) setData(await res.json());
-    } finally {
-      setLoading(false);
-    }
-  }, [days, siteId]);
-
-  useEffect(() => { load(); }, [load]);
+  const params = new URLSearchParams({ days: String(days) });
+  if (siteId) params.set("siteId", siteId);
+  const { data, isLoading: loading, error, mutate } = useSWR<RevenueData>(
+    `/api/analytics/daily-revenue?${params}`,
+    jsonFetcher,
+    { keepPreviousData: true }
+  );
 
   const chartData = data
     ? data.labels.map((label, i) => {
@@ -148,7 +132,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
           <div style={{ display: "flex", gap: 4 }}>
             {([
               { type: "line" as const, label: "Linija", icon: LineChartIcon },
-              { type: "bar" as const, label: "Stacked bar", icon: BarChart3Icon },
+              { type: "bar" as const, label: "Stubici", icon: BarChart3Icon },
             ]).map((o) => (
               <button
                 key={o.type}
@@ -194,7 +178,9 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
       </div>
 
       {/* chart */}
-      {loading ? (
+      {error && !data ? (
+        <LoadError onRetry={() => mutate()} />
+      ) : loading ? (
         <div style={{
           height: 280,
           display: "flex",

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import useSWR from "swr";
+import { jsonFetcher } from "@/lib/hooks/json-fetcher";
+import { LoadError } from "@/components/dashboard/load-error";
 import {
   ResponsiveContainer,
   PieChart,
@@ -62,22 +64,12 @@ interface StatusBreakdownChartProps {
 }
 
 export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
-  const [data, setData] = useState<BreakdownData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (siteId) params.set("siteId", siteId);
-      const res = await fetch(`/api/analytics/status-breakdown?${params}`);
-      if (res.ok) setData(await res.json());
-    } finally {
-      setLoading(false);
-    }
-  }, [siteId]);
-
-  useEffect(() => { load(); }, [load]);
+  const params = new URLSearchParams();
+  if (siteId) params.set("siteId", siteId);
+  const { data, isLoading: loading, error, mutate } = useSWR<BreakdownData>(
+    `/api/analytics/status-breakdown?${params}`,
+    jsonFetcher
+  );
 
   const pieData = (data?.breakdown ?? []).map((item, i) => ({
     name: STATUS_CONFIG[item.status]?.label ?? item.status,
@@ -104,7 +96,9 @@ export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
         )}
       </div>
 
-      {loading ? (
+      {error && !data ? (
+        <LoadError onRetry={() => mutate()} />
+      ) : loading ? (
         <div style={{
           height: 260,
           display: "flex",

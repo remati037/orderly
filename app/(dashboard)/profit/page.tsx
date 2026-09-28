@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   TrendingUpIcon,
   CircleDollarSignIcon,
@@ -331,26 +331,39 @@ export default function ProfitPage() {
   }, [loadData]);
 
   // ── Realtime: refresh KPI when orders change ──────────────────────────────────
-  const loadDataRef = useRef(loadData);
-  loadDataRef.current = loadData;
+  // Only the order-driven numbers (KPI + ad performance) are refetched, in the
+  // background and debounced — reloading everything would flash skeletons and
+  // wipe margin edits the owner is in the middle of typing.
+  const refreshKpi = useCallback(async () => {
+    const [kpiRes, adPerfRes] = await Promise.all([
+      fetch("/api/profit/kpi"),
+      fetch("/api/profit/ad-performance"),
+    ]);
+    if (kpiRes.ok) setKpi(await kpiRes.json());
+    if (adPerfRes.ok) {
+      const adPerfData = await adPerfRes.json();
+      setAdPerf(adPerfData.rows ?? []);
+      setAdPerfTotal(adPerfData.total_spend ?? 0);
+    }
+  }, []);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { refreshKpi(); }, 2_000);
+    };
     const channel = supabaseBrowser
       .channel("profit-orders-watch")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        () => loadDataRef.current()
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        () => loadDataRef.current()
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, schedule)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, schedule)
       .subscribe();
 
-    return () => { supabaseBrowser.removeChannel(channel); };
-  }, []);
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabaseBrowser.removeChannel(channel);
+    };
+  }, [refreshKpi]);
 
   // ── Site margin actions ───────────────────────────────────────────────────────
 

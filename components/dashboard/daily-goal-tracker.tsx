@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "./load-error";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
@@ -30,7 +31,8 @@ interface DailyGoalTrackerProps {
 
 async function fetchTodayRevenue(url: string): Promise<{ revenue_current: number }> {
   const res = await fetch(url);
-  if (!res.ok) return { revenue_current: 0 };
+  // Throw rather than report 0 — a failed request must not look like "0% of goal".
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
@@ -40,7 +42,7 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
   const kpiUrl = siteId
     ? `/api/stats/kpi?preset=today&siteId=${siteId}`
     : "/api/stats/kpi?preset=today";
-  const { data: kpiData, isLoading } = useSWR(kpiUrl, fetchTodayRevenue, {
+  const { data: kpiData, isLoading, error: kpiError, mutate: retryKpi } = useSWR(kpiUrl, fetchTodayRevenue, {
     refreshInterval: 30_000,
   });
 
@@ -63,6 +65,8 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
       return () => clearTimeout(t);
     }
   }, [isLoading, goalLoading, goal]);
+
+  if (kpiError && !kpiData && goal !== null) return <LoadError onRetry={() => retryKpi()} compact />;
 
   if ((isLoading && !kpiData) || goalLoading) {
     return (

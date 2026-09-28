@@ -133,7 +133,7 @@ export function useRealtimeOrders({
         payment_type: row.payment_type as string,
         created_at: row.created_at as string,
         updated_at: (row.updated_at as string | null) ?? null,
-        site_name: sites?.name ?? "Unknown",
+        site_name: sites?.name ?? "Nepoznat sajt",
         site_color: sites?.color_hex ?? "#888888",
         product_name: items?.[0]?.product_name ?? null,
         is_late: false,
@@ -149,7 +149,7 @@ export function useRealtimeOrders({
     console.log(info);
     return {
       ...(row as Omit<RealtimeOrder, "site_name" | "site_color" | "product_name" | "is_late">),
-      site_name: info?.name ?? "Unknown",
+      site_name: info?.name ?? "Nepoznat sajt",
       site_color: info?.color_hex ?? "#888888",
     };
   }

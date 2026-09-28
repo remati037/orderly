@@ -32,7 +32,7 @@ function PlatformBadge({ platform }: { platform: string }) {
 function ProjectTypeBadge({ type }: { type: string }) {
   const config: Record<string, { bg: string; color: string; label: string }> = {
     standard:     { bg: "#F4F4F5", color: "#52525B",   label: "Standard" },
-    subscription: { bg: "#F0FDF4", color: "#166534",   label: "Subscription" },
+    subscription: { bg: "#F0FDF4", color: "#166534",   label: "Pretplata" },
     digital:      { bg: "#EEF2FF", color: "#4338CA",   label: "Digital" },
   };
   const c = config[type] ?? config.standard;

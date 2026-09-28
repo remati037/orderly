@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import useSWR from "swr";
+import { jsonFetcher } from "@/lib/hooks/json-fetcher";
+import { LoadError } from "@/components/dashboard/load-error";
+import { dayBounds } from "@/lib/utils/tz";
 import {
   ResponsiveContainer,
   BarChart,
@@ -59,30 +62,14 @@ interface TopProductsChartProps {
 }
 
 export function TopProductsChart({ siteId }: TopProductsChartProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Last 30 days window (today + 29 previous days)
-      const from = new Date();
-      from.setDate(from.getDate() - 29);
-      from.setHours(0, 0, 0, 0);
-
-      const params = new URLSearchParams({ limit: "10", from: from.toISOString() });
-      if (siteId) params.set("siteId", siteId);
-      const res = await fetch(`/api/analytics/top-products?${params}`);
-      if (res.ok) {
-        const json = await res.json();
-        setProducts(json.products ?? []);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [siteId]);
-
-  useEffect(() => { load(); }, [load]);
+  // Last 30 Belgrade days (today + 29 previous) — stable key within a day.
+  const params = new URLSearchParams({ limit: "10", from: dayBounds(-29).start });
+  if (siteId) params.set("siteId", siteId);
+  const { data, isLoading: loading, error, mutate } = useSWR<{ products: Product[] }>(
+    `/api/analytics/top-products?${params}`,
+    jsonFetcher
+  );
+  const products = data?.products ?? [];
 
   const chartData = products.map((p) => ({
     ...p,
@@ -105,7 +92,9 @@ export function TopProductsChart({ siteId }: TopProductsChartProps) {
         </span>
       </div>
 
-      {loading ? (
+      {error && !data ? (
+        <LoadError onRetry={() => mutate()} />
+      ) : loading ? (
         <div style={{
           height: 320,
           display: "flex",

@@ -92,18 +92,18 @@ function formatAmount(total: number, currency: string): string {
 }
 
 const STATUS: Record<string, { bg: string; color: string; label: string }> = {
-  processing: { bg: "#FFFBEB", color: "#D97706", label: "Processing" },
-  completed:  { bg: "#F0FDF4", color: "#16A34A", label: "Completed" },
-  pending:    { bg: "#EEF2FF", color: "#6366F1", label: "Pending" },
-  cancelled:  { bg: "#F4F4F5", color: "#71717A", label: "Cancelled" },
-  refunded:   { bg: "#FFF1F2", color: "#E11D48", label: "Refunded" },
-  "on-hold":  { bg: "#FFF7ED", color: "#C2410C", label: "On hold" },
+  processing: { bg: "#FFFBEB", color: "#D97706", label: "U obradi" },
+  completed:  { bg: "#F0FDF4", color: "#16A34A", label: "Završeno" },
+  pending:    { bg: "#EEF2FF", color: "#6366F1", label: "Na čekanju" },
+  cancelled:  { bg: "#F4F4F5", color: "#71717A", label: "Otkazano" },
+  refunded:   { bg: "#FFF1F2", color: "#E11D48", label: "Refundirano" },
+  "on-hold":  { bg: "#FFF7ED", color: "#C2410C", label: "Zadržano" },
 };
 
 const SEGMENT_CONFIG: Record<string, { bg: string; color: string; label: string; description: string }> = {
   VIP:     { bg: "#FFF7ED", color: "#C2410C", label: "VIP",     description: "Više od €500 potrošeno" },
-  Regular: { bg: "#F0FDF4", color: "#166534", label: "Regular", description: "Više od €100 potrošeno" },
-  New:     { bg: "#EEF2FF", color: "#4338CA", label: "New",     description: "Manje od €100 potrošeno" },
+  Regular: { bg: "#F0FDF4", color: "#166534", label: "Redovan", description: "Više od €100 potrošeno" },
+  New:     { bg: "#EEF2FF", color: "#4338CA", label: "Nov",     description: "Manje od €100 potrošeno" },
 };
 
 const PLATFORM_LABEL: Record<string, string> = {

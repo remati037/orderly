@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import useSWR from "swr";
+import { jsonFetcher } from "@/lib/hooks/json-fetcher";
+import { LoadError } from "@/components/dashboard/load-error";
 import { useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -34,8 +36,6 @@ interface BreakdownData {
 // split shows up as shades of the site color inside that site's bar segment.
 export function SiteRevenueBar() {
   const sp = useSearchParams();
-  const [data, setData] = useState<BreakdownData | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const preset        = sp.get("kpi_preset") ?? "today";
   const compare       = sp.get("kpi_compare") === "month" ? "month" : "day";
@@ -43,21 +43,16 @@ export function SiteRevenueBar() {
   const to            = sp.get("kpi_to");
   const productsParam = sp.get("kpi_products");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ preset, compare });
-      if (from)          params.set("from", from);
-      if (to)            params.set("to", to);
-      if (productsParam) params.set("products", productsParam);
-      const res = await fetch(`/api/analytics/site-breakdown?${params}`);
-      if (res.ok) setData(await res.json());
-    } finally {
-      setLoading(false);
-    }
-  }, [preset, compare, from, to, productsParam]);
+  const params = new URLSearchParams({ preset, compare });
+  if (from)          params.set("from", from);
+  if (to)            params.set("to", to);
+  if (productsParam) params.set("products", productsParam);
+  const { data, isLoading: loading, error, mutate } = useSWR<BreakdownData>(
+    `/api/analytics/site-breakdown?${params}`,
+    jsonFetcher
+  );
 
-  useEffect(() => { load(); }, [load]);
+  if (error && !data) return <LoadError onRetry={() => mutate()} compact />;
 
   if (loading) {
     return <div style={{ height: 64, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />;
