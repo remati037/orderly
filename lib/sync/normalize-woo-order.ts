@@ -15,8 +15,12 @@ export interface WooOrder {
   status: string;
   total: string;
   currency: string;
+  // date_created / date_modified are in the shop's local timezone WITHOUT an
+  // offset; the *_gmt variants are UTC. Always prefer the _gmt ones.
   date_created?: string;
+  date_created_gmt?: string;
   date_modified?: string;
+  date_modified_gmt?: string;
   payment_method?: string;
   billing: {
     first_name: string;
@@ -58,6 +62,14 @@ export interface NormalizedWooOrder {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
+
+// WooCommerce timestamps carry no offset. The _gmt value is UTC, so append "Z";
+// the local one is only a fallback for very old payloads without _gmt.
+export function wooDate(gmt?: string | null, local?: string | null): string | null {
+  if (gmt) return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(gmt) ? gmt : `${gmt}Z`).toISOString();
+  if (local) return new Date(local).toISOString();
+  return null;
+}
 
 function itemIsDigital(item: WooLineItem): boolean {
   return (
@@ -143,12 +155,8 @@ export async function normalizeWooOrder(
       payment_type: "one-time",
       payment_method: order.payment_method ?? null,
       woo_data: order,
-      created_at: order.date_created
-        ? new Date(order.date_created).toISOString()
-        : new Date().toISOString(),
-      updated_at: order.date_modified
-        ? new Date(order.date_modified).toISOString()
-        : null,
+      created_at: wooDate(order.date_created_gmt, order.date_created) ?? new Date().toISOString(),
+      updated_at: wooDate(order.date_modified_gmt, order.date_modified),
     },
     itemRows: lineItems.map((item) => ({
       product_name: item.name,
