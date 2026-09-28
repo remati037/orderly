@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(
@@ -39,8 +40,9 @@ export async function GET(
   ]);
 
   const orders = ordersRes.data ?? [];
-  const completed = orders.filter(
-    (o) => !["cancelled", "refunded", "failed"].includes(o.status)
+  // Same revenue statuses as every other view (and as customers.total_spent).
+  const completed = orders.filter((o) =>
+    (COUNTED_STATUSES as readonly string[]).includes(o.status)
   );
 
   const totalSpent = completed.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);

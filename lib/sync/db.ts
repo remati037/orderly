@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedWooOrder } from "./normalize-woo-order";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { loadFxSettings, toBase, type FxSettings } from "@/lib/utils/fx";
 
 export async function upsertWooOrder(
   supabase: SupabaseClient,
@@ -25,8 +26,19 @@ export async function upsertWooOrder(
   return row.id as string;
 }
 
+// FX settings change rarely; cache them so a sync of hundreds of orders
+// doesn't re-read settings for every customer.
+let fxCache: { at: number; value: Promise<FxSettings> } | null = null;
+function cachedFx(supabase: SupabaseClient): Promise<FxSettings> {
+  if (!fxCache || Date.now() - fxCache.at > 5 * 60_000) {
+    fxCache = { at: Date.now(), value: loadFxSettings(supabase) };
+  }
+  return fxCache.value;
+}
+
 // Recomputes the customer's totals from their orders instead of incrementing,
 // so webhook redeliveries and re-syncs of the same order never double-count.
+// total_spent is stored in the base currency (orders come in EUR/RSD/USD).
 // Call it after the order itself has been upserted.
 export async function upsertCustomer(
   supabase: SupabaseClient,
@@ -34,7 +46,8 @@ export async function upsertCustomer(
   name: string,
   city?: string
 ) {
-  const [{ data: existing }, { data: orders }] = await Promise.all([
+  const [fx, { data: existing }, { data: orders }] = await Promise.all([
+    cachedFx(supabase),
     supabase
       .from("customers")
       .select("id, name, first_order_at, last_order_at")
@@ -42,13 +55,14 @@ export async function upsertCustomer(
       .maybeSingle(),
     supabase
       .from("orders")
-      .select("total, created_at")
+      .select("total, currency, created_at")
       .eq("customer_email", email)
       .in("status", COUNTED_STATUSES),
   ]);
 
   const counted = orders ?? [];
-  const totalSpent = counted.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+  const totalSpent =
+    Math.round(counted.reduce((sum, o) => sum + toBase(Number(o.total ?? 0), o.currency ?? "RSD", fx.rates), 0) * 100) / 100;
   const dates = counted.map((o) => o.created_at as string).sort();
   const now = new Date().toISOString();
 

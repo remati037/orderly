@@ -3,7 +3,6 @@ import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
-import { DEFAULT_RATES, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -87,7 +86,8 @@ export async function GET(request: NextRequest) {
     const monthsSinceFirst = c.first_order_at
       ? Math.max(1, (now - new Date(c.first_order_at).getTime()) / (30 * 24 * 3600 * 1000))
       : 1;
-    const totalSpentEur = toBase(c.total_spent ?? 0, "RSD", DEFAULT_RATES);
+    // Stored in the base currency by upsertCustomer / migration 017.
+    const totalSpentEur = Number(c.total_spent ?? 0);
     const ltv_score = Math.round(totalSpentEur / monthsSinceFirst);
     const segment =
       totalSpentEur >= 500
