@@ -3,7 +3,9 @@
 import useSWR from "swr";
 import { jsonFetcher } from "@/lib/hooks/json-fetcher";
 import { LoadError } from "@/components/dashboard/load-error";
-import { useState } from "react";
+import { TooltipBox, compactMoney } from "@/components/dashboard/analytics/chart-kit";
+import { chartColor, orderForSeparation } from "@/lib/utils/chart-color";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -32,6 +34,7 @@ interface RevenueData {
   labels: string[];
   series: Series[];
   totals: number[];
+  base_currency?: string;
 }
 
 
@@ -43,25 +46,15 @@ function CustomTooltip({ active, payload, label }: {
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
-  return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid #E4E4E7",
-      borderRadius: 8,
-      padding: "10px 14px",
-      fontSize: 12,
-      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-    }}>
-      <p style={{ margin: "0 0 6px", fontWeight: 600, color: "#18181B" }}>{label}</p>
-      {payload.map((p) => (
-        <p key={p.name} style={{ margin: "2px 0", color: p.color }}>
-          <span style={{ fontWeight: 600 }}>{p.name}:</span>{" "}
-          {formatRSD(p.value)}
-        </p>
-      ))}
-    </div>
-  );
+  const total = payload.find((p) => p.name === "Ukupno");
+  const rows = payload
+    .filter((p) => p.name !== "Ukupno")
+    .map((p) => ({ key: p.name, label: p.name, color: p.color, value: formatRSD(p.value) }));
+  return <TooltipBox title={String(label)} rows={rows} footer={total ? `Ukupno: ${formatRSD(total.value)}` : undefined} />;
 }
+
+// Legend text stays in neutral ink; the swatch carries the series colour.
+const legendText = (value: string) => <span style={{ color: "#52525B" }}>{value}</span>;
 
 // ── component ──────────────────────────────────────────────────────────────────
 
@@ -80,6 +73,12 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
     `/api/analytics/daily-revenue?${params}`,
     jsonFetcher,
     { keepPreviousData: true }
+  );
+
+  // Chart-safe site colours, ordered so neighbouring series stay distinct.
+  const series = useMemo(
+    () => orderForSeparation((data?.series ?? []).map((s) => ({ ...s, color: chartColor(s.color) })), (s) => s.color),
+    [data]
   );
 
   const chartData = data
@@ -123,12 +122,14 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 8,
         marginBottom: 16,
       }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
           Dnevni prihod
         </span>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 4 }}>
             {([
               { type: "line" as const, label: "Linija", icon: LineChartIcon },
@@ -206,15 +207,16 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
               tick={{ fontSize: 11, fill: "#A1A1AA" }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-              width={36}
+              tickFormatter={(v) => compactMoney(v, data?.base_currency ?? "EUR")}
+              width={48}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
             <Legend
               onClick={handleLegendClick}
               wrapperStyle={{ fontSize: 12, cursor: "pointer", paddingTop: 8 }}
+              formatter={legendText}
             />
-            {(data?.series ?? []).map((s) => (
+            {series.map((s) => (
               <Bar
                 key={s.siteId}
                 stackId="revenue"
@@ -222,6 +224,9 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 fill={s.color}
                 hide={hiddenSites.has(s.name)}
                 radius={0}
+                maxBarSize={24}
+                stroke="#fff"
+                strokeWidth={2}
               />
             ))}
           </BarChart>
@@ -241,15 +246,16 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
               tick={{ fontSize: 11, fill: "#A1A1AA" }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-              width={36}
+              tickFormatter={(v) => compactMoney(v, data?.base_currency ?? "EUR")}
+              width={48}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#E4E4E7", strokeWidth: 1 }} />
             <Legend
               onClick={handleLegendClick}
               wrapperStyle={{ fontSize: 12, cursor: "pointer", paddingTop: 8 }}
+              formatter={legendText}
             />
-            {(data?.series ?? []).map((s) => (
+            {series.map((s) => (
               <Line
                 key={s.siteId}
                 type="monotone"
@@ -258,7 +264,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 strokeWidth={2}
                 dot={false}
                 hide={hiddenSites.has(s.name)}
-                activeDot={{ r: 4 }}
+                activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
               />
             ))}
             {!siteId && (
@@ -266,11 +272,10 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 type="monotone"
                 dataKey="Ukupno"
                 stroke="#18181B"
-                strokeWidth={3}
+                strokeWidth={2}
                 dot={false}
                 hide={hiddenSites.has("Ukupno")}
-                activeDot={{ r: 5 }}
-                strokeDasharray="0"
+                activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
               />
             )}
           </LineChart>
