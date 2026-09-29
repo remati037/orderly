@@ -1,5 +1,6 @@
 "use client";
 
+import { compareLabel, compareOptions, parseCompare, type CompareMode } from "@/lib/utils/kpi-period";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarIcon, CheckIcon, ChevronDownIcon, PackageIcon, XIcon } from "lucide-react";
@@ -40,7 +41,7 @@ function useKpiFilters() {
   const params   = useSearchParams();
 
   const preset        = params.get("kpi_preset") ?? "today";
-  const compare       = params.get("kpi_compare") === "month" ? "month" : "day";
+  const compare       = parseCompare(params.get("kpi_compare"));
   const from          = params.get("kpi_from") ?? "";
   const to            = params.get("kpi_to") ?? "";
   const siteId        = params.get("kpi_site") ?? "";
@@ -79,17 +80,28 @@ function useKpiFilters() {
 
 // ── CompareToggle ──────────────────────────────────────────────────────────────
 
+const COMPARE_TEXT: Record<CompareMode, string> = {
+  prev:  "",               // filled per preset below
+  month: "vs prošli mesec",
+  year:  "vs prošla godina",
+};
+
 function CompareToggle({
+  preset,
   value,
   onChange,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  preset: string;
+  value: CompareMode;
+  onChange: (v: CompareMode) => void;
 }) {
-  const OPTIONS = [
-    { value: "day",   label: "vs juče" },
-    { value: "month", label: "vs prošli mesec" },
-  ];
+  const modes = compareOptions(preset);
+  if (modes.length < 2) return null; // nothing to choose (e.g. this year)
+  const selected = modes.includes(value) ? value : modes[0];
+  const OPTIONS = modes.map((m) => ({
+    value: m,
+    label: m === "prev" ? `vs ${compareLabel(preset, "prev")}` : COMPARE_TEXT[m],
+  }));
   return (
     <div
       style={{
@@ -102,7 +114,7 @@ function CompareToggle({
       }}
     >
       {OPTIONS.map((o) => {
-        const active = value === o.value;
+        const active = selected === o.value;
         return (
           <button
             key={o.value}
@@ -478,8 +490,9 @@ export function KpiFilters() {
       />
 
       <CompareToggle
+        preset={f.preset}
         value={f.compare}
-        onChange={(v) => f.push({ kpi_compare: v === "month" ? "month" : null })}
+        onChange={(v) => f.push({ kpi_compare: v === "prev" ? null : v })}
       />
 
       <SiteSelect

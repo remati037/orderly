@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
   const sp            = new URL(request.url).searchParams;
   const preset        = sp.get("preset") ?? "today";
-  const compare       = sp.get("compare") === "month" ? "month" : "day";
+  const compare       = sp.get("compare") ?? "prev";
   const from          = sp.get("from");
   const to            = sp.get("to");
   const siteId        = sp.get("siteId");
@@ -98,13 +98,13 @@ export async function GET(request: NextRequest) {
     supabase.from("sites").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
-  const { current, prev, prevSamePeriod } = periodBounds(preset, from, to, compare);
+  const { current, prev, prevFull } = periodBounds(preset, from, to, compare);
 
-  const [currentData, prevData, prevSamePeriodData] = await Promise.all([
+  const [currentData, prevData, prevFullData] = await Promise.all([
     queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),
     queryOrders(supabase, prev.start,    prev.end,    fx.rates, siteId, products),
-    prevSamePeriod
-      ? queryOrders(supabase, prevSamePeriod.start, prevSamePeriod.end, fx.rates, siteId, products)
+    prevFull
+      ? queryOrders(supabase, prevFull.start, prevFull.end, fx.rates, siteId, products)
       : null,
   ]);
 
@@ -114,11 +114,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     base_currency:   fx.baseCurrency,
     revenue_current: currentData.revenue,
+    // Comparison window of the same length as `current` (fair basis for trends).
     revenue_prev:    prevData.revenue,
-    // Only set for presets where "current" is a partial period (currently
-    // this_month) — the fair basis for a trend %, vs. revenue_prev which is
-    // the full previous period (e.g. the whole previous month).
-    revenue_prev_same_period: prevSamePeriodData?.revenue ?? null,
+    // this_month only: the whole previous month, shown as a total.
+    revenue_prev_full: prevFullData?.revenue ?? null,
+    current_start:   current.start,
+    current_end:     current.end,
+    prev_start:      prev.start,
+    prev_end:        prev.end,
     orders_current:  currentData.orders,
     orders_prev:     prevData.orders,
     aov_current:     aov,

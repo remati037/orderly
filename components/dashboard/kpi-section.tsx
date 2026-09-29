@@ -14,6 +14,19 @@ import { LoadError } from "./load-error";
 import { useKpiStats } from "@/lib/hooks/use-kpi-stats";
 import { useSparklines } from "@/lib/hooks/use-sparklines";
 
+const dateFmt = new Intl.DateTimeFormat("sr-Latn-RS", { timeZone: "Europe/Belgrade", day: "2-digit", month: "2-digit", year: "numeric" });
+const timeFmt = new Intl.DateTimeFormat("sr-Latn-RS", { timeZone: "Europe/Belgrade", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+// "28.09.2026. do 14:05" / "01.09.2026. – 28.09.2026." for the comparison window
+// (end is exclusive, so the last included moment is end − 1ms).
+function formatRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const last = new Date(new Date(endIso).getTime() - 1);
+  const endsAtMidnight = timeFmt.format(new Date(endIso)) === "00:00";
+  const endLabel = endsAtMidnight ? dateFmt.format(last) : `${dateFmt.format(last)} do ${timeFmt.format(new Date(endIso))}`;
+  return dateFmt.format(start) === dateFmt.format(last) ? endLabel : `${dateFmt.format(start)} – ${endLabel}`;
+}
+
 function parseTrend(signed: string): number {
   return parseFloat(signed);
 }
@@ -33,6 +46,12 @@ export function KPISection({ siteId }: KPISectionProps) {
     <div>
       {/* Filters only on the main dashboard, not on site-specific pages */}
       {!siteId && <KpiFilters />}
+
+      {stats?.prev_start && (
+        <p style={{ fontSize: 12, color: "#A1A1AA", margin: "0 0 10px" }}>
+          Poređeno sa: {formatRange(stats.prev_start, stats.prev_end)}
+        </p>
+      )}
 
       {error && !stats && (
         <div style={{ marginBottom: 12 }}>

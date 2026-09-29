@@ -19,7 +19,7 @@ function TrendText({ value, compareLabel }: { value: number; compareLabel: strin
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12 }}>
       <span style={{ fontWeight: 600, color: positive ? "#16A34A" : "#DC2626" }}>
-        {positive ? "↑" : "↓"} {Math.abs(value).toFixed(1)}%
+        {positive ? "↑" : "↓"} {Math.abs(value) > 999 ? ">999" : Math.abs(value).toFixed(1)}%
       </span>
       <span style={{ color: "#A1A1AA" }}>vs {compareLabel}</span>
     </span>

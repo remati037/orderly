@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
+import { compareLabel, compareOptions, parseCompare } from "@/lib/utils/kpi-period";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ interface KpiRaw {
   net_profit:      number;
   stripe_fees:     number;
   active_sites:    number;
+  prev_start:      string;
+  prev_end:        string;
 }
 
 export interface KpiStats {
@@ -30,6 +33,8 @@ export interface KpiStats {
   net_profit:       number;
   stripe_fees:      number;
   active_sites:     number;
+  prev_start:       string;
+  prev_end:         string;
   // formatted
   revenue_fmt:      string;
   aov_fmt:          string;
@@ -66,6 +71,8 @@ function buildStats(raw: KpiRaw): KpiStats {
     net_profit:      raw.net_profit,
     stripe_fees:     raw.stripe_fees,
     active_sites:    raw.active_sites,
+    prev_start:      raw.prev_start,
+    prev_end:        raw.prev_end,
     revenue_fmt:     formatCurrency(raw.revenue_current, bc),
     aov_fmt:         formatCurrency(raw.aov_current,     bc),
     net_profit_fmt:  formatCurrency(raw.net_profit,      bc),
@@ -96,7 +103,7 @@ export function useKpiStats(forceSiteId?: string): {
   const sp = useSearchParams();
 
   const preset        = sp.get("kpi_preset") ?? "today";
-  const compare       = sp.get("kpi_compare") === "month" ? "month" : "day";
+  const compare       = parseCompare(sp.get("kpi_compare"));
   const from          = sp.get("kpi_from");
   const to            = sp.get("kpi_to");
   const siteId        = forceSiteId ?? sp.get("kpi_site");
@@ -121,6 +128,9 @@ export function useKpiStats(forceSiteId?: string): {
     isLoading,
     error: error ?? null,
     retry: () => { mutate(); },
-    compareLabel: compare === "month" ? "prošli mesec" : "juče",
+    compareLabel: compareLabel(
+      preset,
+      compareOptions(preset).includes(compare) ? compare : compareOptions(preset)[0]
+    ),
   };
 }

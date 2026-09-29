@@ -118,3 +118,30 @@ export function belgradeMonthProgress() {
   const { y, m, d } = todayInTZ();
   return { dayOfMonth: d, daysInMonth: new Date(Date.UTC(y, m + 1, 0)).getUTCDate() };
 }
+
+// Shifts an instant by calendar days / months / years in Belgrade wall-clock
+// time, so "same time last month / last year" stays correct across DST.
+// Days past the end of a shorter month clamp (Mar 31 − 1 month → Feb 28).
+export function shiftBelgrade(
+  iso: string,
+  { days = 0, months = 0, years = 0 }: { days?: number; months?: number; years?: number }
+): string {
+  const date = new Date(iso);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(date).map((p) => [p.type, Number(p.value)])
+  ) as Record<string, number>;
+
+  const y = parts.year + years;
+  const m = parts.month - 1 + months;
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const d = Math.min(parts.day, lastDay) + days;
+
+  const wall = Date.UTC(y, m, d, parts.hour, parts.minute, parts.second, date.getUTCMilliseconds());
+  // Wall-clock → instant: subtract Belgrade's offset at that moment.
+  const approx = new Date(wall);
+  return new Date(wall - tzOffsetMs(approx)).toISOString();
+}

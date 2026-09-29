@@ -38,7 +38,7 @@ export function SiteRevenueBar() {
   const sp = useSearchParams();
 
   const preset        = sp.get("kpi_preset") ?? "today";
-  const compare       = sp.get("kpi_compare") === "month" ? "month" : "day";
+  const compare       = sp.get("kpi_compare") ?? "prev";
   const from          = sp.get("kpi_from");
   const to            = sp.get("kpi_to");
   const productsParam = sp.get("kpi_products");

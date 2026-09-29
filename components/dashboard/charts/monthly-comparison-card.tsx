@@ -16,8 +16,8 @@ async function fetcher(url: string) {
   if (!res.ok) throw new Error("fetch failed");
   return res.json() as Promise<{
     revenue_current: number;
-    revenue_prev: number;
-    revenue_prev_same_period: number | null;
+    revenue_prev: number;            // previous month up to the same day
+    revenue_prev_full: number | null; // whole previous month
   }>;
 }
 
@@ -49,12 +49,13 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
   }
 
   const current = data.revenue_current;
-  const previous = data.revenue_prev;
   // Comparing today's partial month against a full previous month always
   // looks like a crash early in the month — the trend % and progress bar
-  // use the same-elapsed-days figure instead. revenue_prev (full month)
-  // still drives the "last month" column, since that total is what it is.
-  const previousFair = data.revenue_prev_same_period ?? previous;
+  // use the same-elapsed-days figure (revenue_prev). The full month still
+  // drives the "last month" column, since that total is what it is.
+  const previous = data.revenue_prev_full ?? data.revenue_prev;
+  const samePeriod = data.revenue_prev_full !== null ? data.revenue_prev : null;
+  const previousFair = data.revenue_prev;
   const pct = previousFair === 0
     ? (current > 0 ? 100 : 0)
     : ((current - previousFair) / previousFair) * 100;
@@ -79,12 +80,12 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
             {monthName(0)}
           </p>
           <p
-            title={data.revenue_prev_same_period !== null
-              ? `${monthName(-1)} do istog dana: ${formatRSD(data.revenue_prev_same_period)}`
+            title={samePeriod !== null
+              ? `${monthName(-1)} do istog dana: ${formatRSD(samePeriod ?? 0)}`
               : undefined}
             style={{
               fontSize: 22, fontWeight: 700, color: "#18181B", margin: 0, letterSpacing: "-0.02em",
-              cursor: data.revenue_prev_same_period !== null ? "help" : "default",
+              cursor: samePeriod !== null ? "help" : "default",
             }}
           >
             {formatRSD(current)}
@@ -121,7 +122,7 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
           {positive ? "+" : "-"}{absPct.toFixed(1)}%
         </span>
         <span style={{ fontSize: 12, color: "#A1A1AA" }}>
-          {data.revenue_prev_same_period !== null ? "vs. prošlog meseca do sada" : "vs. prošlog meseca"}
+          {samePeriod !== null ? "vs. prošlog meseca do sada" : "vs. prošlog meseca"}
         </span>
       </div>
 
