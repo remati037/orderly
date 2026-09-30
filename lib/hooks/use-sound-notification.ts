@@ -125,8 +125,16 @@ export function useSoundNotification() {
 
     console.log("[Sound] playSound called — ctx.state:", ctx.state);
 
-    // Resume if the context was suspended (tab switch, Safari, etc.)
-    if (ctx.state === "suspended") await ctx.resume();
+    // Resume if the context isn't running (tab switch, Safari "interrupted", …).
+    // resume() can stay pending until the page wakes up — sometimes an hour
+    // later — so give it a moment and skip the ding rather than play it late.
+    if (ctx.state !== "running") {
+      await Promise.race([
+        ctx.resume().catch(() => {}),
+        new Promise((r) => setTimeout(r, 1_000)),
+      ]);
+      if ((ctx.state as AudioContextState) !== "running") return;
+    }
 
     const vol = (volumePct ?? settingsRef.current.volume) / 100;
     const t   = ctx.currentTime;

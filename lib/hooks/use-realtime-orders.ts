@@ -47,6 +47,10 @@ interface UseRealtimeOrdersOptions {
 const MAX_ORDERS = 50;
 const RECONNECT_DELAY_MS = 2_000;
 const HEARTBEAT_INTERVAL_MS = 30_000;
+// An INSERT committed longer ago than this is a late delivery (the tab was
+// frozen/asleep and the socket flushed its backlog on wake) — show it, but
+// don't ring or animate it as if it just arrived.
+const STALE_EVENT_MS = 3 * 60_000;
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -79,6 +83,9 @@ export function useRealtimeOrders({
   const [isConnected, setIsConnected] = useState(false);
 
   const sitesCache = useRef<Map<string, SiteInfo>>(new Map());
+  // Every order id this client has already shown — a repeated INSERT for one of
+  // these never rings again.
+  const seenIdsRef = useRef<Set<string>>(new Set());
   const onNewOrderRef = useRef(onNewOrder);
   onNewOrderRef.current = onNewOrder;
   const onUpdateRef = useRef(onUpdate);
@@ -185,7 +192,9 @@ export function useRealtimeOrders({
         .order("created_at", { ascending: false })
         .limit(MAX_ORDERS);
 
-      setRecentOrders(mapRows((data ?? []) as Record<string, unknown>[]));
+      const rows = mapRows((data ?? []) as Record<string, unknown>[]);
+      rows.forEach((o) => seenIdsRef.current.add(o.id));
+      setRecentOrders(rows);
     }
 
     init();
@@ -220,6 +229,15 @@ export function useRealtimeOrders({
 
             if (orderStatus === "failed") return;
 
+            const id = newRow.id as string;
+            const alreadySeen = seenIdsRef.current.has(id);
+            seenIdsRef.current.add(id);
+            if (alreadySeen) return;
+
+            const commitMs = Date.parse(payload.commit_timestamp);
+            const isStale =
+              Number.isFinite(commitMs) && Date.now() - commitMs > STALE_EVENT_MS;
+
             const order: RealtimeOrder = {
               ...enrichFromCache(newRow, siteId),
               product_name: null,
@@ -227,7 +245,7 @@ export function useRealtimeOrders({
             };
 
             // Play sound — all values read via refs so they're always current
-            if (!silentRef.current) {
+            if (!silentRef.current && !isStale) {
               const { isMuted, shouldPlay, playSound, settings } = soundCtxRef.current;
               if (!isMuted && shouldPlay(orderStatus)) playSound(settings.volume);
             }
@@ -236,8 +254,13 @@ export function useRealtimeOrders({
               if (prev.some((o) => o.id === order.id)) return prev;
               return [order, ...prev].slice(0, MAX_ORDERS);
             });
-            setNewOrderCount((n) => n + 1);
-            onNewOrderRef.current?.(order);
+            if (isStale) {
+              // Still refresh KPIs/table, just without sound + "new" animation.
+              onUpdateRef.current?.(order.id, orderStatus);
+            } else {
+              setNewOrderCount((n) => n + 1);
+              onNewOrderRef.current?.(order);
+            }
 
             // Resolve product name async and patch state
             supabaseBrowser
@@ -349,7 +372,9 @@ export function useRealtimeOrders({
         .limit(MAX_ORDERS);
 
       if (data) {
-        setRecentOrders(mapRows(data as Record<string, unknown>[]));
+        const rows = mapRows(data as Record<string, unknown>[]);
+        rows.forEach((o) => seenIdsRef.current.add(o.id));
+        setRecentOrders(rows);
       }
     }
 
