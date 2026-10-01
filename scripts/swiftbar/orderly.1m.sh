@@ -7,11 +7,11 @@
 # <swiftbar.hideSwiftBar>true</swiftbar.hideSwiftBar>
 #
 # SwiftBar plugin: today's revenue in the menu bar, refreshed every minute
-# (the ".1m." in the file name). Needs MENUBAR_TOKEN set on the server.
+# (the ".1m." in the file name). Server checks the token against settings.menubar_token_sha256.
 # The token lives in the macOS Keychain:
 #   security add-generic-password -a "$USER" -s orderly-menubar -w '<MENUBAR_TOKEN>'
 
-ORDERLY_URL="${ORDERLY_URL:-https://orderly.vercel.app}"
+ORDERLY_URL="${ORDERLY_URL:-https://orderly-drab.vercel.app}"
 
 token="${ORDERLY_TOKEN:-$(security find-generic-password -s orderly-menubar -w 2>/dev/null)}"
 if [[ -z "$token" ]]; then

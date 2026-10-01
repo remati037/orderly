@@ -1,5 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchCountedOrders, type CountedOrder } from "@/lib/stats/counted-orders";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
@@ -7,21 +8,32 @@ import { todayComparisonBounds } from "@/lib/utils/tz";
 
 // Today's revenue for the macOS menu bar (SwiftBar plugin in scripts/swiftbar).
 // The plugin can't hold a Supabase session cookie, so this route is public in
-// proxy.ts and authenticates itself with `Authorization: Bearer $MENUBAR_TOKEN`.
-function authorized(request: NextRequest, token: string): boolean {
-  const given = Buffer.from(request.headers.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${token}`);
-  return given.length === expected.length && timingSafeEqual(given, expected);
+// proxy.ts and authenticates itself with `Authorization: Bearer <token>`.
+// The token is the MENUBAR_TOKEN env var, or — so it can be set without touching
+// Vercel — its SHA-256 hex in settings.menubar_token_sha256. Only the hash is
+// stored because every signed-in member can read the settings table.
+const sha256 = (s: string) => createHash("sha256").update(s).digest();
+
+async function expectedTokenHash(supabase: SupabaseClient): Promise<Buffer | null> {
+  if (process.env.MENUBAR_TOKEN) return sha256(process.env.MENUBAR_TOKEN);
+  const { data } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "menubar_token_sha256")
+    .maybeSingle();
+  return typeof data?.value === "string" ? Buffer.from(data.value, "hex") : null;
 }
 
 export async function GET(request: NextRequest) {
-  const token = process.env.MENUBAR_TOKEN;
-  if (!token)
-    return NextResponse.json({ error: "MENUBAR_TOKEN not configured" }, { status: 500 });
-  if (!authorized(request, token))
+  const supabase = adminClient();
+
+  const expected = await expectedTokenHash(supabase);
+  if (!expected)
+    return NextResponse.json({ error: "Menu bar token not configured" }, { status: 500 });
+  const given = sha256((request.headers.get("authorization") ?? "").replace(/^Bearer /, ""));
+  if (given.length !== expected.length || !timingSafeEqual(given, expected))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = adminClient();
   // Today so far vs. yesterday up to the same clock time — a fair comparison
   // at any hour, unlike partial today vs. all of yesterday.
   const { current, prev } = todayComparisonBounds();
