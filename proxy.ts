@@ -10,6 +10,8 @@ const PUBLIC_ROUTES = [
   /^\/api\/webhook\/stripe\//,
   // Cron endpoints authenticate themselves with CRON_SECRET, not a user session.
   /^\/api\/cron\//,
+  // Menu bar plugin authenticates with MENUBAR_TOKEN, not a user session.
+  /^\/api\/menubar$/,
 ];
 
 export default async function proxy(request: NextRequest) {
