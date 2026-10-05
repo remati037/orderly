@@ -128,3 +128,17 @@ export function stripeProductName(obj: any, siteName: string): string {
     siteName
   );
 }
+
+// Per-site filter for Stripe accounts shared by several sites. "key" keeps only
+// objects whose metadata has that key, "!key" keeps only those without it.
+// Empty / null means no filtering.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function matchesStripeFilter(obj: any, filter: string | null | undefined): boolean {
+  const f = (filter ?? "").trim();
+  if (!f) return true;
+  const negate = f.startsWith("!");
+  const key = negate ? f.slice(1).trim() : f;
+  if (!key) return true;
+  const has = obj?.metadata?.[key] != null && obj.metadata[key] !== "";
+  return negate ? !has : has;
+}

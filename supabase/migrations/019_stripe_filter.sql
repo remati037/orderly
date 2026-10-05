@@ -1,0 +1,12 @@
+-- =============================================================
+-- Orderly — per-site Stripe filter
+--
+-- Several sites can share one Stripe account, and a Stripe webhook receives
+-- every charge on it. This column says which charges belong to the site:
+--   'znak'   → only charges whose metadata has the key "znak"
+--   '!znak'  → only charges whose metadata does NOT have that key
+--   NULL     → no filtering (previous behaviour)
+--
+-- Run in: Supabase Dashboard → SQL Editor → Run
+-- =============================================================
+ALTER TABLE public.sites ADD COLUMN IF NOT EXISTS stripe_filter TEXT;

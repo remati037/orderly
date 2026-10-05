@@ -64,6 +64,7 @@ interface Site {
   color_hex: string;
   project_type: "standard" | "subscription" | "digital";
   is_active: boolean;
+  stripe_filter: string | null;
   created_at: string;
   last_sync: { created_at: string; status: string } | null;
 }
@@ -79,6 +80,7 @@ interface SiteForm {
   consumer_secret: string;
   subdomain: string;
   thinkific_api_key: string;
+  stripe_filter: string;
 }
 
 const DEFAULT_FORM: SiteForm = {
@@ -92,6 +94,7 @@ const DEFAULT_FORM: SiteForm = {
   consumer_secret: "",
   subdomain: "",
   thinkific_api_key: "",
+  stripe_filter: "",
 };
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -295,6 +298,7 @@ export default function SitesManager() {
       consumer_secret: "",
       subdomain: site.subdomain ?? "",
       thinkific_api_key: "",
+      stripe_filter: site.stripe_filter ?? "",
     });
     setShowSecret(false);
     setShowApiKey(false);
@@ -340,6 +344,8 @@ export default function SitesManager() {
           form.platform === "thinkific" ? form.subdomain || null : null,
         thinkific_api_key:
           form.platform === "thinkific" ? form.thinkific_api_key || null : null,
+        stripe_filter:
+          form.platform === "stripe" ? form.stripe_filter.trim() || null : null,
       };
 
       if (editingSite) {
@@ -892,6 +898,17 @@ export default function SitesManager() {
                       placeholder={savedPlaceholder("has_consumer_secret", "whsec_...")}
                       value={form.consumer_secret}
                       onChange={(e) => setField("consumer_secret", e.target.value)}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Filter (metadata ključ)"
+                    hint='Za Stripe nalog koji deli više sajtova. "znak" = samo naplate sa metadata znak, "!znak" = sve osim njih. Prazno = sve.'
+                  >
+                    <Input
+                      placeholder="znak"
+                      value={form.stripe_filter}
+                      onChange={(e) => setField("stripe_filter", e.target.value)}
                     />
                   </FormField>
 

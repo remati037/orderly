@@ -5,6 +5,7 @@ import {
   normalizeStripeEvent,
   stripeProductName,
   stripeAmount,
+  matchesStripeFilter,
 } from "@/lib/sync/normalize-stripe-event";
 import { upsertCustomer } from "@/lib/sync/db";
 
@@ -27,7 +28,7 @@ export async function POST(
 
   const { data: site } = await supabase
     .from("sites")
-    .select("id, name, platform, consumer_key, default_margin_percent")
+    .select("id, name, platform, consumer_key, default_margin_percent, stripe_filter")
     .eq("id", siteId)
     .single();
 
@@ -59,6 +60,7 @@ export async function POST(
 
   for (const charge of charges) {
     if (charge.status !== "succeeded" || charge.refunded) continue;
+    if (!matchesStripeFilter(charge, site.stripe_filter)) continue;
 
     const bt = charge.balance_transaction;
     const fee =

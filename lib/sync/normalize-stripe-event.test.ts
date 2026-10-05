@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapStripeStatus, normalizeStripeEvent, stripeAmount } from "./normalize-stripe-event";
+import { matchesStripeFilter, mapStripeStatus, normalizeStripeEvent, stripeAmount } from "./normalize-stripe-event";
 
 describe("stripeAmount", () => {
   it("divides normal currencies by 100 and leaves zero-decimal ones", () => {
@@ -55,5 +55,23 @@ describe("normalizeStripeEvent", () => {
 
   it("ignores events we don't track", () => {
     expect(normalizeStripeEvent({ type: "invoice.paid", data: { object: charge } }, "s", 100, null)).toBeNull();
+  });
+});
+
+describe("matchesStripeFilter", () => {
+  const mine = { metadata: { znak: "bik" } };
+  const other = { metadata: {} };
+  it("passes everything without a filter", () => {
+    expect(matchesStripeFilter(other, null)).toBe(true);
+    expect(matchesStripeFilter(other, "  ")).toBe(true);
+  });
+  it("'key' keeps only objects carrying that metadata key", () => {
+    expect(matchesStripeFilter(mine, "znak")).toBe(true);
+    expect(matchesStripeFilter(other, "znak")).toBe(false);
+    expect(matchesStripeFilter({}, "znak")).toBe(false);
+  });
+  it("'!key' keeps only objects without it", () => {
+    expect(matchesStripeFilter(mine, "!znak")).toBe(false);
+    expect(matchesStripeFilter(other, "!znak")).toBe(true);
   });
 });

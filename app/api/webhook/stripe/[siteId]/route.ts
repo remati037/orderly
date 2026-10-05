@@ -5,6 +5,7 @@ import {
   normalizeStripeEvent,
   stripeProductName,
   stripeAmount,
+  matchesStripeFilter,
 } from "@/lib/sync/normalize-stripe-event";
 import { upsertCustomer, logSync } from "@/lib/sync/db";
 
@@ -53,7 +54,7 @@ export async function POST(
 
   const { data: site } = await supabase
     .from("sites")
-    .select("id, name, platform, consumer_key, consumer_secret, default_margin_percent")
+    .select("id, name, platform, consumer_key, consumer_secret, default_margin_percent, stripe_filter")
     .eq("id", siteId)
     .single();
 
@@ -79,6 +80,10 @@ export async function POST(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ev = event as any;
   const obj = ev.data?.object ?? {};
+
+  // Shared Stripe account: ignore charges that belong to other sites.
+  if (!matchesStripeFilter(obj, site.stripe_filter))
+    return NextResponse.json({ ok: true }, { status: 200 });
 
   // Only pull the fee for a successful charge.
   const fee =

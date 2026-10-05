@@ -3,7 +3,7 @@
 // sites the secret key and webhook signing secret) never leave the server;
 // the client only learns whether each one is set.
 export const PUBLIC_SITE_COLUMNS =
-  "id, name, platform, url, subdomain, color_hex, is_active, project_type, default_margin_percent, created_at";
+  "id, name, platform, url, subdomain, color_hex, is_active, project_type, default_margin_percent, stripe_filter, created_at";
 
 const SECRET_COLUMNS = ["consumer_key", "consumer_secret", "thinkific_api_key"] as const;
 
@@ -19,7 +19,7 @@ export function secretFlags(row: Partial<Record<(typeof SECRET_COLUMNS)[number],
 
 const EDITABLE_COLUMNS = [
   "name", "platform", "url", "subdomain", "color_hex", "is_active",
-  "project_type", "default_margin_percent",
+  "project_type", "default_margin_percent", "stripe_filter",
 ] as const;
 
 // Whitelists a PATCH body. Secret fields are only written when a new non-empty

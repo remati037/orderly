@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     color_hex,
     project_type,
     is_active,
+    stripe_filter,
   } = body;
 
   if (!name || !platform)
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
       thinkific_api_key: thinkific_api_key || null,
       color_hex: color_hex || "#16A34A",
       project_type: project_type || "standard",
+      stripe_filter: stripe_filter?.trim() || null,
       is_active: is_active ?? true,
     })
     .select(PUBLIC_SITE_COLUMNS)
