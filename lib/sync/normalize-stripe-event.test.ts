@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesStripeFilter, mapStripeStatus, normalizeStripeEvent, stripeAmount } from "./normalize-stripe-event";
+import { isUncontactableLoss, matchesStripeFilter, mapStripeStatus, normalizeStripeEvent, stripeAmount } from "./normalize-stripe-event";
 
 describe("stripeAmount", () => {
   it("divides normal currencies by 100 and leaves zero-decimal ones", () => {
@@ -73,5 +73,17 @@ describe("matchesStripeFilter", () => {
   it("'!key' keeps only objects without it", () => {
     expect(matchesStripeFilter(mine, "!znak")).toBe(false);
     expect(matchesStripeFilter(other, "!znak")).toBe(true);
+  });
+});
+
+describe("isUncontactableLoss", () => {
+  it("drops failed/abandoned orders with no email and no phone", () => {
+    expect(isUncontactableLoss({ status: "failed", customer_email: null, customer_phone: null })).toBe(true);
+    expect(isUncontactableLoss({ status: "checkout-draft", customer_email: "", customer_phone: " " })).toBe(true);
+  });
+  it("keeps anything with a contact, and every completed order", () => {
+    expect(isUncontactableLoss({ status: "failed", customer_email: "a@b.rs", customer_phone: null })).toBe(false);
+    expect(isUncontactableLoss({ status: "checkout-draft", customer_email: null, customer_phone: "060" })).toBe(false);
+    expect(isUncontactableLoss({ status: "completed", customer_email: null, customer_phone: null })).toBe(false);
   });
 });

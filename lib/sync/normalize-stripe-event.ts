@@ -142,3 +142,12 @@ export function matchesStripeFilter(obj: any, filter: string | null | undefined)
   const has = obj?.metadata?.[key] != null && obj.metadata[key] !== "";
   return negate ? !has : has;
 }
+
+// A failed / abandoned payment with no email and no phone cannot be followed up,
+// so it is useless in the recovery pipeline. Completed orders are always kept.
+export function isUncontactableLoss(
+  row: Pick<StripeOrderRow, "status" | "customer_email" | "customer_phone">
+): boolean {
+  if (row.status === "completed") return false;
+  return !row.customer_email?.trim() && !row.customer_phone?.trim();
+}

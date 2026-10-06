@@ -6,6 +6,7 @@ import {
   stripeProductName,
   stripeAmount,
   matchesStripeFilter,
+  isUncontactableLoss,
 } from "@/lib/sync/normalize-stripe-event";
 import { upsertCustomer, logSync } from "@/lib/sync/db";
 
@@ -100,6 +101,9 @@ export async function POST(
 
   // Event type we don't track — acknowledge and move on.
   if (!normalized) return NextResponse.json({ ok: true }, { status: 200 });
+
+  // Failed / abandoned checkout with no email or phone: nobody to contact, skip.
+  if (isUncontactableLoss(normalized)) return NextResponse.json({ ok: true }, { status: 200 });
 
   const { data: row, error } = await supabase
     .from("orders")
