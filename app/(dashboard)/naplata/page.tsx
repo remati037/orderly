@@ -3,5 +3,5 @@ import RecoveryBoard from "./recovery-board";
 
 export default async function NaplataPage() {
   const member = await requirePageRole(["owner", "agent"]);
-  return <RecoveryBoard currentMemberId={member.id} />;
+  return <RecoveryBoard currentMemberId={member.id} isOwner={member.role === "owner"} />;
 }
