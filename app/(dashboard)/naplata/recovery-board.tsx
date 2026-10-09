@@ -173,7 +173,7 @@ function StatusPill({ status }: { status: string }) {
 
 // ── board ──────────────────────────────────────────────────────────────────────
 
-export default function RecoveryBoard({ currentMemberId }: { currentMemberId: string }) {
+export default function RecoveryBoard({ currentMemberId, isOwner = false }: { currentMemberId: string; isOwner?: boolean }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [open, setOpen] = useState<Task | null>(null);
@@ -487,6 +487,7 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
           task={tasks.find((t) => t.id === open.id) ?? open}
           members={members}
           currentMemberId={currentMemberId}
+          isOwner={isOwner}
           onClose={() => setOpen(null)}
           onPatch={patch}
           onChanged={load}
@@ -499,9 +500,10 @@ export default function RecoveryBoard({ currentMemberId }: { currentMemberId: st
 // ── drawer ─────────────────────────────────────────────────────────────────────
 
 function TaskDrawer({
-  task, members, currentMemberId, onClose, onPatch, onChanged,
+  task, members, currentMemberId, isOwner, onClose, onPatch, onChanged,
 }: {
   task: Task;
+  isOwner: boolean;
   members: Member[];
   currentMemberId: string;
   onClose: () => void;
@@ -657,6 +659,29 @@ function TaskDrawer({
             </>
           )}
         </div>
+
+        {/* manual payment confirmation: owner only, on-hold orders (bank transfer / QR) */}
+        {isOwner && task.order_status === "on-hold" && task.stage !== "naplaceno" && task.stage !== "otkazano" && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            <button
+              onClick={() => {
+                if (confirm(`Označiti kao uplaćeno: ${task.customer_name || "kupac"}, ${formatCurrency(task.total, task.currency)}? Narudžbina ulazi u prihod.`))
+                  onPatch(task, { order_status: "completed" });
+              }}
+              style={{ ...contactBtn("#16A34A"), flex: 1, justifyContent: "center", background: "#16A34A", color: "#fff", cursor: "pointer" }}
+            >
+              <CheckCircle2Icon style={{ width: 14, height: 14 }} /> Uplaćeno
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Otkazati narudžbinu?")) onPatch(task, { order_status: "cancelled" });
+              }}
+              style={{ ...contactBtn("#B91C1C"), background: "#fff", cursor: "pointer" }}
+            >
+              Otkaži
+            </button>
+          </div>
+        )}
 
         {/* stage + assignee */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>

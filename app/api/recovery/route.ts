@@ -203,8 +203,38 @@ export async function PATCH(request: NextRequest) {
   const { error: authError } = await requireRole(["owner", "agent"]);
   if (authError) return authError;
 
-  const { id, stage, assigned_to, linked_task_ids } = await request.json();
+  const { id, stage, assigned_to, linked_task_ids, order_status } = await request.json();
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  // Manual payment confirmation for orders waiting on a bank transfer / QR payment.
+  // Changes the ORDER status (so it counts as revenue once "completed"); the
+  // sync_recovery_task trigger then closes the task by itself (naplaceno / otkazano).
+  // Only on-hold orders can be changed this way, and only by the owner, since it moves
+  // revenue numbers.
+  if (order_status !== undefined) {
+    if (order_status !== "completed" && order_status !== "cancelled")
+      return NextResponse.json({ error: "Nepoznat status" }, { status: 400 });
+    const { error: ownerError } = await requireRole(["owner"]);
+    if (ownerError) return ownerError;
+
+    const taskIds: string[] = Array.isArray(linked_task_ids) && linked_task_ids.length ? linked_task_ids : [id];
+    const sb = adminClient();
+    const { data: taskRows, error: taskErr } = await sb
+      .from("recovery_tasks").select("order_id").in("id", taskIds);
+    if (taskErr) return NextResponse.json({ error: taskErr.message }, { status: 500 });
+
+    const orderIds = (taskRows ?? []).map((r) => r.order_id as string);
+    const { data: changed, error: orderErr } = await sb
+      .from("orders")
+      .update({ status: order_status, updated_at: new Date().toISOString() })
+      .in("id", orderIds)
+      .eq("status", "on-hold")
+      .select("id");
+    if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
+    if (!changed?.length)
+      return NextResponse.json({ error: "Status se menja samo za narudžbine na čekanju (on-hold)" }, { status: 409 });
+    return NextResponse.json({ ok: true });
+  }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
