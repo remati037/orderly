@@ -8,6 +8,8 @@ const PUBLIC_ROUTES = [
   /^\/api\/webhook\/woo\//,
   /^\/api\/webhook\/thinkific\//,
   /^\/api\/webhook\/stripe\//,
+  // Storefront-posted on-hold orders (IPS QR); authenticated by MANUAL_WEBHOOK_SECRET.
+  /^\/api\/webhook\/manual\//,
   // Cron endpoints authenticate themselves with CRON_SECRET, not a user session.
   /^\/api\/cron\//,
   // Menu bar plugin authenticates with MENUBAR_TOKEN, not a user session.
