@@ -13,8 +13,12 @@ import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 // a secret of its own — NOT the site's Stripe / WooCommerce secret.
 //
 // Unlike the Woo webhook this answers with real error codes (the caller is our own
-// code, and it logs failures), and it only accepts on-hold orders: marking an order
-// paid is done by a person on the Naplata board.
+// code, and it logs failures). Accepted statuses: on-hold (waiting for a bank / QR
+// payment), processing and completed (paid, e.g. a card payment confirmed by Stripe).
+// The same order id can be sent again to move it forward, but never backwards: an order
+// already paid or cancelled is not reset to on-hold by a late or repeated delivery.
+const ALLOWED = ["on-hold", "processing", "completed"];
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
@@ -44,8 +48,26 @@ export async function POST(
     if (!site) return NextResponse.json({ error: "Unknown site" }, { status: 404 });
 
     const order = JSON.parse(rawBody);
-    if (order?.status !== "on-hold" || order.id == null || !order.billing?.email || !order.line_items?.length) {
-      return NextResponse.json({ error: "Expected an on-hold order with id, billing.email and line_items" }, { status: 400 });
+    if (
+      !ALLOWED.includes(order?.status) ||
+      order.id == null ||
+      !order.billing?.email ||
+      !order.line_items?.length
+    ) {
+      return NextResponse.json(
+        { error: `Expected status ${ALLOWED.join("|")} with id, billing.email and line_items` },
+        { status: 400 }
+      );
+    }
+
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("site_id", siteId)
+      .eq("woo_order_id", String(order.id))
+      .maybeSingle();
+    if (existing && order.status === "on-hold" && existing.status !== "on-hold") {
+      return NextResponse.json({ ok: true, unchanged: existing.status });
     }
 
     const normalized = await normalizeWooOrder(supabase, order, siteId, site.default_margin_percent ?? 100);
@@ -62,7 +84,7 @@ export async function POST(
       normalized.orderRow.customer_city
     );
     await logSync(supabase, siteId, "webhook", "success", 1);
-    console.log(`[manual-webhook] "${site.name}" order ${order.id} stored as on-hold`);
+    console.log(`[manual-webhook] "${site.name}" order ${order.id} stored as ${order.status}`);
     return NextResponse.json({ ok: true, id: orderId });
   } catch (err) {
     console.error("[manual-webhook] Unhandled error:", err);
