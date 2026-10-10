@@ -3,6 +3,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { normalizeWooOrder } from "@/lib/sync/normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
 import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
+import crypto from "crypto";
 
 // Orders that are not created by a shop platform: a customer chose to pay by bank
 // transfer / IPS QR on the storefront and the storefront posts the order here as
@@ -26,15 +27,13 @@ export async function POST(
   const { siteId } = await params;
   const rawBody = await request.text();
 
-  if (
-    !verifyHmacSignature(
-      rawBody,
-      request.headers.get("x-wc-webhook-signature"),
-      process.env.MANUAL_WEBHOOK_SECRET,
-      "base64"
-    )
-  ) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  // Trimmed: a value pasted into the Vercel dashboard can pick up a trailing newline.
+  const secret = process.env.MANUAL_WEBHOOK_SECRET?.trim();
+  if (!verifyHmacSignature(rawBody, request.headers.get("x-wc-webhook-signature"), secret, "base64")) {
+    // Fingerprint of the configured secret (first 8 hex of its SHA-256) so the sender can
+    // tell "no secret" / "different secret" apart without the secret ever leaving the server.
+    const key = secret ? crypto.createHash("sha256").update(secret).digest("hex").slice(0, 8) : "none";
+    return NextResponse.json({ error: "Invalid signature", key }, { status: 401 });
   }
 
   const supabase = adminClient();
