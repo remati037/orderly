@@ -1,19 +1,25 @@
 // Columns of `sites` that are safe to send to the browser. The API credential
-// columns (consumer_key / consumer_secret / thinkific_api_key — for Stripe
-// sites the secret key and webhook signing secret) never leave the server;
+// columns (consumer_key / consumer_secret / thinkific_api_key / circle_token —
+// for Stripe sites the secret key and webhook signing secret) never leave the server;
 // the client only learns whether each one is set.
 export const PUBLIC_SITE_COLUMNS =
   "id, name, platform, url, subdomain, color_hex, is_active, project_type, default_margin_percent, stripe_filter, created_at";
 
-const SECRET_COLUMNS = ["consumer_key", "consumer_secret", "thinkific_api_key"] as const;
+const SECRET_COLUMNS = ["consumer_key", "consumer_secret", "thinkific_api_key", "circle_token"] as const;
 
-type SecretFlags = { has_consumer_key: boolean; has_consumer_secret: boolean; has_thinkific_api_key: boolean };
+type SecretFlags = {
+  has_consumer_key: boolean;
+  has_consumer_secret: boolean;
+  has_thinkific_api_key: boolean;
+  has_circle_token: boolean;
+};
 
 export function secretFlags(row: Partial<Record<(typeof SECRET_COLUMNS)[number], string | null>>): SecretFlags {
   return {
     has_consumer_key: !!row.consumer_key,
     has_consumer_secret: !!row.consumer_secret,
     has_thinkific_api_key: !!row.thinkific_api_key,
+    has_circle_token: !!row.circle_token,
   };
 }
 

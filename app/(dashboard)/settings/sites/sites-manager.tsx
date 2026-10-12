@@ -61,6 +61,7 @@ interface Site {
   has_consumer_key: boolean;
   has_consumer_secret: boolean;
   has_thinkific_api_key: boolean;
+  has_circle_token: boolean;
   color_hex: string;
   project_type: "standard" | "subscription" | "digital";
   is_active: boolean;
@@ -81,6 +82,7 @@ interface SiteForm {
   subdomain: string;
   thinkific_api_key: string;
   stripe_filter: string;
+  circle_token: string;
 }
 
 const DEFAULT_FORM: SiteForm = {
@@ -95,6 +97,7 @@ const DEFAULT_FORM: SiteForm = {
   subdomain: "",
   thinkific_api_key: "",
   stripe_filter: "",
+  circle_token: "",
 };
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -299,6 +302,7 @@ export default function SitesManager() {
       subdomain: site.subdomain ?? "",
       thinkific_api_key: "",
       stripe_filter: site.stripe_filter ?? "",
+      circle_token: "",
     });
     setShowSecret(false);
     setShowApiKey(false);
@@ -306,7 +310,7 @@ export default function SitesManager() {
   }
 
   function savedPlaceholder(
-    flag: "has_consumer_key" | "has_consumer_secret" | "has_thinkific_api_key",
+    flag: "has_consumer_key" | "has_consumer_secret" | "has_thinkific_api_key" | "has_circle_token",
     fallback: string
   ): string {
     return editingSite?.[flag] ? "•••••• sačuvano — ostavi prazno da zadržiš" : fallback;
@@ -346,6 +350,8 @@ export default function SitesManager() {
           form.platform === "thinkific" ? form.thinkific_api_key || null : null,
         stripe_filter:
           form.platform === "stripe" ? form.stripe_filter.trim() || null : null,
+        circle_token:
+          form.platform === "stripe" ? form.circle_token.trim() || null : null,
       };
 
       if (editingSite) {
@@ -909,6 +915,18 @@ export default function SitesManager() {
                       placeholder="znak"
                       value={form.stripe_filter}
                       onChange={(e) => setField("stripe_filter", e.target.value)}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Circle Admin token (opciono)"
+                    hint="Circle → Settings → Developers → Tokens → Admin V2. Orderly po mejlu povlači telefon kupca iz Circle profila."
+                  >
+                    <Input
+                      type={showSecret ? "text" : "password"}
+                      placeholder={savedPlaceholder("has_circle_token", "Admin V2 token")}
+                      value={form.circle_token}
+                      onChange={(e) => setField("circle_token", e.target.value)}
                     />
                   </FormField>
 

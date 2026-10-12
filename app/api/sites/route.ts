@@ -11,7 +11,7 @@ export async function GET() {
 
   const { data: sites, error } = await supabase
     .from("sites")
-    .select(`${PUBLIC_SITE_COLUMNS}, consumer_key, consumer_secret, thinkific_api_key`)
+    .select(`${PUBLIC_SITE_COLUMNS}, consumer_key, consumer_secret, thinkific_api_key, circle_token`)
     .order("created_at");
 
   if (error)
@@ -39,9 +39,9 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    (sites ?? []).map(({ consumer_key, consumer_secret, thinkific_api_key, ...site }) => ({
+    (sites ?? []).map(({ consumer_key, consumer_secret, thinkific_api_key, circle_token, ...site }) => ({
       ...site,
-      ...secretFlags({ consumer_key, consumer_secret, thinkific_api_key }),
+      ...secretFlags({ consumer_key, consumer_secret, thinkific_api_key, circle_token }),
       last_sync: latestSync[site.id] ?? null,
     }))
   );
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     project_type,
     is_active,
     stripe_filter,
+    circle_token,
   } = body;
 
   if (!name || !platform)
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       color_hex: color_hex || "#16A34A",
       project_type: project_type || "standard",
       stripe_filter: stripe_filter?.trim() || null,
+      circle_token: circle_token?.trim() || null,
       is_active: is_active ?? true,
     })
     .select(PUBLIC_SITE_COLUMNS)

@@ -9,6 +9,7 @@ import {
   isUncontactableLoss,
 } from "@/lib/sync/normalize-stripe-event";
 import { upsertCustomer, logSync } from "@/lib/sync/db";
+import { fetchCirclePhone } from "@/lib/sync/circle";
 
 // Fetch the real processor fee for a charge/invoice, in the order currency.
 // Returns null if it can't be resolved (caller falls back to the 5% estimate).
@@ -55,7 +56,7 @@ export async function POST(
 
   const { data: site } = await supabase
     .from("sites")
-    .select("id, name, platform, consumer_key, consumer_secret, default_margin_percent, stripe_filter")
+    .select("id, name, platform, consumer_key, consumer_secret, default_margin_percent, stripe_filter, circle_token")
     .eq("id", siteId)
     .single();
 
@@ -101,6 +102,11 @@ export async function POST(
 
   // Event type we don't track — acknowledge and move on.
   if (!normalized) return NextResponse.json({ ok: true }, { status: 200 });
+
+  // Circle never passes the phone to Stripe — fetch it from the member profile.
+  if (!normalized.customer_phone && normalized.customer_email && site.circle_token) {
+    normalized.customer_phone = await fetchCirclePhone(site.circle_token, normalized.customer_email);
+  }
 
   // Failed / abandoned checkout with no email or phone: nobody to contact, skip.
   if (isUncontactableLoss(normalized)) return NextResponse.json({ ok: true }, { status: 200 });
