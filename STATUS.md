@@ -11,7 +11,7 @@ Faza: uživo
 - U toku (necommitovano): SMS recovery (grana feat/sms-recovery).
 
 ## Sledeći korak
-- Pustiti Circle izmenu na produkciju (merge u main), da i nove porudžbine dobijaju telefon.
+- Circle izmena je na main (9f7030e) — proveriti da nove Stripe porudžbine stižu sa telefonom.
 - Završiti SMS recovery.
 
 ## Šta fali od Vladimira
