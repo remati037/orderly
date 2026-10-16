@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
-import { fetchAll } from "@/lib/supabase/fetch-all";
-import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { fetchPeriodActivity, summarizeActivity } from "@/lib/stats/counted-orders";
+import { loadFxSettings } from "@/lib/utils/fx";
 import { dayBounds } from "@/lib/utils/tz";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
 
 const TZ = "Europe/Belgrade";
-
-type OrderRow = {
-  total: number | null;
-  currency: string | null;
-  created_at: string;
-};
 
 // Belgrade-local YYYY-MM-DD for a given instant.
 function belgradeDay(iso: string): string {
@@ -38,47 +31,17 @@ export async function GET(request: NextRequest) {
     dayKeys.push(belgradeDay(dayBounds(-i).start));
   }
   const from = dayBounds(-(days - 1)).start;
+  const to   = dayBounds(0).end;
 
-  let rows: OrderRow[] = [];
-  if (products?.length) {
-    ({ data: rows } = await fetchAll<OrderRow>(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as any)
-        .from("orders")
-        .select("total, currency, created_at, order_items!inner(product_name)")
-        .gte("created_at", from)
-        .in("status", COUNTED_STATUSES)
-        .in("order_items.product_name", products)
-        .order("id");
-      if (siteId) q = q.eq("site_id", siteId);
-      return q;
-    }));
-  } else {
-    ({ data: rows } = await fetchAll<OrderRow>(() => {
-      let q = supabase
-        .from("orders")
-        .select("total, currency, created_at")
-        .gte("created_at", from)
-        .in("status", COUNTED_STATUSES)
-        .order("id");
-      if (siteId) q = q.eq("site_id", siteId);
-      return q;
-    }));
-  }
+  // Raw rows rather than daily_stats so the product filter keeps working.
+  // Revenue is net: orders on their day minus refunds on the refund's day.
+  const activity = await fetchPeriodActivity(supabase, from, to, siteId, products);
+  const dayIndex = new Map(dayKeys.map((k, i) => [k, i]));
+  const s = summarizeActivity(activity, fx.rates, days, (iso) => dayIndex.get(belgradeDay(iso)) ?? -1);
 
-  const revByDay   = new Map<string, number>(dayKeys.map((k) => [k, 0]));
-  const countByDay = new Map<string, number>(dayKeys.map((k) => [k, 0]));
-
-  for (const o of rows) {
-    const key = belgradeDay(o.created_at);
-    if (!revByDay.has(key)) continue;
-    revByDay.set(key, revByDay.get(key)! + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates));
-    countByDay.set(key, countByDay.get(key)! + 1);
-  }
-
-  const revenue = dayKeys.map((k) => Math.round(revByDay.get(k)!));
-  const orders  = dayKeys.map((k) => countByDay.get(k)!);
-  const aov     = dayKeys.map((k, i) => (orders[i] > 0 ? Math.round(revenue[i] / orders[i]) : 0));
+  const revenue = s.buckets.map((v) => Math.round(v));
+  const orders  = s.orderBuckets;
+  const aov     = dayKeys.map((_, i) => (orders[i] > 0 ? Math.round(revenue[i] / orders[i]) : 0));
 
   return NextResponse.json({ labels: dayKeys, revenue, orders, aov });
 }

@@ -38,7 +38,7 @@ export function monthlyAmount(item: any): { amount: number; currency: string } {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function customerIdFor(supabase: Supa, cust: any): Promise<string | null> {
-  const email = (cust?.email ?? "").toLowerCase();
+  const email = (cust?.email ?? "").trim().toLowerCase();
   if (!email) return null;
 
   const { data: existing } = await supabase
@@ -91,6 +91,9 @@ export async function upsertSubscription(
     product_name:
       item?.price?.nickname || item?.plan?.nickname || sub.description || "Pretplata",
     mrr: mrrBase,
+    // As charged; lib/metrics converts with the current rates when reading.
+    mrr_amount: Math.round(amount * 100) / 100,
+    mrr_currency: currency,
     status: mapSubStatus(sub.status),
     started_at: sub.start_date ? new Date(sub.start_date * 1000).toISOString() : null,
     cancelled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,

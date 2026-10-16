@@ -1,82 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
-import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { loadFxSettings } from "@/lib/utils/fx";
 import { periodBounds } from "@/lib/utils/kpi-period";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
-import { fetchAll } from "@/lib/supabase/fetch-all";
-
-interface PeriodResult {
-  revenue: number;
-  netProfit: number;
-  orders: number;
-  stripeFees: number;
-}
-
-type OrderRow = {
-  total: number | null;
-  net_profit: number | null;
-  currency: string | null;
-  payment_method: string | null;
-  processor_fee: number | null;
-};
-
-function sumOrders(rows: OrderRow[], rates: Record<string, number>): PeriodResult {
-  let revenue = 0, netProfit = 0, stripeFees = 0;
-  for (const o of rows) {
-    const total    = o.total ?? 0;
-    const currency = o.currency ?? "RSD";
-    const isStripe = /stripe/i.test(o.payment_method ?? "");
-    revenue   += toBase(total, currency, rates);
-    netProfit += toBase(o.net_profit ?? 0, currency, rates);
-    // Use the real Stripe fee when we captured it; otherwise fall back to 5%.
-    if (o.processor_fee != null) stripeFees += toBase(o.processor_fee, currency, rates);
-    else if (isStripe)          stripeFees += toBase(total * 0.05, currency, rates);
-  }
-  return { revenue, netProfit, orders: rows.length, stripeFees };
-}
-
-const EMPTY: PeriodResult = { revenue: 0, netProfit: 0, orders: 0, stripeFees: 0 };
-
-async function queryOrders(
-  supabase: ReturnType<typeof adminClient>,
-  from: string,
-  to: string,
-  rates: Record<string, number>,
-  siteId?: string | null,
-  products?: string[] | null,
-): Promise<PeriodResult> {
-  if (products?.length) {
-    // Supabase TS cannot infer types for non-literal select strings; cast to any.
-    const { data, error } = await fetchAll<OrderRow>(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as any)
-        .from("orders")
-        .select("total, net_profit, currency, payment_method, processor_fee, order_items!inner(product_name)")
-        .gte("created_at", from)
-        .lt("created_at", to)
-        .in("status", COUNTED_STATUSES)
-        .in("order_items.product_name", products)
-        .order("id");
-      if (siteId) q = q.eq("site_id", siteId);
-      return q;
-    });
-    return error ? EMPTY : sumOrders(data, rates);
-  }
-
-  const { data, error } = await fetchAll<OrderRow>(() => {
-    let q = supabase
-      .from("orders")
-      .select("total, net_profit, currency, payment_method, processor_fee")
-      .gte("created_at", from)
-      .lt("created_at", to)
-      .in("status", COUNTED_STATUSES)
-      .order("id");
-    if (siteId) q = q.eq("site_id", siteId);
-    return q;
-  });
-  return error ? EMPTY : sumOrders(data, rates);
-}
+import { fetchRevenue } from "@/lib/metrics";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -99,35 +26,36 @@ export async function GET(request: NextRequest) {
   ]);
 
   const { current, prev, prevFull } = periodBounds(preset, from, to, compare);
+  const q = { rates: fx.rates, siteId, products };
 
+  // Revenue = net revenue (gross − refunds made in the period), see lib/metrics.
   const [currentData, prevData, prevFullData] = await Promise.all([
-    queryOrders(supabase, current.start, current.end, fx.rates, siteId, products),
-    queryOrders(supabase, prev.start,    prev.end,    fx.rates, siteId, products),
-    prevFull
-      ? queryOrders(supabase, prevFull.start, prevFull.end, fx.rates, siteId, products)
-      : null,
+    fetchRevenue(supabase, { ...q, ...current }),
+    fetchRevenue(supabase, { ...q, ...prev }),
+    prevFull ? fetchRevenue(supabase, { ...q, ...prevFull }) : null,
   ]);
-
-  const aov     = currentData.orders > 0 ? currentData.revenue / currentData.orders : 0;
-  const aovPrev = prevData.orders    > 0 ? prevData.revenue    / prevData.orders    : 0;
 
   return NextResponse.json({
     base_currency:   fx.baseCurrency,
-    revenue_current: currentData.revenue,
+    revenue_current: currentData.net,
     // Comparison window of the same length as `current` (fair basis for trends).
-    revenue_prev:    prevData.revenue,
+    revenue_prev:    prevData.net,
     // this_month only: the whole previous month, shown as a total.
-    revenue_prev_full: prevFullData?.revenue ?? null,
+    revenue_prev_full: prevFullData?.net ?? null,
     current_start:   current.start,
     current_end:     current.end,
     prev_start:      prev.start,
     prev_end:        prev.end,
     orders_current:  currentData.orders,
     orders_prev:     prevData.orders,
-    aov_current:     aov,
-    aov_prev:        aovPrev,
+    aov_current:     currentData.aov,
+    aov_prev:        prevData.aov,
     net_profit:      currentData.netProfit,
-    stripe_fees:     currentData.stripeFees,
+    stripe_fees:     currentData.fees,
+    gross_current:   currentData.gross,
+    refunds_current: currentData.refunds,
+    refund_count_current: currentData.refundCount,
+    refunds_prev:    prevData.refunds,
     active_sites:    activeSitesRes.count ?? 0,
   });
 }

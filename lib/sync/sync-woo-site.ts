@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeWooOrder, WooOrder } from "./normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "./db";
+import { syncWooOrderRefunds } from "./refunds-db";
 
 interface WooSite {
   id: string;
@@ -49,7 +50,8 @@ export async function syncWooSite(
   supabase: SupabaseClient,
   site: WooSite,
   logType: "manual" | "cron" = "manual",
-  after?: string // ISO date — only fetch orders created after this date
+  after?: string, // ISO date — only fetch orders created after this date
+  modifiedAfter?: string // ISO date — only orders changed since (status, refunds, …)
 ): Promise<WooSyncResult> {
   const auth = Buffer.from(
     `${site.consumer_key}:${site.consumer_secret}`
@@ -62,6 +64,7 @@ export async function syncWooSite(
       `${site.url}/wp-json/wc/v3/orders` +
       `?per_page=100&page=${page}&orderby=date&order=asc`;
     if (after) url += `&after=${encodeURIComponent(after)}`;
+    if (modifiedAfter) url += `&modified_after=${encodeURIComponent(modifiedAfter)}`;
 
     let orders: WooOrder[];
     try {
@@ -88,6 +91,7 @@ export async function syncWooSite(
           result.failed++;
           continue;
         }
+        await syncWooOrderRefunds(supabase, site, order, orderId);
         if (normalized.orderRow.customer_email) {
           await upsertCustomer(
             supabase,

@@ -1,5 +1,5 @@
 import type { adminClient } from "@/lib/supabase/admin";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES } from "@/lib/metrics";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
 type Supa = ReturnType<typeof adminClient>;
@@ -64,7 +64,7 @@ export async function computeSubscriptionOrdinals(
     (supabase as any)
       .from("orders")
       .select("id, customer_email, created_at, order_items!inner(product_name)")
-      .in("status", COUNTED_STATUSES)
+      .in("status", PAID_STATUSES)
       .not("customer_email", "is", null)
       .in("order_items.product_name", Array.from(subNames))
       .order("id")

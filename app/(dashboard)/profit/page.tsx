@@ -46,6 +46,7 @@ interface Product {
 
 interface ProfitKPI {
   gross_revenue_month: number;
+  net_revenue_month: number;
   net_profit_month: number;
   avg_margin_pct: number;
   highest_margin_product: string | null;
@@ -578,8 +579,8 @@ export default function ProfitPage() {
         {/* KPI strip */}
         <div style={{ display: "flex", gap: 12 }}>
           <StatCard
-            label="Bruto prihod mesec"
-            value={kpi ? formatRSD(kpi.gross_revenue_month) : "—"}
+            label="Neto prihod mesec"
+            value={kpi ? formatRSD(kpi.net_revenue_month) : "—"}
             icon={TrendingUpIcon}
           />
           <StatCard

@@ -13,6 +13,7 @@
     "db:rollback": "node --env-file=.env.local scripts/db.mjs rollback",
     "woo:order": "node --env-file=.env.local scripts/create-woo-order.mjs",
     "db:query": "node --env-file=.env.local scripts/db.mjs query",
+    "refunds:backfill": "node --env-file=.env.local scripts/backfill-refunds.mts",
     "test": "vitest run"
   },
   "dependencies": {

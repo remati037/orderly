@@ -3,19 +3,23 @@ import { adminClient } from "@/lib/supabase/admin";
 import { syncWooSite } from "@/lib/sync/sync-woo-site";
 import { syncThinkificSite } from "@/lib/sync/sync-thinkific-site";
 import { syncMetaAccount } from "@/lib/sync/sync-meta-account";
+import { syncRecentStripeRefunds } from "@/lib/sync/refunds-db";
 
 // Daily Vercel cron — safety net behind the webhooks:
-//   • WooCommerce: re-pull orders created in the last WOO_LOOKBACK_DAYS, which
-//     picks up missed webhooks and recent status changes without a full-history
-//     pull (that would blow the function timeout).
+//   • WooCommerce: re-pull orders changed in the last WOO_LOOKBACK_DAYS, which
+//     picks up missed webhooks, status changes and refunds (also on older
+//     orders) without a full-history pull (that would blow the function timeout).
 //   • Thinkific: full sync (no date filter in its API client yet).
 //   • Meta: last META_LOOKBACK_DAYS of spend — Meta revises recent days' numbers.
-// Stripe is covered by its webhook + /api/cron/sync-subscriptions.
+//   • Stripe: refunds of the last STRIPE_REFUND_LOOKBACK_DAYS, in case the
+//     webhook isn't subscribed to charge.refunded. Charges come by webhook,
+//     subscriptions by /api/cron/sync-subscriptions.
 // Vercel sends `Authorization: Bearer $CRON_SECRET` automatically.
 export const maxDuration = 300;
 
 const WOO_LOOKBACK_DAYS = 3;
 const META_LOOKBACK_DAYS = 7;
+const STRIPE_REFUND_LOOKBACK_DAYS = 7;
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -46,11 +50,13 @@ export async function GET(request: NextRequest) {
     Promise.allSettled(
       sites.map((site) => {
         if (site.platform === "woocommerce")
-          return syncWooSite(supabase, site, "cron", wooAfter).then((r) => {
+          return syncWooSite(supabase, site, "cron", undefined, wooAfter).then((r) => {
             if (!r.complete && r.synced === 0) throw new Error(r.error);
             return r.synced;
           });
         if (site.platform === "thinkific") return syncThinkificSite(supabase, site, "cron");
+        if (site.platform === "stripe")
+          return syncRecentStripeRefunds(supabase, site, STRIPE_REFUND_LOOKBACK_DAYS);
         return Promise.resolve(0);
       })
     ),

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
-import { fetchAll } from "@/lib/supabase/fetch-all";
-import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { loadFxSettings } from "@/lib/utils/fx";
 import { periodBounds, compareLabel, compareOptions, parseCompare } from "@/lib/utils/kpi-period";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import {
+  fetchPaidOrders, fetchRefunds, summarizeRevenueBy, type RevenueOrder, type RevenueRefund,
+} from "@/lib/metrics";
 
-type Row = { site_id: string; total: number | null; currency: string | null };
+type Row = RevenueOrder & { site_id: string };
+type RefundRow = RevenueRefund & { site_id: string };
 
 // Revenue, orders, AOV and share per site for the selected KPI period, plus the
 // same figures for the comparison window (same presets/compare as /api/stats/kpi).
+// Revenue is net revenue (gross − refunds made in the window), see lib/metrics.
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -20,16 +23,13 @@ export async function GET(request: NextRequest) {
   const { current, prev } = periodBounds(preset, sp.get("from"), sp.get("to"), compare);
 
   const supabase = adminClient();
-  const window = (b: { start: string; end: string }) =>
-    fetchAll<Row>(() =>
-      supabase
-        .from("orders")
-        .select("site_id, total, currency")
-        .gte("created_at", b.start)
-        .lt("created_at", b.end)
-        .in("status", COUNTED_STATUSES)
-        .order("id")
-    );
+  const window = async (b: { start: string; end: string }) => {
+    const [orders, refunds] = await Promise.all([
+      fetchPaidOrders<Row>(supabase, b, "site_id"),
+      fetchRefunds<RefundRow>(supabase, b, "site_id"),
+    ]);
+    return { orders: orders.data, refunds: refunds.data, error: orders.error ?? refunds.error };
+  };
 
   const [fx, sitesRes, cur, prv] = await Promise.all([
     loadFxSettings(supabase),
@@ -40,18 +40,12 @@ export async function GET(request: NextRequest) {
   if (cur.error || prv.error)
     return NextResponse.json({ error: "Failed to load orders" }, { status: 500 });
 
-  const sum = (rows: Row[]) => {
-    const m = new Map<string, { revenue: number; orders: number }>();
-    for (const r of rows) {
-      const e = m.get(r.site_id) ?? { revenue: 0, orders: 0 };
-      e.revenue += toBase(r.total ?? 0, r.currency ?? "RSD", fx.rates);
-      e.orders += 1;
-      m.set(r.site_id, e);
-    }
-    return m;
+  const sum = (w: { orders: Row[]; refunds: RefundRow[] }) => {
+    const bySite = summarizeRevenueBy(w.orders, w.refunds, fx.rates, (o) => o.site_id, (r) => r.site_id);
+    return new Map([...bySite].map(([k, s]) => [k, { revenue: s.net, orders: s.orders }]));
   };
-  const now = sum(cur.data);
-  const before = sum(prv.data);
+  const now = sum(cur);
+  const before = sum(prv);
   const totalRevenue = [...now.values()].reduce((s, v) => s + v.revenue, 0);
 
   const sites = (sitesRes.data ?? [])
@@ -72,7 +66,7 @@ export async function GET(request: NextRequest) {
         trend: p.revenue ? (c.revenue - p.revenue) / p.revenue : null,
       };
     })
-    .filter((s) => s.revenue > 0 || s.prev_revenue > 0)
+    .filter((s) => s.revenue !== 0 || s.prev_revenue !== 0)
     .sort((a, b) => b.revenue - a.revenue);
 
   const mode = parseCompare(compare);
@@ -80,7 +74,7 @@ export async function GET(request: NextRequest) {
     base_currency: fx.baseCurrency,
     compare_label: compareLabel(preset, compareOptions(preset).includes(mode) ? mode : compareOptions(preset)[0]),
     total_revenue: totalRevenue,
-    total_orders: cur.data.length,
+    total_orders: cur.orders.length,
     prev_total_revenue: [...before.values()].reduce((s, v) => s + v.revenue, 0),
     sites,
   });

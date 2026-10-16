@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES } from "@/lib/metrics";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       .from("orders")
       .select("customer_email, site_id, sites(name, color_hex, platform)")
       .in("customer_email", emails)
-      .in("status", COUNTED_STATUSES)
+      .in("status", PAID_STATUSES)
       .order("id")
   );
 

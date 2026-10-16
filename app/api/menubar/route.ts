@@ -2,8 +2,9 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
-import { fetchCountedOrders, type CountedOrder } from "@/lib/stats/counted-orders";
-import { loadFxSettings, toBase } from "@/lib/utils/fx";
+import { fetchPeriodActivity } from "@/lib/stats/counted-orders";
+import { summarizeRevenue } from "@/lib/metrics";
+import { loadFxSettings } from "@/lib/utils/fx";
 import { todayComparisonBounds } from "@/lib/utils/tz";
 
 // Today's revenue for the macOS menu bar (SwiftBar plugin in scripts/swiftbar).
@@ -40,16 +41,17 @@ export async function GET(request: NextRequest) {
 
   const [fx, today, yesterday] = await Promise.all([
     loadFxSettings(supabase),
-    fetchCountedOrders(supabase, current.start, current.end),
-    fetchCountedOrders(supabase, prev.start, prev.end),
+    fetchPeriodActivity(supabase, current.start, current.end),
+    fetchPeriodActivity(supabase, prev.start, prev.end),
   ]);
 
   const error = today.error ?? yesterday.error;
   if (error) return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 
-  const sum = (rows: CountedOrder[]) =>
-    rows.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
-  const lastOrderAt = today.data.reduce<string | null>(
+  // Net revenue (paid orders − refunds made in the window), see lib/metrics.
+  const t = summarizeRevenue(today.orders, today.refunds, fx.rates);
+  const y = summarizeRevenue(yesterday.orders, yesterday.refunds, fx.rates);
+  const lastOrderAt = today.orders.reduce<string | null>(
     (last, o) => (!last || o.created_at > last ? o.created_at : last),
     null
   );
@@ -57,10 +59,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       base_currency: fx.baseCurrency,
-      revenue: sum(today.data),
-      orders: today.data.length,
-      yesterday_revenue: sum(yesterday.data),
-      yesterday_orders: yesterday.data.length,
+      revenue: t.net,
+      orders: t.orders,
+      yesterday_revenue: y.net,
+      yesterday_orders: y.orders,
       last_order_at: lastOrderAt,
     },
     { headers: { "Cache-Control": "no-store" } }

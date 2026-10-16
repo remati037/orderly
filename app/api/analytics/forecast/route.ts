@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, fetchRevenue, orderNet } from "@/lib/metrics";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { dayBounds, monthBounds, belgradeDayLabel, belgradeMonthProgress } from "@/lib/utils/tz";
 
@@ -56,21 +56,21 @@ export async function GET() {
   const { data: orders } = await fetchAll(() =>
     supabase
       .from("orders")
-      .select("total, currency, created_at")
+      .select("total, refunded_total, currency, created_at")
       .gte("created_at", from)
-      .in("status", COUNTED_STATUSES)
+      .in("status", PAID_STATUSES)
       .order("created_at")
       .order("id")
   );
 
-  // Aggregate daily totals
+  // Aggregate daily totals — each order at its own net (total − refunded_total).
   const dailyMap: Record<string, number> = {};
   for (let i = HISTORY_DAYS - 1; i >= 0; i--) dailyMap[belgradeDayLabel(dayBounds(-i).start)] = 0;
 
   for (const order of orders ?? []) {
     const label = belgradeDayLabel(order.created_at);
     if (label in dailyMap) {
-      dailyMap[label] = (dailyMap[label] ?? 0) + toBase(order.total ?? 0, order.currency ?? "RSD", fx.rates);
+      dailyMap[label] = (dailyMap[label] ?? 0) + toBase(orderNet(order), order.currency ?? "RSD", fx.rates);
     }
   }
 
@@ -95,9 +95,10 @@ export async function GET() {
   const { dayOfMonth, daysInMonth } = belgradeMonthProgress();
   const remainingDays = daysInMonth - dayOfMonth;
 
-  const realizedThisMonth = (orders ?? [])
-    .filter((o) => new Date(o.created_at) >= new Date(monthStart))
-    .reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
+  // Realized = this month's net revenue so far, same figure as the KPI cards.
+  const realizedThisMonth = (
+    await fetchRevenue(supabase, { start: monthStart, end: new Date().toISOString(), rates: fx.rates })
+  ).net;
 
   const avgForecastDaily = forecast.slice(0, Math.ceil(remainingDays)).reduce((s, v, _, arr) => s + v / arr.length, 0);
   const projectedMonthRevenue = Math.round(
