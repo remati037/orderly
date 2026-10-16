@@ -3,18 +3,18 @@ Ažurirano: 2026-10-16
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
-- SMS recovery na main-u, migracija 020 primenjena (isključen dok ga ne uključiš u Naplata → SMS).
-- Faza 0 na main-u: migracije 022–027 primenjene, 40 refundacija upisano (€2.221,94), duplikati kupaca spojeni (41), porudžbine povezane sa kupcima, UTM izvori popunjeni (3.206), daily_stats popunjen (754 reda).
+- Faza 0 završena i na produkciji (migracije 020–028, 40 refundacija, spojeni kupci, UTM izvori, daily_stats, registar metrika).
+- Provera sa Metorikom (nemanjaantic.com, neto = bruto − refundacije):
+  avgust 371 / €15.984 i septembar 381 / €16.863 — tačno isto kao Metorik.
+  Oktobar 1–16: Orderly 194 / €9.343, Metorik 195 / €9.457 — razlika je samo #7084 (€114, on-hold):
+  Metorik on-hold računa kao prihod, Orderly ne (to je kartica za naplatu).
+- Popravljeno usput: 2 propuštene Woo porudžbine (#6513, #6514), zaglavljen status (#6862), test porudžbine iz Woo kante (#7094, #7095); Orderly sada prati Woo kantu.
 - Plan i odluke: `docs/analiza-metorik/FAZA-0.md`.
 
-- Provera Faze 0 (nemanjaantic.com, neto = bruto − refundacije): refundacije se poklapaju sa Metorikom u dlaku (avg 6/€222, sep 5/€194, okt 2/€102). Razlike u bruto prodaji: avg −€119 (#6513, #6514 nikad nisu stigle u Orderly), sep −€56 (#6862 zaglavljena u `wfocu-pri-order`, u Woo je completed), okt −€64 (#7084 on-hold €114 Metorik računa, a test porudžbine #7094 €50 i #7095 €0 su u Woo kanti, Orderly ih i dalje računa).
-
 ## Sledeći korak
-- Uz potvrdu: ponovo povući #6513, #6514, #6862 iz Woo i označiti #7094/#7095 kao obrisane; u kodu dodati praćenje Woo kante (`trash` / `order.deleted`). Posle toga avg i sep se poklapaju tačno, okt ostaje razlika €114 (on-hold po definiciji nije prihod u Orderlyju).
-- Zatim Faza 1 (pokreće Vladimir).
+- Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
-- Pristup Metoriku za poređenje (Keychain „Brave Safe Storage” ili prijava u vidljiv browser).
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
