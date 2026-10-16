@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import type { NormalizedWooOrder } from "./normalize-woo-order";
+import type { NormalizedWooOrder } from "./normalize-woo-order.ts";
 
 export async function upsertWooOrder(
   supabase: SupabaseClient,

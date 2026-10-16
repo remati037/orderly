@@ -8,7 +8,7 @@ import {
   wooRefundRows,
   type RefundRow,
   type WooOrderRefundRef,
-} from "./refunds";
+} from "./refunds.ts";
 
 async function upsertRefunds(supabase: SupabaseClient, rows: RefundRow[]) {
   if (!rows.length) return;

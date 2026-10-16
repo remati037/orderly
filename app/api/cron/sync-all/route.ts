@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { syncWooSite } from "@/lib/sync/sync-woo-site";
+import { fetchWooTrashedIds, markWooOrdersTrashed, syncWooSite } from "@/lib/sync/sync-woo-site";
 import { syncThinkificSite } from "@/lib/sync/sync-thinkific-site";
 import { syncMetaAccount } from "@/lib/sync/sync-meta-account";
 import { syncRecentStripeRefunds } from "@/lib/sync/refunds-db";
@@ -50,8 +50,11 @@ export async function GET(request: NextRequest) {
     Promise.allSettled(
       sites.map((site) => {
         if (site.platform === "woocommerce")
-          return syncWooSite(supabase, site, "cron", undefined, wooAfter).then((r) => {
+          return syncWooSite(supabase, site, "cron", undefined, wooAfter).then(async (r) => {
             if (!r.complete && r.synced === 0) throw new Error(r.error);
+            // Orders trashed in Woo (test orders) leave revenue too.
+            const trashed = await fetchWooTrashedIds(site, wooAfter).catch(() => []);
+            await markWooOrdersTrashed(supabase, site.id, trashed);
             return r.synced;
           });
         if (site.platform === "thinkific") return syncThinkificSite(supabase, site, "cron");

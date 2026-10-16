@@ -12,6 +12,7 @@
     "db:baseline": "node --env-file=.env.local scripts/db.mjs baseline",
     "db:rollback": "node --env-file=.env.local scripts/db.mjs rollback",
     "woo:order": "node --env-file=.env.local scripts/create-woo-order.mjs",
+    "woo:resync": "node --env-file=.env.local scripts/woo-resync.mts",
     "db:query": "node --env-file=.env.local scripts/db.mjs query",
     "refunds:backfill": "node --env-file=.env.local scripts/backfill-refunds.mts",
     "test": "vitest run"

@@ -4,6 +4,7 @@ import { normalizeWooOrder } from "@/lib/sync/normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
 import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 import { syncWooOrderRefunds } from "@/lib/sync/refunds-db";
+import { markWooOrdersTrashed } from "@/lib/sync/sync-woo-site";
 
 export async function POST(
   request: NextRequest,
@@ -47,6 +48,13 @@ export async function POST(
 
     // ── 3. Parse payload ───────────────────────────────────────────────────────
     const order = JSON.parse(rawBody);
+
+    // order.deleted (trash or permanent delete) carries only the id.
+    if (request.headers.get("x-wc-webhook-topic") === "order.deleted" || order.status === "trash") {
+      const n = await markWooOrdersTrashed(supabase, siteId, [String(order.id)]);
+      console.log(`[woo-webhook] order ${order.id} deleted in Woo → ${n} marked trash`);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
     console.log(
       `[woo-webhook] Payload parsed: woo_order_id=${order.id}, status="${order.status}", total=${order.total}, customer="${order.billing?.email}"`
     );
