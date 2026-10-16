@@ -3,12 +3,12 @@ import { PUBLIC_SITE_COLUMNS, secretFlags, siteUpdateFromBody } from "./site-col
 
 describe("site credential handling", () => {
   it("never lists credential columns as public", () => {
-    expect(PUBLIC_SITE_COLUMNS).not.toMatch(/consumer_key|consumer_secret|thinkific_api_key/);
+    expect(PUBLIC_SITE_COLUMNS).not.toMatch(/consumer_key|consumer_secret|thinkific_api_key|circle_token/);
   });
 
   it("exposes only whether credentials are set", () => {
     expect(secretFlags({ consumer_key: "ck", consumer_secret: null })).toEqual({
-      has_consumer_key: true, has_consumer_secret: false, has_thinkific_api_key: false,
+      has_consumer_key: true, has_consumer_secret: false, has_thinkific_api_key: false, has_circle_token: false,
     });
   });
 
