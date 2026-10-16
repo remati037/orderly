@@ -675,8 +675,10 @@ function TaskDrawer({
           )}
         </div>
 
-        {/* manual payment confirmation: owner only, on-hold orders (bank transfer / QR) */}
-        {isOwner && task.order_status === "on-hold" && task.stage !== "naplaceno" && task.stage !== "otkazano" && (
+        {/* manual payment confirmation: owner only, on-hold orders (bank transfer / QR).
+            Not gated on stage: moving the card to "Naplaćeno" by hand leaves the order
+            on-hold, and this button is the only way to fix that. */}
+        {isOwner && task.order_status === "on-hold" && (
           <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
             <button
               onClick={() => {
