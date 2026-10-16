@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { supabaseBrowser } from "@/lib/supabase/browser-client";
 import { SubscriptionDots } from "@/components/dashboard/subscription-dots";
 import ProcessingCallsList from "./processing-calls-list";
+import { SmsQueue, SmsSettings, TaskSms } from "./sms-panel";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ interface Member { id: string; email: string; name: string | null }
 
 interface Note {
   id: string;
-  channel: "telefon" | "email" | "napomena";
+  channel: "telefon" | "email" | "napomena" | "sms";
   body: string;
   created_at: string;
   author?: { email: string; name: string | null } | null;
@@ -181,7 +182,15 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
   const [notifPermission, setNotifPermission] =
     useState<NotificationPermission | "unsupported">("default");
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"naplata" | "pozivi">("naplata");
+  const [tab, setTab] = useState<"naplata" | "pozivi" | "sms">("naplata");
+  const [smsPending, setSmsPending] = useState(0);
+
+  const loadSmsPending = useCallback(async () => {
+    const res = await fetch("/api/sms?summary=1");
+    if (res.ok) setSmsPending((await res.json()).pending ?? 0);
+  }, []);
+
+  useEffect(() => { loadSmsPending(); }, [loadSmsPending]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/recovery");
@@ -290,6 +299,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
         {([
           { key: "naplata", label: "Naplata" },
           { key: "pozivi", label: "Pozivi" },
+          { key: "sms", label: smsPending > 0 ? `SMS (${smsPending})` : "SMS" },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -306,7 +316,12 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
         ))}
       </div>
 
-      {tab === "pozivi" ? (
+      {tab === "sms" ? (
+        <>
+          <SmsQueue onChanged={loadSmsPending} />
+          {isOwner && <SmsSettings />}
+        </>
+      ) : tab === "pozivi" ? (
         <ProcessingCallsList />
       ) : (
       <>
@@ -739,6 +754,11 @@ function TaskDrawer({
         >
           Sačuvaj
         </button>
+
+        <TaskSms
+          taskIds={task.linked_task_ids?.length ? task.linked_task_ids : [task.id]}
+          onChanged={onChanged}
+        />
 
         {/* history */}
         <span style={{ fontSize: 12, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 8 }}>

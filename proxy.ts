@@ -14,6 +14,8 @@ const PUBLIC_ROUTES = [
   /^\/api\/cron\//,
   // Menu bar plugin authenticates with MENUBAR_TOKEN, not a user session.
   /^\/api\/menubar$/,
+  // SMS gateway authenticates with SMS_GATEWAY_TOKEN, not a user session.
+  /^\/api\/sms\/gateway\//,
 ];
 
 export default async function proxy(request: NextRequest) {
