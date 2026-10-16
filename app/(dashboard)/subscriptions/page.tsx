@@ -9,7 +9,6 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { formatRSD } from "@/lib/hooks/use-kpi-stats";
-import { toBase, DEFAULT_RATES } from "@/lib/utils/fx";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -25,6 +24,7 @@ interface Subscription {
   site_id: string;
   product_name: string;
   mrr: number;
+  mrr_base?: number; // base currency at today's rates (server-side, lib/metrics)
   status: string;
   started_at: string;
   customers: { id: string; name: string; email: string } | null;
@@ -387,7 +387,7 @@ export default function SubscriptionsPage() {
                             </div>
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "#18181B", whiteSpace: "nowrap" }}>
-                            {formatRSD(toBase(sub.mrr ?? 0, "RSD", DEFAULT_RATES))}
+                            {formatRSD(sub.mrr_base ?? sub.mrr ?? 0)}
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle" }}>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>

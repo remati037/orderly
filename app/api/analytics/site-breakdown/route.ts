@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
-import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { periodBounds } from "@/lib/utils/kpi-period";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { fetchPaidOrders, fetchRefunds, type RevenueOrder, type RevenueRefund } from "@/lib/metrics";
 import { computeSubscriptionOrdinals } from "@/lib/utils/subscription-ordinal";
 
-type OrderRow = {
+type OrderInfo = {
   id: string;
-  site_id: string;
-  total: number | null;
-  currency: string | null;
   customer_email: string | null;
   created_at: string;
   order_items: { product_name: string }[] | null;
 };
+
+type OrderRow = RevenueOrder & OrderInfo & { site_id: string };
+type RefundRow = RevenueRefund & { site_id: string; order_id: string };
 
 type BucketKind = "onetime" | "new" | "renewal";
 
@@ -57,6 +56,8 @@ const BUCKET_SHADE: Record<BucketKind, (color: string) => string> = {
 // its revenue is split into one-time / new-subscription / renewal segments
 // rendered as shades of the site color, using the same customer_email +
 // product_name history check as the recovery board's subscription_seq badge.
+// Revenue is net (see lib/metrics): refunds made in the period come off the
+// site and bucket of the order they refund. A bucket never shows below zero.
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -78,25 +79,33 @@ export async function GET(request: NextRequest) {
 
   const { current } = periodBounds(preset, from, to, compare);
 
-  const select = "id, site_id, total, currency, customer_email, created_at, order_items(product_name)";
+  // With a product filter fetchPaidOrders already embeds order_items (inner).
+  const extra = "id, site_id, customer_email, created_at" + (products?.length ? "" : ", order_items(product_name)");
+  const q = { start: current.start, end: current.end, products };
 
-  const { data: rows, error } = await fetchAll<OrderRow>(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q = (supabase as any)
-      .from("orders")
-      .select(products?.length ? select.replace("order_items(", "order_items!inner(") : select)
-      .gte("created_at", current.start)
-      .lt("created_at", current.end)
-      .in("status", COUNTED_STATUSES)
-      .order("id");
-    if (products?.length) q = q.in("order_items.product_name", products);
-    return q;
-  });
+  const [ordersRes, refundsRes] = await Promise.all([
+    fetchPaidOrders<OrderRow>(supabase, q, extra),
+    fetchRefunds<RefundRow>(supabase, q, "site_id, order_id"),
+  ]);
+  const error = ordersRes.error ?? refundsRes.error;
   if (error) return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  const rows = ordersRes.data;
+  const refunds = refundsRes.data;
+
+  // The refunded orders (usually created before the period), to bucket refunds.
+  const refundedIds = [...new Set(refunds.map((r) => r.order_id))];
+  const refundedRes = refundedIds.length
+    ? await supabase
+        .from("orders")
+        .select("id, customer_email, created_at, order_items(product_name)")
+        .in("id", refundedIds)
+    : { data: [] as OrderInfo[] };
+  const refundedOrders = new Map(((refundedRes.data ?? []) as OrderInfo[]).map((o) => [o.id, o]));
+  const infos = new Map<string, OrderInfo>([...refundedOrders, ...rows.map((o) => [o.id, o] as const)]);
 
   const subscriptionSeq = await computeSubscriptionOrdinals(
     supabase,
-    rows.map((o) => ({
+    [...infos.values()].map((o) => ({
       id: o.id,
       customer_email: o.customer_email,
       product_name: o.order_items?.[0]?.product_name ?? null,
@@ -112,18 +121,21 @@ export async function GET(request: NextRequest) {
 
   const byBucket = new Map<string, number>(); // `${siteId}:${kind}`
 
-  for (const row of rows) {
-    const revenue = toBase(row.total ?? 0, row.currency ?? "RSD", fx.rates);
-    const productName = row.order_items?.[0]?.product_name;
+  const kindOf = (o: OrderInfo | undefined): BucketKind => {
+    const productName = o?.order_items?.[0]?.product_name;
+    return o && productName && subNames.has(productName)
+      ? subscriptionSeq.has(o.id) ? "renewal" : "new"
+      : "onetime";
+  };
+  const add = (key: string, amount: number) => byBucket.set(key, (byBucket.get(key) ?? 0) + amount);
 
-    const kind: BucketKind =
-      productName && subNames.has(productName)
-        ? subscriptionSeq.has(row.id) ? "renewal" : "new"
-        : "onetime";
+  for (const row of rows)
+    add(`${row.site_id}:${kindOf(row)}`, toBase(Number(row.total ?? 0), row.currency ?? "RSD", fx.rates));
+  for (const r of refunds)
+    add(`${r.site_id}:${kindOf(infos.get(r.order_id))}`, -toBase(Number(r.amount), r.currency, fx.rates));
 
-    const key = `${row.site_id}:${kind}`;
-    byBucket.set(key, (byBucket.get(key) ?? 0) + revenue);
-  }
+  // Shares of a bar can't be negative: drop buckets that refunds took to ≤ 0.
+  for (const [k, v] of byBucket) if (v <= 0) byBucket.delete(k);
 
   const total = Array.from(byBucket.values()).reduce((s, v) => s + v, 0);
   const sites = sitesRes.data ?? [];

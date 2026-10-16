@@ -10,6 +10,8 @@ import {
 } from "@/lib/sync/normalize-stripe-event";
 import { upsertCustomer, logSync } from "@/lib/sync/db";
 import { fetchCirclePhone } from "@/lib/sync/circle";
+import { fetchStripeRefunds, isFullyRefunded } from "@/lib/sync/refunds";
+import { saveStripeRefunds } from "@/lib/sync/refunds-db";
 
 // Fetch the real processor fee for a charge/invoice, in the order currency.
 // Returns null if it can't be resolved (caller falls back to the 5% estimate).
@@ -82,6 +84,33 @@ export async function POST(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ev = event as any;
   const obj = ev.data?.object ?? {};
+
+  // Refunds: stored against the charge's order (if we have it). Only this
+  // site's orders can match, so a shared account needs no extra filtering.
+  // A failure answers 500 so Stripe redelivers; the daily cron also catches up.
+  if (ev.type === "charge.refunded" || ev.type === "charge.refund.updated") {
+    try {
+      const refunds =
+        ev.type === "charge.refunded"
+          ? await fetchStripeRefunds(site.consumer_key ?? "", { charge: obj.id })
+          : [obj];
+      const saved = await saveStripeRefunds(supabase, siteId, refunds);
+      if (ev.type === "charge.refunded" && isFullyRefunded(obj)) {
+        await supabase
+          .from("orders")
+          .update({ status: "refunded", updated_at: new Date().toISOString() })
+          .eq("site_id", siteId)
+          .eq("woo_order_id", obj.id)
+          .eq("status", "completed");
+      }
+      console.log(`[stripe-webhook] "${site.name}" ${ev.type} → ${saved} refund(s) stored`);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    } catch (err) {
+      console.error(`[stripe-webhook] refund handling failed:`, (err as Error).message);
+      await logSync(supabase, siteId, "webhook", "error", 0, `refund: ${(err as Error).message}`);
+      return NextResponse.json({ error: "Refund sync failed" }, { status: 500 });
+    }
+  }
 
   // Shared Stripe account: ignore charges that belong to other sites.
   if (!matchesStripeFilter(obj, site.stripe_filter))

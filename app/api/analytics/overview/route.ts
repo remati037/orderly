@@ -4,7 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { monthBounds } from "@/lib/utils/tz";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, fetchRefunds, type RevenueRefund } from "@/lib/metrics";
 
 export const maxDuration = 60;
 
@@ -12,6 +12,7 @@ type Row = {
   site_id: string;
   status: string;
   total: number | null;
+  refunded_total: number | null;
   currency: string | null;
   customer_email: string | null;
   customer_city: string | null;
@@ -38,7 +39,7 @@ function belgrade(iso: string) {
   };
 }
 
-const SUCCESS = new Set<string>(COUNTED_STATUSES);
+const SUCCESS = new Set<string>(PAID_STATUSES);
 
 // Customers type cities freely ("Beograd", "Belgrade", "Nis", "Niš") — group
 // them by a diacritic-free lowercase key plus a few English aliases, and
@@ -60,6 +61,9 @@ const hasDiacritics = (s: string) => /[čćšžđČĆŠŽĐ]/.test(s);
 // last N months of orders (Belgrade calendar, base currency):
 //   monthly revenue / orders / AOV per site, new vs returning revenue,
 //   weekly payment success rate, weekday × hour heatmap, top cities.
+// Site revenue is net revenue by month (refunds in the month they were made,
+// see lib/metrics); the per-order breakdowns (new/returning, heatmap, cities)
+// use each order's own net, total − refunded_total.
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -70,13 +74,13 @@ export async function GET(request: NextRequest) {
   const from = monthBounds(-(months - 1)).start;
 
   const supabase = adminClient();
-  const [fx, sitesRes, ordersRes, firstsRes] = await Promise.all([
+  const [fx, sitesRes, ordersRes, firstsRes, refundsRes] = await Promise.all([
     loadFxSettings(supabase),
     supabase.from("sites").select("id, name, color_hex, created_at").order("created_at"),
     fetchAll<Row>(() => {
       let q = supabase
         .from("orders")
-        .select("site_id, status, total, currency, customer_email, customer_city, created_at")
+        .select("site_id, status, total, refunded_total, currency, customer_email, customer_city, created_at")
         .gte("created_at", from)
         .order("id");
       if (siteId) q = q.eq("site_id", siteId);
@@ -87,12 +91,15 @@ export async function GET(request: NextRequest) {
       supabase
         .from("orders")
         .select("customer_email, created_at")
-        .in("status", COUNTED_STATUSES)
+        .in("status", PAID_STATUSES)
         .not("customer_email", "is", null)
         .order("id")
     ),
+    fetchRefunds<RevenueRefund & { site_id: string; refunded_at: string }>(
+      supabase, { start: from, end: monthBounds(0).end, siteId }, "site_id, refunded_at"
+    ),
   ]);
-  if (ordersRes.error || firstsRes.error)
+  if (ordersRes.error || firstsRes.error || refundsRes.error)
     return NextResponse.json({ error: "Failed to load orders" }, { status: 500 });
 
   const firstPurchase = new Map<string, string>();
@@ -127,10 +134,12 @@ export async function GET(request: NextRequest) {
 
     const i = mIdx.get(b.month);
     if (i === undefined) continue;
-    const amount = toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates);
+    const cur = o.currency ?? "RSD";
+    // The order's own net, for the per-order breakdowns below.
+    const amount = toBase(Number(o.total ?? 0) - Number(o.refunded_total ?? 0), cur, fx.rates);
 
     const s = bySite.get(o.site_id) ?? { revenue: zeros(), orders: zeros() };
-    s.revenue[i] += amount;
+    s.revenue[i] += toBase(Number(o.total ?? 0), cur, fx.rates);
     s.orders[i] += 1;
     bySite.set(o.site_id, s);
 
@@ -157,6 +166,15 @@ export async function GET(request: NextRequest) {
       c.orders += 1;
       cities.set(key, c);
     }
+  }
+
+  // Site revenue is net by month: subtract refunds in the month they were made.
+  for (const r of refundsRes.data) {
+    const i = mIdx.get(belgrade(r.refunded_at).month);
+    if (i === undefined) continue;
+    const s = bySite.get(r.site_id) ?? { revenue: zeros(), orders: zeros() };
+    s.revenue[i] -= toBase(Number(r.amount), r.currency, fx.rates);
+    bySite.set(r.site_id, s);
   }
 
   const sites = (sitesRes.data ?? [])

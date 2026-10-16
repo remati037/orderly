@@ -3,6 +3,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { normalizeWooOrder } from "@/lib/sync/normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
 import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
+import { syncWooOrderRefunds } from "@/lib/sync/refunds-db";
 
 export async function POST(
   request: NextRequest,
@@ -67,6 +68,9 @@ export async function POST(
     }
 
     console.log(`[woo-webhook] Order upserted: internal_id=${orderId}, woo_order_id=${order.id}, net_profit=${normalized.orderRow.net_profit}`);
+
+    // A refund arrives as order.updated with a new entry in order.refunds.
+    await syncWooOrderRefunds(supabase, site, order, orderId);
 
     // ── 5. Upsert customer ─────────────────────────────────────────────────────
     if (normalized.orderRow.customer_email) {

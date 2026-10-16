@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, orderNet } from "@/lib/metrics";
 
 function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -37,9 +37,9 @@ export async function GET() {
     fetchAll(() =>
       supabase
         .from("orders")
-        .select("customer_email, created_at")
+        .select("customer_email, created_at, total, refunded_total")
         .gte("created_at", lookbackStart.toISOString())
-        .in("status", COUNTED_STATUSES)
+        .in("status", PAID_STATUSES)
         .not("customer_email", "is", null)
         .order("id")
     ),
@@ -48,10 +48,11 @@ export async function GET() {
   const customers = customersRes.data ?? [];
   const orders = ordersRes.data ?? [];
 
-  // Build order lookup: email → Set<monthKey>
+  // Build order lookup: email → Set<monthKey>. A fully refunded order (own net
+  // 0) isn't a purchase the customer kept, so it doesn't count as retained.
   const orderMonths: Record<string, Set<string>> = {};
   for (const o of orders) {
-    if (!o.customer_email) continue;
+    if (!o.customer_email || (Number(o.total ?? 0) > 0 && orderNet(o) <= 0)) continue;
     if (!orderMonths[o.customer_email])
       orderMonths[o.customer_email] = new Set();
     orderMonths[o.customer_email].add(monthKey(new Date(o.created_at)));

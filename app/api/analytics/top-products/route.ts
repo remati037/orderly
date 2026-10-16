@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, orderKeptShare } from "@/lib/metrics";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(request: NextRequest) {
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
   const { data, error } = await fetchAll(() => {
     let query = supabase
       .from("order_items")
-      .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency)")
-      .in("order.status", COUNTED_STATUSES)
+      .select("product_name, product_type, quantity, price, order:orders!inner(site_id, status, created_at, currency, total, refunded_total)")
+      .in("order.status", PAID_STATUSES)
       .order("id");
     if (siteId) query = query.eq("order.site_id", siteId);
     if (from) query = query.gte("order.created_at", from);
@@ -34,14 +34,17 @@ export async function GET(request: NextRequest) {
   if (error)
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 
-  // Aggregate by product name
+  // Aggregate by product name. Revenue is each line's share of its order's own
+  // net (total − refunded_total), so a fully refunded order contributes 0.
   const map = new Map<string, { name: string; type: string; revenue: number; units: number }>();
 
   for (const item of data ?? []) {
     const key = item.product_name ?? "Nepoznat proizvod";
     const existing = map.get(key);
-    const orderCurrency = (item.order as { currency?: string } | null)?.currency ?? "RSD";
-    const revenue = toBase((item.price ?? 0) * (item.quantity ?? 1), orderCurrency, fx.rates);
+    const order = item.order as { currency?: string; total?: number | null; refunded_total?: number | null } | null;
+    const orderCurrency = order?.currency ?? "RSD";
+    const keep = orderKeptShare({ total: order?.total ?? null, refunded_total: order?.refunded_total });
+    const revenue = toBase((item.price ?? 0) * (item.quantity ?? 1) * keep, orderCurrency, fx.rates);
     if (existing) {
       existing.revenue += revenue;
       existing.units += item.quantity ?? 1;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, orderKeptShare, orderNet } from "@/lib/metrics";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 
 export async function GET(
@@ -28,7 +29,7 @@ export async function GET(
     supabase
       .from("orders")
       .select(
-        "id, woo_order_id, source, status, total, net_profit, currency, product_type, payment_type, payment_method, created_at, updated_at, site_id, sites(name, color_hex, platform), order_items(product_name, product_type, quantity, price)"
+        "id, woo_order_id, source, status, total, refunded_total, net_profit, currency, product_type, payment_type, payment_method, created_at, updated_at, site_id, sites(name, color_hex, platform), order_items(product_name, product_type, quantity, price)"
       )
       .eq("customer_email", customer.email)
       .order("created_at", { ascending: false }),
@@ -40,14 +41,16 @@ export async function GET(
   ]);
 
   const orders = ordersRes.data ?? [];
-  // Same revenue statuses as every other view (and as customers.total_spent).
-  const completed = orders.filter((o) =>
-    (COUNTED_STATUSES as readonly string[]).includes(o.status)
+  // Same definition as customers.total_spent (refresh_customer_totals, migration
+  // 025): what the customer paid and kept — each paid order at its own net
+  // (total − refunded_total). Fully refunded orders (status "refunded") add 0
+  // and, like there, don't count as orders.
+  const paid = orders.filter((o) => (PAID_STATUSES as readonly string[]).includes(o.status));
+  const totalSpent = paid.reduce((s, o) => s + toBase(orderNet(o), o.currency ?? "RSD", fx.rates), 0);
+  const netSpent = paid.reduce(
+    (s, o) => s + toBase(Number(o.net_profit ?? 0) * orderKeptShare(o), o.currency ?? "RSD", fx.rates), 0
   );
-
-  const totalSpent = completed.reduce((s, o) => s + toBase(o.total ?? 0, o.currency ?? "RSD", fx.rates), 0);
-  const netSpent = completed.reduce((s, o) => s + toBase(o.net_profit ?? 0, o.currency ?? "RSD", fx.rates), 0);
-  const orderCount = completed.length;
+  const orderCount = orders.filter((o) => (COUNTED_STATUSES as readonly string[]).includes(o.status)).length;
   const aov = orderCount > 0 ? totalSpent / orderCount : 0;
 
   const monthsSinceFirst = customer.first_order_at

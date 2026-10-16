@@ -1,21 +1,21 @@
 # Status: Orderly
-Ažurirano: 2026-10-12
-Faza: uživo
+Ažurirano: 2026-10-16
+Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
-- Naplata: Stripe porudžbine (Circle) nisu imale telefon jer ga Circle ne šalje Stripe-u.
-  Sada Stripe webhook po mejlu povlači telefon iz Circle profila (polje "Telefon"),
-  token se čuva po sajtu (`sites.circle_token`, polje u Podešavanja → Sajtovi).
-- Popunjeni postojeći podaci: 1.469 porudžbina dobilo telefon; od 723 otvorene kartice
-  AI Profit Lab-a, 480 sada ima broj (ostali nemaju telefon ni u Circle-u).
-- U toku (necommitovano): SMS recovery (grana feat/sms-recovery).
+- SMS recovery na main-u, migracija 020 primenjena (isključen dok ga ne uključiš u Naplata → SMS).
+- Faza 0 na main-u: migracije 022–027 primenjene, 40 refundacija upisano (€2.221,94), duplikati kupaca spojeni (41), porudžbine povezane sa kupcima, UTM izvori popunjeni (3.206), daily_stats popunjen (754 reda).
+- Plan i odluke: `docs/analiza-metorik/FAZA-0.md`.
 
 ## Sledeći korak
-- Circle izmena je na main (9f7030e) — proveriti da nove Stripe porudžbine stižu sa telefonom.
-- Završiti SMS recovery.
+- Uporediti neto prihod avg/sep/okt za nemanjaantic.com sa Metorikom (korak 4), pa Faza 1.
 
 ## Šta fali od Vladimira
-- Circle token za Odgovori Univerzuma, ako je i on na Circle-u.
+- Pristup Metoriku za poređenje (Keychain „Brave Safe Storage” ili prijava u vidljiv browser).
+- Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
-- Migracije 019 i 020 su "pending" u db:status (019 je već ručno primenjena).
+- Dug za Fazu 5: `settings.key` i `customers.email` su jedinstveni globalno, ne po organizaciji; većina endpointa još ne filtrira po org_id (registar metrika filtrira kad dobije orgId).
+- Ad spend prozor u profit/kpi i ad-performance koristi UTC datume Beogradskih ponoći (dan pomeren) — postojeća greška, nije dirana.
+- `profit/recalculate` ne preračunava net_profit za refunded porudžbine.
+- Stripe webhook treba da bude pretplaćen na `charge.refunded` u Stripe-u; dok nije, refundacije stižu dnevnim cronom (do 24h kašnjenja).

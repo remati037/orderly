@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
+import { loadFxSettings } from "@/lib/utils/fx";
+import { currentMrr, mrrAt, subscriptionMrr } from "@/lib/metrics";
 
 function monthLabel(offsetMonths: number): string {
   const d = new Date();
@@ -22,11 +24,12 @@ export async function GET() {
 
   const supabase = adminClient();
 
-  const [subsRes, sitesRes] = await Promise.all([
+  const [fx, subsRes, sitesRes] = await Promise.all([
+    loadFxSettings(supabase),
     supabase
       .from("subscriptions")
       .select(
-        "id, site_id, customer_id, product_name, mrr, status, started_at, customers(id, name, email), sites(id, name, color_hex, platform, project_type)"
+        "id, site_id, customer_id, product_name, mrr, mrr_amount, mrr_currency, status, started_at, cancelled_at, customers(id, name, email), sites(id, name, color_hex, platform, project_type)"
       )
       .order("started_at", { ascending: false }),
     supabase
@@ -39,7 +42,8 @@ export async function GET() {
   const subscriptionSites = sitesRes.data ?? [];
 
   const activeSubs = subs.filter((s) => s.status === "active");
-  const totalMRR = activeSubs.reduce((s, sub) => s + (sub.mrr ?? 0), 0);
+  // MRR per lib/metrics: the charged amount at today's rates.
+  const totalMRR = currentMrr(subs, fx.rates);
 
   const now = new Date();
   const thisMonthStart = new Date(
@@ -71,18 +75,16 @@ export async function GET() {
       ? Math.round((churnedThisMonth / prevActiveSubs) * 1000) / 10
       : 0;
 
-  // MRR chart: for each of last 6 months, sum MRR from active subs started before end of that month
+  // MRR chart: MRR as it stood at the end of each of the last 6 months
+  // (subs cancelled later still count for the months they were paying).
   const mrrChart = Array.from({ length: 6 }, (_, i) => {
     const offset = i - 5;
-    const end = monthEnd(offset);
-    const mrrAtMonth = subs
-      .filter((s) => s.started_at < end && s.status === "active")
-      .reduce((sum, s) => sum + (s.mrr ?? 0), 0);
-    return { month: monthLabel(offset), mrr: mrrAtMonth };
+    return { month: monthLabel(offset), mrr: mrrAt(subs, monthEnd(offset), fx.rates) };
   });
 
   return NextResponse.json({
-    subscriptions: subs,
+    // mrr_base: this subscription's MRR in the base currency at today's rates.
+    subscriptions: subs.map((s) => ({ ...s, mrr_base: subscriptionMrr(s, fx.rates) })),
     subscriptionSites,
     kpi: {
       total_mrr: totalMRR,

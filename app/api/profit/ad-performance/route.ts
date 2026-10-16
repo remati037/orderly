@@ -4,7 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
+import { PAID_STATUSES, orderKeptShare } from "@/lib/metrics";
 import { monthBounds } from "@/lib/utils/tz";
 
 interface Row {
@@ -19,7 +19,8 @@ interface Row {
 
 // Ad spend vs. the revenue it actually produced, by (site, product) — joins
 // getMappedSpend's byProduct/bySite breakdown (already computed for
-// /api/profit/kpi) with real order revenue for the same period.
+// /api/profit/kpi) with real order revenue for the same period. Revenue is each
+// line's share of its order's own net (total − refunded_total).
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
   if (authError) return authError;
@@ -43,8 +44,8 @@ export async function GET(request: NextRequest) {
   const { data: items } = await fetchAll(() =>
     supabase
       .from("order_items")
-      .select("product_name, price, quantity, order:orders!inner(site_id, status, created_at, currency)")
-      .in("order.status", COUNTED_STATUSES)
+      .select("product_name, price, quantity, order:orders!inner(site_id, status, created_at, currency, total, refunded_total)")
+      .in("order.status", PAID_STATUSES)
       .gte("order.created_at", from)
       .lt("order.created_at", to)
       .order("id")
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const item of (items ?? []) as any[]) {
     const order = item.order;
-    const rev = toBase((item.price ?? 0) * (item.quantity ?? 1), order?.currency ?? "RSD", fx.rates);
+    const rev = toBase((item.price ?? 0) * (item.quantity ?? 1) * orderKeptShare(order), order?.currency ?? "RSD", fx.rates);
     revenueBySite.set(order.site_id, (revenueBySite.get(order.site_id) ?? 0) + rev);
     if (item.product_name) {
       const key = `${order.site_id}::${item.product_name}`;

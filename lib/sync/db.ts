@@ -1,7 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedWooOrder } from "./normalize-woo-order";
-import { COUNTED_STATUSES } from "@/lib/utils/order-status";
-import { loadFxSettings, toBase, type FxSettings } from "@/lib/utils/fx";
 
 export async function upsertWooOrder(
   supabase: SupabaseClient,
@@ -26,70 +24,46 @@ export async function upsertWooOrder(
   return row.id as string;
 }
 
-// FX settings change rarely; cache them so a sync of hundreds of orders
-// doesn't re-read settings for every customer.
-let fxCache: { at: number; value: Promise<FxSettings> } | null = null;
-function cachedFx(supabase: SupabaseClient): Promise<FxSettings> {
-  if (!fxCache || Date.now() - fxCache.at > 5 * 60_000) {
-    fxCache = { at: Date.now(), value: loadFxSettings(supabase) };
-  }
-  return fxCache.value;
-}
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-// Recomputes the customer's totals from their orders instead of incrementing,
-// so webhook redeliveries and re-syncs of the same order never double-count.
-// total_spent is stored in the base currency (orders come in EUR/RSD/USD).
+// Creates or updates the customer row, then has the database recompute their
+// totals (refresh_customer_totals, migration 025: net of refunds, base
+// currency) — the one definition shared with the refund trigger and backfills,
+// so webhook redeliveries and re-syncs never double-count.
 // Call it after the order itself has been upserted.
 export async function upsertCustomer(
   supabase: SupabaseClient,
-  email: string,
+  rawEmail: string,
   name: string,
   city?: string
 ) {
-  const [fx, { data: existing }, { data: orders }] = await Promise.all([
-    cachedFx(supabase),
-    supabase
-      .from("customers")
-      .select("id, name, first_order_at, last_order_at")
-      .eq("email", email)
-      .maybeSingle(),
-    supabase
-      .from("orders")
-      .select("total, currency, created_at")
-      .eq("customer_email", email)
-      .in("status", COUNTED_STATUSES),
-  ]);
+  const email = normalizeEmail(rawEmail);
+  if (!email) return;
 
-  const counted = orders ?? [];
-  const totalSpent =
-    Math.round(counted.reduce((sum, o) => sum + toBase(Number(o.total ?? 0), o.currency ?? "RSD", fx.rates), 0) * 100) / 100;
-  const dates = counted.map((o) => o.created_at as string).sort();
-  const now = new Date().toISOString();
-
-  const totals = {
-    order_count: counted.length,
-    total_spent: totalSpent,
-    first_order_at: dates[0] ?? existing?.first_order_at ?? now,
-    last_order_at: dates[dates.length - 1] ?? existing?.last_order_at ?? now,
-  };
+  const { data: existing } = await supabase
+    .from("customers")
+    .select("id, name")
+    .eq("email", email)
+    .maybeSingle();
 
   if (existing) {
     await supabase
       .from("customers")
-      .update({
-        name: name || existing.name,
-        ...(city !== undefined && { city }),
-        ...totals,
-      })
+      .update({ name: name || existing.name, ...(city !== undefined && { city }) })
       .eq("id", existing.id);
   } else {
+    const now = new Date().toISOString();
     await supabase.from("customers").insert({
       email,
       name,
       ...(city !== undefined && { city }),
-      ...totals,
+      first_order_at: now,
+      last_order_at: now,
     });
   }
+
+  const { error } = await supabase.rpc("refresh_customer_totals", { p_email: email });
+  if (error) console.error(`[customers] refresh totals for ${email}:`, error.message);
 }
 
 // Thinkific has no subscription id we can key on, so one row per
@@ -106,7 +80,7 @@ export async function upsertThinkificSubscription(
   const { data: customer } = await supabase
     .from("customers")
     .select("id")
-    .eq("email", email)
+    .eq("email", normalizeEmail(email))
     .maybeSingle();
   const customerId = customer?.id ?? null;
 
