@@ -13,7 +13,10 @@ const SUPABASE_STUBS = `
   CREATE ROLE service_role NOLOGIN BYPASSRLS;
   CREATE SCHEMA auth;
   CREATE TABLE auth.users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT);
-  CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS $$ SELECT NULL::UUID $$;
+  -- Same source as Supabase: the JWT subject of the current request.
+  CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS
+    $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::UUID $$;
+  GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
 `;
 
 export function migrationFiles(upTo = Infinity): string[] {
