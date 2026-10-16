@@ -5,12 +5,13 @@
 //   npm run db:migrate              apply pending migrations in order
 //   npm run db:baseline -- 014      mark everything up to 014 as applied without running it
 //   npm run db:query -- "select 1"  run an ad-hoc query and print the rows
+//   npm run db:rollback -- 020      run migrations/down/020_*.down.sql and unmark 020
 //
 // Needs SUPABASE_ACCESS_TOKEN (personal access token, sbp_…) and
 // NEXT_PUBLIC_SUPABASE_URL in .env.local. Applied migrations are tracked in
 // supabase_migrations.schema_migrations — the same table the Supabase CLI uses.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const MIGRATIONS_DIR = join(import.meta.dirname, "..", "supabase", "migrations");
@@ -108,6 +109,20 @@ switch (command) {
     break;
   }
 
+  case "rollback": {
+    const m = migrationFiles().find((f) => f.version === arg);
+    const downFile = m && join(MIGRATIONS_DIR, "down", `${m.version}_${m.name}.down.sql`);
+    if (!m || !existsSync(downFile)) {
+      console.error(`Usage: npm run db:rollback -- <version>  (needs migrations/down/<file>.down.sql)`);
+      process.exit(1);
+    }
+    process.stdout.write(`Rolling back ${m.file} … `);
+    await query(readFileSync(downFile, "utf8"));
+    await query(`DELETE FROM supabase_migrations.schema_migrations WHERE version = ${quote(m.version)}`);
+    console.log("ok");
+    break;
+  }
+
   case "query": {
     if (!arg) {
       console.error('Usage: npm run db:query -- "<sql>"');
@@ -118,6 +133,6 @@ switch (command) {
   }
 
   default:
-    console.error("Commands: status | migrate | baseline <version> | query <sql>");
+    console.error("Commands: status | migrate | baseline <version> | rollback <version> | query <sql>");
     process.exit(1);
 }
