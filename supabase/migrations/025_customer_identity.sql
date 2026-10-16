@@ -39,15 +39,15 @@ AS $$
 $$;
 
 -- ── 1. Merge duplicates ──────────────────────────────────────────────────────
+-- One pass: rank each email's rows by age; every row but the oldest is merged into it.
 CREATE TEMP TABLE customer_merge ON COMMIT DROP AS
-SELECT c.id AS loser_id, k.id AS keeper_id
-  FROM public.customers c
-  JOIN LATERAL (
-    SELECT k.id FROM public.customers k
-     WHERE normalize_email(k.email) = normalize_email(c.email)
-     ORDER BY k.created_at, k.id
-     LIMIT 1
-  ) k ON k.id <> c.id;
+SELECT id AS loser_id, keeper_id
+  FROM (
+    SELECT id, first_value(id) OVER (PARTITION BY normalize_email(email) ORDER BY created_at, id) AS keeper_id
+      FROM public.customers
+     WHERE normalize_email(email) IS NOT NULL
+  ) ranked
+ WHERE id <> keeper_id;
 
 UPDATE public.customers k
    SET total_spent    = k.total_spent + a.total_spent,
