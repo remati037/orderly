@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyStorefronts } from "@/lib/sync/storefront-callback";
 import { adminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { requireRole } from "@/lib/auth/roles";
@@ -229,11 +230,16 @@ export async function PATCH(request: NextRequest) {
       .update({ status: order_status, updated_at: new Date().toISOString() })
       .in("id", orderIds)
       .eq("status", "on-hold")
-      .select("id");
+      .select("id, site_id, woo_order_id");
     if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
     if (!changed?.length)
       return NextResponse.json({ error: "Status se menja samo za narudžbine na čekanju (on-hold)" }, { status: 409 });
-    return NextResponse.json({ ok: true });
+    // The storefront that sent the order (manual webhook) follows this change: its own
+    // order sheet and email tags. The order change above stands even if that call fails;
+    // the board then tells the owner, and the storefront has a manual fallback.
+    const results = await notifyStorefronts(changed, order_status);
+    const storefront_failed = results.filter((r) => !r.ok);
+    return NextResponse.json({ ok: true, storefront_failed });
   }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };

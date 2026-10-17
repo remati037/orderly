@@ -252,7 +252,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
 
   async function patch(task: Task, body: Record<string, unknown>) {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...body } as Task : t)));
-    await fetch("/api/recovery", {
+    const res = await fetch("/api/recovery", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       // linked_task_ids: a merged card can fold in several Stripe-retry
@@ -260,6 +260,15 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
       // a later retry doesn't drop back below the stage already set here.
       body: JSON.stringify({ id: task.id, linked_task_ids: task.linked_task_ids, ...body }),
     });
+    // Uplaćeno / Otkaži on a storefront's manual order is also sent to that storefront
+    // (see lib/sync/storefront-callback.ts). If it didn't get through, say so.
+    if (body.order_status) {
+      const json = await res.json().catch(() => null);
+      const failed: { order: string; error?: string }[] = json?.storefront_failed ?? [];
+      if (failed.length)
+        alert(`Upisano u Orderly, ali sajt nije primio potvrdu za narudžbinu ${failed.map((f) => f.order).join(", ")}.\n` +
+              `Na sajtu je potvrdi ručno (./potvrdi_uplatu.sh).\n\n${failed[0].error ?? ""}`);
+    }
     load();
   }
 
