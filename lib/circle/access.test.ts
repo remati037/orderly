@@ -28,7 +28,7 @@ describe("isPaidStatus / parseCircleConfig", () => {
     expect(isPaidStatus(null)).toBe(false);
   });
   it("defaults to disabled", () => {
-    expect(parseCircleConfig(null)).toEqual({ enabled: false, rules: [] });
+    expect(parseCircleConfig(null)).toEqual({ enabled: false, enabled_from: null, rules: [] });
   });
 });
 
@@ -62,5 +62,13 @@ describe("grantCircleAccess", () => {
   it("tolerates already-in-group", async () => {
     const f = vi.fn().mockResolvedValueOnce(res(200)).mockResolvedValueOnce(res(422, "already a member"));
     await expect(grantCircleAccess("t", args, f as unknown as typeof fetch)).resolves.toBeUndefined();
+  });
+});
+
+describe("enabled_from", () => {
+  it("is parsed from settings", () => {
+    expect(parseCircleConfig({ enabled: true, enabled_from: "2026-10-20T12:00:00Z", rules: [] }).enabled_from).toBe(
+      "2026-10-20T12:00:00Z"
+    );
   });
 });

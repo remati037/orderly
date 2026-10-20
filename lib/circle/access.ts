@@ -17,6 +17,9 @@ export interface CircleRule {
 
 export interface CircleConfig {
   enabled: boolean;
+  // Orders created before this instant are never granted (set when switching on,
+  // so the sweep doesn't re-invite buyers who were added by hand).
+  enabled_from: string | null;
   rules: CircleRule[];
 }
 
@@ -48,7 +51,11 @@ export function matchAccessGroups(
 
 export function parseCircleConfig(value: unknown): CircleConfig {
   const v = (value ?? {}) as Partial<CircleConfig>;
-  return { enabled: v.enabled === true, rules: Array.isArray(v.rules) ? v.rules : [] };
+  return {
+    enabled: v.enabled === true,
+    enabled_from: typeof v.enabled_from === "string" ? v.enabled_from : null,
+    rules: Array.isArray(v.rules) ? v.rules : [],
+  };
 }
 
 // ── Circle Admin API v2 ───────────────────────────────────────────────────────
@@ -96,7 +103,7 @@ export async function grantCircleAccess(
 
 // ── Orchestration ─────────────────────────────────────────────────────────────
 
-export type GrantOutcome = "disabled" | "not-paid" | "no-match" | "no-token" | "no-email" | "done" | "partial";
+export type GrantOutcome = "disabled" | "not-paid" | "no-match" | "too-old" | "no-token" | "no-email" | "done" | "partial";
 
 async function loadConfig(supabase: SupabaseClient): Promise<CircleConfig> {
   const { data } = await supabase.from("settings").select("value").eq("key", "circle_access").maybeSingle();
@@ -120,11 +127,12 @@ export async function processOrderCircleAccess(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, site_id, status, customer_email, customer_name, woo_data, source")
+    .select("id, site_id, status, customer_email, customer_name, woo_data, source, created_at")
     .eq("id", orderId)
     .single();
   if (!order || order.source !== "woocommerce") return "no-match";
   if (!isPaidStatus(order.status)) return "not-paid";
+  if (config.enabled_from && new Date(order.created_at) < new Date(config.enabled_from)) return "too-old";
 
   const groups = matchAccessGroups(order.woo_data, order.site_id, config.rules);
   if (groups.length === 0) return "no-match";
@@ -186,7 +194,8 @@ export async function sweepCircleAccess(
   const stats = { checked: 0, granted: 0, failed: 0 };
   if (!config.enabled || config.rules.length === 0) return stats;
 
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  let since = new Date(Date.now() - days * 86_400_000).toISOString();
+  if (config.enabled_from && config.enabled_from > since) since = config.enabled_from;
   const { data: orders } = await supabase
     .from("orders")
     .select("id, site_id, woo_data")
