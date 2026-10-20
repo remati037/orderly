@@ -5,6 +5,7 @@ import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
 import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 import { syncWooOrderRefunds } from "@/lib/sync/refunds-db";
 import { markWooOrdersTrashed } from "@/lib/sync/sync-woo-site";
+import { processOrderCircleAccess } from "@/lib/circle/access";
 
 export async function POST(
   request: NextRequest,
@@ -89,6 +90,12 @@ export async function POST(
         normalized.orderRow.customer_city
       );
     }
+
+    // Paid order with a Circle-mapped product → create the member + grant access.
+    // Never fails the webhook; the daily cron sweep retries errors.
+    await processOrderCircleAccess(supabase, orderId).catch((e) =>
+      console.error("[woo-webhook] circle access failed:", e)
+    );
 
     await logSync(supabase, siteId, "webhook", "success", 1);
     console.log(`[woo-webhook] Done — woo_order_id=${order.id} processed successfully`);

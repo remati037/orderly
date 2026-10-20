@@ -4,6 +4,7 @@ import { fetchWooTrashedIds, markWooOrdersTrashed, syncWooSite } from "@/lib/syn
 import { syncThinkificSite } from "@/lib/sync/sync-thinkific-site";
 import { syncMetaAccount } from "@/lib/sync/sync-meta-account";
 import { syncRecentStripeRefunds } from "@/lib/sync/refunds-db";
+import { sweepCircleAccess } from "@/lib/circle/access";
 
 // Daily Vercel cron — safety net behind the webhooks:
 //   • WooCommerce: re-pull orders changed in the last WOO_LOOKBACK_DAYS, which
@@ -66,7 +67,11 @@ export async function GET(request: NextRequest) {
     Promise.allSettled(accounts.map((a) => syncMetaAccount(a.id, META_LOOKBACK_DAYS))),
   ]);
 
+  // Runs after the Woo pull so orders it just caught up on are covered too.
+  const circle = await sweepCircleAccess(supabase).catch((e) => ({ error: String(e) }));
+
   const summary = {
+    circle,
     sites: siteResults.map((r, i) => ({
       site: sites[i].name,
       platform: sites[i].platform,
