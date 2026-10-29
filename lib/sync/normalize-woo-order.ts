@@ -30,6 +30,15 @@ export interface WooOrder {
     phone?: string;
   };
   line_items: WooLineItem[];
+  meta_data?: Array<{ key: string; value: unknown }>;
+}
+
+// Orders the AI Video Editor funnel (studio.aiprofit.rs) writes into Woo as a
+// bookkeeping copy of a Stripe payment. Orderly takes those payments from the
+// Stripe site instead (it also sees failed charges), so the Woo copy is skipped
+// to avoid counting the same sale twice.
+export function isStripeFunnelCopy(order: Pick<WooOrder, "meta_data">): boolean {
+  return order.meta_data?.some((m) => m.key === "studio_funnel" && String(m.value) === "1") ?? false;
 }
 
 export interface NormalizedWooOrder {

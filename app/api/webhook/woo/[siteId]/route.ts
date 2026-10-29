@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { normalizeWooOrder } from "@/lib/sync/normalize-woo-order";
+import { normalizeWooOrder, isStripeFunnelCopy } from "@/lib/sync/normalize-woo-order";
 import { upsertWooOrder, upsertCustomer, logSync } from "@/lib/sync/db";
 import { verifyHmacSignature } from "@/lib/sync/hmac-signature";
 import { syncWooOrderRefunds } from "@/lib/sync/refunds-db";
@@ -59,6 +59,11 @@ export async function POST(
     console.log(
       `[woo-webhook] Payload parsed: woo_order_id=${order.id}, status="${order.status}", total=${order.total}, customer="${order.billing?.email}"`
     );
+
+    if (isStripeFunnelCopy(order)) {
+      console.log(`[woo-webhook] order ${order.id} is a funnel copy of a Stripe payment → skipped`);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
 
     const normalized = await normalizeWooOrder(
       supabase,

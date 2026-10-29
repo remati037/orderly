@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 // Relative imports carry .ts so scripts/woo-resync.mts can run this with plain node.
-import { normalizeWooOrder, type WooOrder } from "./normalize-woo-order.ts";
+import { normalizeWooOrder, isStripeFunnelCopy, type WooOrder } from "./normalize-woo-order.ts";
 import { upsertWooOrder, upsertCustomer, logSync } from "./db.ts";
 import { syncWooOrderRefunds } from "./refunds-db.ts";
 
@@ -89,6 +89,7 @@ export async function syncWooOrdersById(
     out.missing.push(...chunk.filter((id) => !found.has(id)));
     for (const order of orders) {
       if (order.status === "trash") continue; // handled by markWooOrdersTrashed
+      if (isStripeFunnelCopy(order)) continue; // counted from the Stripe site
       if (await ingestWooOrder(supabase, site, order)) out.synced++;
       else out.failed++;
     }
@@ -164,6 +165,7 @@ export async function syncWooSite(
 
     for (const order of orders) {
       result.seenWooIds.add(String(order.id));
+      if (isStripeFunnelCopy(order)) continue; // counted from the Stripe site
       if (await ingestWooOrder(supabase, site, order)) result.synced++;
       else result.failed++;
     }

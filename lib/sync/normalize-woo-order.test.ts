@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
-import { normalizeWooOrder, wooDate, type WooOrder } from "./normalize-woo-order";
+import { isStripeFunnelCopy, normalizeWooOrder, wooDate, type WooOrder } from "./normalize-woo-order";
 
 // Minimal stand-in for the products lookup chain in calcNetProfit.
 function fakeSupabase(products: Record<string, { cost_percent?: number; cost_fixed?: number }> = {}) {
@@ -74,5 +74,16 @@ describe("normalizeWooOrder", () => {
     const { orderRow, itemRows } = await normalizeWooOrder(fakeSupabase(), order, "s", 100);
     expect(orderRow.product_type).toBe("physical");
     expect(itemRows[0]).toMatchObject({ product_type: "physical", quantity: 2, price: 40 });
+  });
+});
+
+describe("isStripeFunnelCopy", () => {
+  it("flags orders the AI Video Editor funnel copies from Stripe", () => {
+    expect(isStripeFunnelCopy({ meta_data: [{ key: "stripe_ref", value: "cs_1" }, { key: "studio_funnel", value: "1" }] })).toBe(true);
+  });
+  it("leaves regular shop orders alone", () => {
+    expect(isStripeFunnelCopy({ meta_data: [{ key: "bwfan_cart_id", value: "8868" }] })).toBe(false);
+    expect(isStripeFunnelCopy({ meta_data: [{ key: "studio_funnel", value: "0" }] })).toBe(false);
+    expect(isStripeFunnelCopy({})).toBe(false);
   });
 });
