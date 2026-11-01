@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon, MenuIcon } from "lucide-react";
+import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon, MenuIcon, GiftIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -28,6 +28,7 @@ const GROUPS: NavGroup[] = [
       { href: "/customers",     label: "Kupci",     icon: UsersIcon,            roles: ["owner"] },
       { href: "/subscriptions", label: "Pretplate", icon: CreditCardIcon,       roles: ["owner"] },
       { href: "/profit",        label: "Profit",    icon: CircleDollarSignIcon, roles: ["owner"] },
+      { href: "/bonus",         label: "Bonus",     icon: GiftIcon,             roles: ["owner"] },
     ],
   },
   {
