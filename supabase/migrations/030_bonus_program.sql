@@ -24,18 +24,10 @@ INSERT INTO settings (key, value) VALUES (
     },
     "tiers": [
       { "from": 70000,  "amount": 2100 },
-      { "from": 80000,  "amount": 2400 },
-      { "from": 90000,  "amount": 2700 },
       { "from": 100000, "amount": 6000 },
-      { "from": 110000, "amount": 6800 },
-      { "from": 120000, "amount": 7600 },
-      { "from": 130000, "amount": 8400 },
-      { "from": 140000, "amount": 9200 },
+      { "from": 125000, "amount": 10000 },
       { "from": 150000, "amount": 18000 },
-      { "from": 160000, "amount": 18800 },
-      { "from": 170000, "amount": 19600 },
-      { "from": 180000, "amount": 20400 },
-      { "from": 190000, "amount": 21200 },
+      { "from": 175000, "amount": 22000 },
       { "from": 200000, "amount": 30000 }
     ]
   }'::jsonb

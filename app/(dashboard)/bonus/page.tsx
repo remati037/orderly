@@ -40,8 +40,8 @@ const GREEN = "#16A34A";
 const eur = (v: number, cur: string) =>
   cur === "EUR" ? `${Math.round(v).toLocaleString("de-DE")} €` : `${Math.round(v).toLocaleString("de-DE")} ${cur}`;
 
-// The first tier and the big jumps (100k, 150k, 200k) get marked on the bar and chart.
-const isMilestone = (t: Tier, i: number, all: Tier[]) => i === 0 || t.amount > all[i - 1].amount * 1.3;
+// Round 50k steps (100k, 150k, 200k) are the headline tiers, bold in the table.
+const isHeadline = (t: Tier, i: number) => i > 0 && t.from % 50_000 === 0;
 
 const dayLabel = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
 
@@ -62,13 +62,13 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 // Progress across the tier ladder: bar from 0 to the last tier, ticks at the
-// big steps, plus how much is still missing to the next tier.
+// tiers, plus how much is still missing to the next tier.
 function Progress({ data }: { data: BonusData }) {
   const cur = data.base_currency;
   const max = data.tiers[data.tiers.length - 1]?.from ?? 1;
   const next = data.tiers[data.bonus.tierIndex + 1];
   const fill = Math.min(1, Math.max(0, data.counted / max));
-  const milestones = data.tiers.filter(isMilestone);
+  const milestones = data.tiers;
 
   return (
     <ChartCard
@@ -96,7 +96,7 @@ function CumulativeChart({ data }: { data: BonusData }) {
   const cur = data.base_currency;
   const max = data.tiers[data.tiers.length - 1]?.from ?? 0;
   const top = Math.max(max, ...data.days.map((d) => d.cumulative ?? 0)) * 1.05;
-  const milestones = data.tiers.filter(isMilestone);
+  const milestones = data.tiers;
 
   return (
     <ChartCard title="Obračunski promet kroz mesec" subtitle="Zbirno po danima · partnerski sajtovi sa 50%">
@@ -318,7 +318,7 @@ function TiersTable({ data }: { data: BonusData }) {
             </tr>
             {data.tiers.map((t, i) => {
               const reached = i === data.bonus.tierIndex;
-              const big = i > 0 && isMilestone(t, i, data.tiers);
+              const big = isHeadline(t, i);
               return (
                 <tr key={t.from} style={{ borderBottom: `1px solid ${INK.grid}`, background: reached ? "#DCFCE7" : undefined }}>
                   <td style={{ ...td, textAlign: "left", fontWeight: big ? 700 : 400 }}>
