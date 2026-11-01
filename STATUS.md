@@ -15,10 +15,10 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Novi sajt FIlip Ćirić (ciricfilip.com) dodat 2026-10-27: istorija učitana, ali u Woo nije bilo Orderly webhook-a, pa nove porudžbine nisu ulazile. Ručno povučene #5325–#5329. Posle promene ključa na Read/Write napravljeni webhook-ovi (order.created/updated/deleted, ID 2–4) i provereni potpisanim test pozivom.
 
-- Novi tab **Bonus** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Bonus = procenat dostignutog praga × promet, prvi prag 80.000 €, plafon 30.000 € od 200.000 €, deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Proveren na lokalnim podacima, još nije push-ovan na produkciju.
+- Novi tab **Bonus** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Bonus = procenat dostignutog praga × promet, prvi prag 70.000 € (3% = 2.100 €), plafon 30.000 € od 200.000 €, deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Proveren lokalno, NIJE push-ovan: Vladimir prvo gleda.
 
 ## Sledeći korak
-- Push na `main` da bi tab Bonus bio na produkciji.
+- Kad Vladimir odobri: push na `main` da bi tab Bonus bio na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
 - Circle: test sa jednim email-om, pa `enabled = true` i merge grane `feat/circle-access`.
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
@@ -28,7 +28,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
-- Bonus: promet od 70.000 do 80.000 € daje 0 € (prvi prag u tabeli je 80.000 €); potvrditi da je tako zamišljeno.
+- Bonus: za 70.000–80.000 € uzet je 3% (2.100 € na 70k); potvrditi.
 - Za Woo sajtove UI ne prikazuje webhook URL niti ih pravi sam — svaki novi Woo sajt ostaje bez webhook-a ako se to zaboravi.
 - Dug za Fazu 5: `settings.key` i `customers.email` su jedinstveni globalno, ne po organizaciji; većina endpointa još ne filtrira po org_id (registar metrika filtrira kad dobije orgId).
 - Ad spend prozor u profit/kpi i ad-performance koristi UTC datume Beogradskih ponoći (dan pomeren) — postojeća greška, nije dirana.

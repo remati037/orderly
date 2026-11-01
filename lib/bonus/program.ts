@@ -16,6 +16,8 @@ export interface BonusProgram {
   people: number;
   /** site_id → share of its revenue that counts (partners 0.5); missing = 1. */
   site_shares: Record<string, number>;
+  /** site_id → product name → goal for its counted revenue (after the share). */
+  product_goals?: Record<string, Record<string, number>>;
   tiers: BonusTier[];
 }
 

@@ -3,11 +3,20 @@ import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { customBounds } from "@/lib/utils/tz";
-import { fetchPaidOrders, fetchRefunds, type RevenueOrder, type RevenueRefund } from "@/lib/metrics";
+import { fetchAll } from "@/lib/supabase/fetch-all";
+import {
+  PAID_STATUSES, fetchPaidOrders, fetchRefunds, orderKeptShare, type RevenueOrder, type RevenueRefund,
+} from "@/lib/metrics";
 import { computeBonus, siteShare, sortedTiers, tierRate, type BonusProgram } from "@/lib/bonus/program";
 
 type Row = RevenueOrder & { site_id: string; created_at: string };
 type RefundRow = RevenueRefund & { site_id: string; refunded_at: string };
+interface ItemRow {
+  product_name: string | null;
+  quantity: number | null;
+  price: number | null;
+  order: { site_id: string; currency: string | null; total: number | null; refunded_total: number | null };
+}
 
 const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Belgrade" });
 
@@ -27,11 +36,20 @@ export async function GET() {
   if (!program) return NextResponse.json({ error: "Bonus program is not configured" }, { status: 404 });
 
   const { start, end } = customBounds(program.from, program.to);
-  const [orders, refunds] = await Promise.all([
+  const [orders, refunds, items] = await Promise.all([
     fetchPaidOrders<Row>(supabase, { start, end }, "site_id, created_at"),
     fetchRefunds<RefundRow>(supabase, { start, end }, "site_id, refunded_at"),
+    fetchAll(() =>
+      supabase
+        .from("order_items")
+        .select("product_name, quantity, price, order:orders!inner(site_id, currency, total, refunded_total, created_at, status)")
+        .in("order.status", PAID_STATUSES)
+        .gte("order.created_at", start)
+        .lt("order.created_at", end)
+        .order("id")
+    ),
   ]);
-  if (orders.error || refunds.error)
+  if (orders.error || refunds.error || items.error)
     return NextResponse.json({ error: "Failed to load orders" }, { status: 500 });
 
   // Every day of the window, so the chart has a point even on empty days.
@@ -51,11 +69,38 @@ export async function GET() {
   for (const o of orders.data) add(o.site_id, o.created_at, toBase(Number(o.total ?? 0), o.currency ?? "RSD", fx.rates), true);
   for (const r of refunds.data) add(r.site_id, r.refunded_at, -toBase(Number(r.amount), r.currency, fx.rates), false);
 
+  // Products per site: each line's share of its order's own net (same as Top
+  // proizvodi), so product sums can differ slightly from the site total when a
+  // refund lands in another month. Products with a goal show even without sales.
+  const products = new Map<string, Map<string, { revenue: number; units: number }>>();
+  const product = (siteId: string, name: string) => {
+    let site = products.get(siteId);
+    if (!site) products.set(siteId, (site = new Map()));
+    let p = site.get(name);
+    if (!p) site.set(name, (p = { revenue: 0, units: 0 }));
+    return p;
+  };
+  for (const it of items.data as unknown as ItemRow[]) {
+    const p = product(it.order.site_id, it.product_name ?? "Nepoznat proizvod");
+    const qty = it.quantity ?? 1;
+    p.units += qty;
+    p.revenue += toBase(Number(it.price ?? 0) * qty * orderKeptShare(it.order), it.order.currency ?? "RSD", fx.rates);
+  }
+  for (const [siteId, goals] of Object.entries(program.product_goals ?? {}))
+    for (const name of Object.keys(goals)) product(siteId, name);
+
   const sites = (sitesRes.data ?? [])
     .map((s) => {
       const v = bySite.get(s.id) ?? { revenue: 0, orders: 0 };
       const share = siteShare(program, s.id);
-      return { site_id: s.id, name: s.name, color: s.color_hex, share, revenue: v.revenue, counted: v.revenue * share, orders: v.orders };
+      const goals = program.product_goals?.[s.id] ?? {};
+      const siteProducts = [...(products.get(s.id) ?? [])]
+        .map(([name, p]) => ({ name, revenue: p.revenue, counted: p.revenue * share, units: p.units, goal: goals[name] ?? null }))
+        .sort((a, b) => b.revenue - a.revenue || a.name.localeCompare(b.name));
+      return {
+        site_id: s.id, name: s.name, color: s.color_hex, share,
+        revenue: v.revenue, counted: v.revenue * share, orders: v.orders, products: siteProducts,
+      };
     })
     .sort((a, b) => b.counted - a.counted);
 

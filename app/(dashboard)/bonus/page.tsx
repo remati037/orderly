@@ -1,6 +1,8 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import useSWR from "swr";
+import { ChevronRightIcon } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -11,7 +13,8 @@ import { ChartCard, INK, TooltipBox, compactMoney, pct } from "@/components/dash
 
 interface Tier { from: number; amount: number; rate: number; per_person: number }
 interface BonusResult { tierIndex: number; rate: number; total: number; perPerson: number }
-interface SiteRow { site_id: string; name: string; color: string; share: number; revenue: number; counted: number; orders: number }
+interface ProductRow { name: string; revenue: number; counted: number; units: number; goal: number | null }
+interface SiteRow { site_id: string; name: string; color: string; share: number; revenue: number; counted: number; orders: number; products: ProductRow[] }
 interface Day { date: string; counted: number; cumulative: number | null }
 
 interface BonusData {
@@ -129,12 +132,114 @@ function CumulativeChart({ data }: { data: BonusData }) {
   );
 }
 
-function SitesTable({ data }: { data: BonusData }) {
-  const cur = data.base_currency;
+// Goal input for one product: saves on Enter / blur when the value changed.
+function GoalInput({ siteId, product, goal, cur, onSaved }: {
+  siteId: string; product: string; goal: number | null; cur: string; onSaved: () => void;
+}) {
+  const [value, setValue] = useState(goal ? String(goal) : "");
+  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
+
+  const save = async () => {
+    const next = value.trim() === "" ? null : Number(value.replace(/\./g, "").replace(",", "."));
+    if (next === goal || (next === 0 && goal === null)) return;
+    if (next !== null && (!Number.isFinite(next) || next < 0)) return setState("error");
+    setState("saving");
+    const res = await fetch("/api/bonus/goals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ site_id: siteId, product, goal: next }),
+    }).catch(() => null);
+    setState(res?.ok ? "idle" : "error");
+    if (res?.ok) onSaved();
+  };
+
   return (
-    <ChartCard title="Promet po sajtovima" subtitle="Partnerski biznisi ulaze u obračun sa 50% prometa">
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <input
+        inputMode="numeric"
+        aria-label={`Cilj za ${product}`}
+        placeholder="—"
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setState("idle"); }}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        style={{
+          width: 72, fontSize: 13, textAlign: "right", padding: "4px 8px", borderRadius: 6, fontVariantNumeric: "tabular-nums",
+          border: `1px solid ${state === "error" ? "#DC2626" : INK.border}`, background: state === "saving" ? INK.grid : "#fff",
+        }}
+      />
+      <span style={{ fontSize: 12, color: INK.muted }}>{cur === "EUR" ? "€" : cur}</span>
+    </span>
+  );
+}
+
+function GoalProgress({ value, goal }: { value: number; goal: number | null }) {
+  if (!goal) return <span style={{ color: INK.muted }}>—</span>;
+  const ratio = value / goal;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+      <span style={{ width: 48, height: 6, background: INK.grid, borderRadius: 3, overflow: "hidden" }}>
+        <span style={{ display: "block", height: "100%", width: `${Math.min(1, ratio) * 100}%`, background: ratio >= 1 ? "#15803D" : GREEN }} />
+      </span>
+      <span style={{ width: 40, textAlign: "right", fontWeight: ratio >= 1 ? 600 : 400, color: ratio >= 1 ? "#15803D" : INK.secondary }}>{pct(ratio, 0)}</span>
+    </span>
+  );
+}
+
+function SiteProducts({ site, cur, onSaved }: { site: SiteRow; cur: string; onSaved: () => void }) {
+  const sub: React.CSSProperties = { ...td, padding: "7px 8px", fontSize: 12.5 };
+  const subTh: React.CSSProperties = { ...th, padding: "8px 8px" };
+  return (
+    <tr>
+      <td colSpan={6} style={{ padding: "0 4px 10px 28px", background: "#FAFAFA", borderBottom: `1px solid ${INK.grid}` }}>
+        {site.products.length === 0 ? (
+          <p style={{ fontSize: 12, color: INK.muted, margin: 0, padding: "12px" }}>Nema prodatih proizvoda u ovom periodu.</p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ ...subTh, textAlign: "left" }}>Proizvod</th>
+                <th style={subTh}>Kom.</th>
+                <th style={subTh}>Promet</th>
+                <th style={subTh}>Obračunski</th>
+                <th style={subTh}>Cilj</th>
+                <th style={subTh}>Ostvareno</th>
+              </tr>
+            </thead>
+            <tbody>
+              {site.products.map((p) => (
+                <tr key={p.name} style={{ borderTop: `1px solid ${INK.grid}` }}>
+                  <td style={{ ...sub, textAlign: "left", whiteSpace: "normal" }}>{p.name}</td>
+                  <td style={sub}>{p.units.toLocaleString("sr-RS")}</td>
+                  <td style={sub}>{eur(p.revenue, cur)}</td>
+                  <td style={{ ...sub, fontWeight: 600 }}>{eur(p.counted, cur)}</td>
+                  <td style={sub}>
+                    <GoalInput key={`${p.name}:${p.goal}`} siteId={site.site_id} product={p.name} goal={p.goal} cur={cur} onSaved={onSaved} />
+                  </td>
+                  <td style={sub}><GoalProgress value={p.counted} goal={p.goal} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function SitesTable({ data, onSaved }: { data: BonusData; onSaved: () => void }) {
+  const cur = data.base_currency;
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setOpen((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  return (
+    <ChartCard title="Promet po sajtovima" subtitle="Partneri ulaze sa 50% · klikni na sajt za proizvode i ciljeve (cilj se poredi sa obračunskim prometom)">
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${INK.grid}` }}>
               <th style={{ ...th, textAlign: "left" }}>Sajt</th>
@@ -142,30 +247,46 @@ function SitesTable({ data }: { data: BonusData }) {
               <th style={th}>Promet</th>
               <th style={th}>Računa se</th>
               <th style={th}>Obračunski promet</th>
+              <th style={th}>Cilj</th>
             </tr>
           </thead>
           <tbody>
-            {data.sites.map((s) => (
-              <tr key={s.site_id} style={{ borderBottom: `1px solid ${INK.grid}` }}>
-                <td style={{ ...td, textAlign: "left" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: chartColor(s.color), flexShrink: 0 }} />
-                    <span style={{ fontWeight: 500 }}>{s.name}</span>
-                    {s.share < 1 && <span style={{ fontSize: 11, color: "#92400E", background: "#FEF3C7", borderRadius: 4, padding: "1px 6px" }}>partner</span>}
-                  </span>
-                </td>
-                <td style={td}>{s.orders.toLocaleString("sr-RS")}</td>
-                <td style={td}>{eur(s.revenue, cur)}</td>
-                <td style={{ ...td, color: INK.secondary }}>{pct(s.share, 0)}</td>
-                <td style={{ ...td, fontWeight: 600 }}>{eur(s.counted, cur)}</td>
-              </tr>
-            ))}
+            {data.sites.map((s) => {
+              const expanded = open.has(s.site_id);
+              const goal = s.products.reduce((n, p) => n + (p.goal ?? 0), 0);
+              return (
+                <Fragment key={s.site_id}>
+                  <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => toggle(s.site_id)} className="hover:bg-zinc-50">
+                    <td style={{ ...td, textAlign: "left" }}>
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        onClick={(e) => { e.stopPropagation(); toggle(s.site_id); }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", color: "inherit" }}
+                      >
+                        <ChevronRightIcon className="size-4" style={{ color: INK.muted, transform: expanded ? "rotate(90deg)" : undefined, transition: "transform 120ms" }} aria-hidden />
+                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: chartColor(s.color), flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500 }}>{s.name}</span>
+                        {s.share < 1 && <span style={{ fontSize: 11, color: "#92400E", background: "#FEF3C7", borderRadius: 4, padding: "1px 6px" }}>partner</span>}
+                      </button>
+                    </td>
+                    <td style={td}>{s.orders.toLocaleString("sr-RS")}</td>
+                    <td style={td}>{eur(s.revenue, cur)}</td>
+                    <td style={{ ...td, color: INK.secondary }}>{pct(s.share, 0)}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{eur(s.counted, cur)}</td>
+                    <td style={td}>{goal ? <GoalProgress value={s.counted} goal={goal} /> : <span style={{ color: INK.muted }}>—</span>}</td>
+                  </tr>
+                  {expanded && <SiteProducts site={s} cur={cur} onSaved={onSaved} />}
+                </Fragment>
+              );
+            })}
             <tr>
               <td style={{ ...td, textAlign: "left", fontWeight: 600 }}>Ukupno</td>
               <td style={{ ...td, fontWeight: 600 }}>{data.sites.reduce((n, s) => n + s.orders, 0).toLocaleString("sr-RS")}</td>
               <td style={{ ...td, fontWeight: 600 }}>{eur(data.revenue, cur)}</td>
               <td style={td} />
               <td style={{ ...td, fontWeight: 700 }}>{eur(data.counted, cur)}</td>
+              <td style={td} />
             </tr>
           </tbody>
         </table>
@@ -256,10 +377,10 @@ export default function BonusPage() {
           </div>
 
           <Progress data={data} />
-          <CumulativeChart data={data} />
+          <SitesTable data={data} onSaved={() => mutate()} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 16, alignItems: "start" }}>
-            <SitesTable data={data} />
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" style={{ gap: 16, alignItems: "start" }}>
+            <CumulativeChart data={data} />
             <TiersTable data={data} />
           </div>
         </>
