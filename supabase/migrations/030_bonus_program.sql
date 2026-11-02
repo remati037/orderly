@@ -24,8 +24,9 @@ INSERT INTO settings (key, value) VALUES (
     },
     "tiers": [
       { "from": 70000,  "amount": 2100 },
+      { "from": 90000,  "amount": 2700 },
       { "from": 100000, "amount": 6000 },
-      { "from": 125000, "amount": 10000 },
+      { "from": 125000, "amount": 7500 },
       { "from": 150000, "amount": 18000 },
       { "from": 175000, "amount": 22000 },
       { "from": 200000, "amount": 30000 }

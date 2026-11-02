@@ -15,7 +15,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Novi sajt FIlip Ćirić (ciricfilip.com) dodat 2026-10-27: istorija učitana, ali u Woo nije bilo Orderly webhook-a, pa nove porudžbine nisu ulazile. Ručno povučene #5325–#5329. Posle promene ključa na Read/Write napravljeni webhook-ovi (order.created/updated/deleted, ID 2–4) i provereni potpisanim test pozivom.
 
-- Novi tab **Bonus** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Skala: 70k (3%), 100k 6.000 €, 125k 10.000 €, 150k 18.000 €, 175k 22.000 €, 200k+ 30.000 €; između pragova procenat dostignutog praga × promet; deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Proveren lokalno, NIJE push-ovan: Vladimir prvo gleda.
+- Novi tab **Bonus** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Skala: 70k i 90k (3%), 100k 6.000 €, 125k 7.500 € (6%), 150k 18.000 €, 175k 22.000 €, 200k+ 30.000 €; između pragova procenat dostignutog praga × promet; deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Proveren lokalno, NIJE push-ovan: Vladimir prvo gleda.
 
 ## Sledeći korak
 - Kad Vladimir odobri: push na `main` da bi tab Bonus bio na produkciji.
