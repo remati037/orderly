@@ -346,7 +346,7 @@ export default function BonusPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
-          {data?.name ?? "Bonus"}
+          {data?.name ?? "Black Friday"}
         </h1>
         <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0" }}>
           {data ? `Obračun bonusa · ${dayLabel(data.from)} – ${dayLabel(data.to)}${data.to.slice(0, 4)}. · neto promet (bez refundacija)` : "Obračun bonusa"}
