@@ -23,7 +23,8 @@ const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Belgrade" })
 // Black Friday bonus: net revenue per site in the program window, counted with
 // each site's share (partners 50%), the bonus tier reached and a daily series.
 export async function GET() {
-  const { error: authError } = await requireRole(["owner"]);
+  // Agents see the numbers; only the owner edits product goals.
+  const { error: authError, member } = await requireRole(["owner", "agent"]);
   if (authError) return authError;
 
   const supabase = adminClient();
@@ -120,6 +121,7 @@ export async function GET() {
     from: program.from,
     to: program.to,
     people: program.people,
+    can_edit: member?.role === "owner",
     base_currency: fx.baseCurrency,
     revenue: sites.reduce((sum, s) => sum + s.revenue, 0),
     counted,

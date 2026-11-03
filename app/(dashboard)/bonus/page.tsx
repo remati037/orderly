@@ -22,6 +22,7 @@ interface BonusData {
   from: string;
   to: string;
   people: number;
+  can_edit: boolean;
   base_currency: string;
   revenue: number;
   counted: number;
@@ -186,7 +187,7 @@ function GoalProgress({ value, goal }: { value: number; goal: number | null }) {
   );
 }
 
-function SiteProducts({ site, cur, onSaved }: { site: SiteRow; cur: string; onSaved: () => void }) {
+function SiteProducts({ site, cur, canEdit, onSaved }: { site: SiteRow; cur: string; canEdit: boolean; onSaved: () => void }) {
   const sub: React.CSSProperties = { ...td, padding: "7px 8px", fontSize: 12.5 };
   const subTh: React.CSSProperties = { ...th, padding: "8px 8px" };
   return (
@@ -214,7 +215,9 @@ function SiteProducts({ site, cur, onSaved }: { site: SiteRow; cur: string; onSa
                   <td style={sub}>{eur(p.revenue, cur)}</td>
                   <td style={{ ...sub, fontWeight: 600 }}>{eur(p.counted, cur)}</td>
                   <td style={sub}>
-                    <GoalInput key={`${p.name}:${p.goal}`} siteId={site.site_id} product={p.name} goal={p.goal} cur={cur} onSaved={onSaved} />
+                    {canEdit ? (
+                      <GoalInput key={`${p.name}:${p.goal}`} siteId={site.site_id} product={p.name} goal={p.goal} cur={cur} onSaved={onSaved} />
+                    ) : p.goal ? eur(p.goal, cur) : <span style={{ color: INK.muted }}>—</span>}
                   </td>
                   <td style={sub}><GoalProgress value={p.counted} goal={p.goal} /></td>
                 </tr>
@@ -276,7 +279,7 @@ function SitesTable({ data, onSaved }: { data: BonusData; onSaved: () => void })
                     <td style={{ ...td, fontWeight: 600 }}>{eur(s.counted, cur)}</td>
                     <td style={td}>{goal ? <GoalProgress value={s.counted} goal={goal} /> : <span style={{ color: INK.muted }}>—</span>}</td>
                   </tr>
-                  {expanded && <SiteProducts site={s} cur={cur} onSaved={onSaved} />}
+                  {expanded && <SiteProducts site={s} cur={cur} canEdit={data.can_edit} onSaved={onSaved} />}
                 </Fragment>
               );
             })}
