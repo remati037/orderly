@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  METRICS, PAID_STATUSES, currentMrr, mrrAt, orderFee, orderKeptShare, orderNet, subscriptionMrr,
+  METRICS, PAID_STATUSES, currentMrr, mrrAt, orderFee, orderKeptShare, orderNet, relativeChange, subscriptionMrr,
   summarizeRevenue, summarizeRevenueBy, sumDays, totalsByDay,
 } from ".";
 
@@ -107,5 +107,20 @@ describe("MRR", () => {
     ];
     expect(mrrAt(subs, "2026-10-01", RATES)).toBe(30);
     expect(mrrAt(subs, "2026-11-01", RATES)).toBe(90);
+  });
+});
+
+describe("relativeChange", () => {
+  it("returns the change as a fraction", () => {
+    expect(relativeChange(120, 100)).toBeCloseTo(0.2);
+    expect(relativeChange(0, 100)).toBe(-1);
+  });
+
+  it("has no value without a base to compare with", () => {
+    expect(relativeChange(50, 0)).toBeNull();
+  });
+
+  it("reads a rise from a negative base as growth", () => {
+    expect(relativeChange(50, -100)).toBeCloseTo(1.5);
   });
 });

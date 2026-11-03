@@ -4,14 +4,14 @@ import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
 import { periodBounds, compareLabel, compareOptions, parseCompare } from "@/lib/utils/kpi-period";
 import {
-  fetchPaidOrders, fetchRefunds, summarizeRevenueBy, type RevenueOrder, type RevenueRefund,
+  fetchPaidOrders, fetchRefunds, summarizeRevenueBy, relativeChange, type RevenueOrder, type RevenueRefund,
 } from "@/lib/metrics";
 
 type Row = RevenueOrder & { site_id: string };
 type RefundRow = RevenueRefund & { site_id: string };
 
-// Revenue, orders, AOV and share per site for the selected KPI period, plus the
-// same figures for the comparison window (same presets/compare as /api/stats/kpi).
+// Revenue, orders, AOV, net profit, fees and share per site for the selected KPI
+// period, plus changes vs the comparison window (same filters as /api/stats/kpi).
 // Revenue is net revenue (gross − refunds made in the window), see lib/metrics.
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireRole(["owner"]);
@@ -20,13 +20,14 @@ export async function GET(request: NextRequest) {
   const sp      = new URL(request.url).searchParams;
   const preset  = sp.get("preset") ?? "today";
   const compare = sp.get("compare") ?? "prev";
+  const products = sp.get("products")?.split(",").filter(Boolean) ?? null;
   const { current, prev } = periodBounds(preset, sp.get("from"), sp.get("to"), compare);
 
   const supabase = adminClient();
   const window = async (b: { start: string; end: string }) => {
     const [orders, refunds] = await Promise.all([
-      fetchPaidOrders<Row>(supabase, b, "site_id"),
-      fetchRefunds<RefundRow>(supabase, b, "site_id"),
+      fetchPaidOrders<Row>(supabase, { ...b, products }, "site_id"),
+      fetchRefunds<RefundRow>(supabase, { ...b, products }, "site_id"),
     ]);
     return { orders: orders.data, refunds: refunds.data, error: orders.error ?? refunds.error };
   };
@@ -42,16 +43,23 @@ export async function GET(request: NextRequest) {
 
   const sum = (w: { orders: Row[]; refunds: RefundRow[] }) => {
     const bySite = summarizeRevenueBy(w.orders, w.refunds, fx.rates, (o) => o.site_id, (r) => r.site_id);
-    return new Map([...bySite].map(([k, s]) => [k, { revenue: s.net, orders: s.orders }]));
+    return new Map([...bySite].map(([k, s]) => [k, { revenue: s.net, orders: s.orders, netProfit: s.netProfit, fees: s.fees }]));
   };
+  const aovOf = (revenue: number, orders: number) => (orders ? revenue / orders : 0);
+  // AOV only compares when both windows have orders; otherwise it's a jump from/to nothing.
+  const aovChange = (r: number, o: number, pr: number, po: number) =>
+    o && po ? relativeChange(aovOf(r, o), aovOf(pr, po)) : null;
   const now = sum(cur);
   const before = sum(prv);
-  const totalRevenue = [...now.values()].reduce((s, v) => s + v.revenue, 0);
+  const total = (m: typeof now, key: "revenue" | "netProfit" | "fees") =>
+    [...m.values()].reduce((s, v) => s + v[key], 0);
+  const totalRevenue = total(now, "revenue");
+  const prevTotalRevenue = total(before, "revenue");
 
   const sites = (sitesRes.data ?? [])
     .map((s) => {
-      const c = now.get(s.id) ?? { revenue: 0, orders: 0 };
-      const p = before.get(s.id) ?? { revenue: 0, orders: 0 };
+      const c = now.get(s.id) ?? { revenue: 0, orders: 0, netProfit: 0, fees: 0 };
+      const p = before.get(s.id) ?? { revenue: 0, orders: 0, netProfit: 0, fees: 0 };
       return {
         site_id: s.id,
         name: s.name,
@@ -59,11 +67,15 @@ export async function GET(request: NextRequest) {
         platform: s.platform,
         revenue: c.revenue,
         orders: c.orders,
-        aov: c.orders ? c.revenue / c.orders : 0,
+        aov: aovOf(c.revenue, c.orders),
+        net_profit: c.netProfit,
+        fees: c.fees,
         share: totalRevenue ? c.revenue / totalRevenue : 0,
         prev_revenue: p.revenue,
         prev_orders: p.orders,
-        trend: p.revenue ? (c.revenue - p.revenue) / p.revenue : null,
+        trend: relativeChange(c.revenue, p.revenue),
+        orders_trend: relativeChange(c.orders, p.orders),
+        aov_trend: aovChange(c.revenue, c.orders, p.revenue, p.orders),
       };
     })
     .filter((s) => s.revenue !== 0 || s.prev_revenue !== 0)
@@ -75,7 +87,13 @@ export async function GET(request: NextRequest) {
     compare_label: compareLabel(preset, compareOptions(preset).includes(mode) ? mode : compareOptions(preset)[0]),
     total_revenue: totalRevenue,
     total_orders: cur.orders.length,
-    prev_total_revenue: [...before.values()].reduce((s, v) => s + v.revenue, 0),
+    prev_total_revenue: prevTotalRevenue,
+    total_revenue_trend: relativeChange(totalRevenue, prevTotalRevenue),
+    total_orders_trend: relativeChange(cur.orders.length, prv.orders.length),
+    total_aov: aovOf(totalRevenue, cur.orders.length),
+    total_aov_trend: aovChange(totalRevenue, cur.orders.length, prevTotalRevenue, prv.orders.length),
+    total_net_profit: total(now, "netProfit"),
+    total_fees: total(now, "fees"),
     sites,
   });
 }

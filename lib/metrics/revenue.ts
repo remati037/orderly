@@ -169,6 +169,15 @@ export function summarizeRevenueBy<K, O extends RevenueOrder, R extends RevenueR
   return new Map([...groups].map(([k, g]) => [k, summarizeRevenue(g.orders, g.refunds, rates)]));
 }
 
+/**
+ * Change from `prev` to `current` as a fraction (0.12 = +12%), null when there
+ * is no base to compare with. Divides by |prev| so a negative base (a period of
+ * refunds only) still reads as growth when the value went up.
+ */
+export function relativeChange(current: number, prev: number): number | null {
+  return prev ? (current - prev) / Math.abs(prev) : null;
+}
+
 /** An order's own net: its total minus everything refunded on it so far. */
 export function orderNet(o: { total: number | null; refunded_total?: number | null }): number {
   return Number(o.total ?? 0) - Number(o.refunded_total ?? 0);

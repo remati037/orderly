@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-01
+Ažurirano: 2026-11-03
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -15,10 +15,12 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Novi sajt FIlip Ćirić (ciricfilip.com) dodat 2026-10-27: istorija učitana, ali u Woo nije bilo Orderly webhook-a, pa nove porudžbine nisu ulazile. Ručno povučene #5325–#5329. Posle promene ključa na Read/Write napravljeni webhook-ovi (order.created/updated/deleted, ID 2–4) i provereni potpisanim test pozivom.
 
-- Novi tab **Black Friday** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Skala: 70k i 90k (3%), 100k 6.000 €, 125k 7.500 € (6%), 150k 18.000 €, 175k 22.000 €, 200k+ 30.000 €; između pragova procenat dostignutog praga × promet; deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Proveren lokalno, NIJE push-ovan: Vladimir prvo gleda.
+- Novi tab **Black Friday** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Skala: 70k i 90k (3%), 100k 6.000 €, 125k 7.500 € (6%), 150k 18.000 €, 175k 22.000 €, 200k+ 30.000 €; između pragova procenat dostignutog praga × promet; deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Već je na `origin/main`.
+
+- Dashboard: nova kompaktna lista po sajtovima ispod glavnih kartica (prihod, porudžbine, AOV, neto zarada, Stripe naknade), od najvećeg prihoda ka najmanjem, prati filtere; `components/dashboard/site-summary-table.tsx`. Zbir se poklapa sa karticama na stvarnim podacima. Izgled proveren na privremenoj stranici sa brojkama iz baze, ne na samom dashboardu iza prijave. NIJE push-ovano.
 
 ## Sledeći korak
-- Kad Vladimir odobri: push na `main` da bi tab Black Friday bio na produkciji.
+- Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
 - Circle: test sa jednim email-om, pa `enabled = true` i merge grane `feat/circle-access`.
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.

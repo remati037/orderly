@@ -3,6 +3,7 @@ import { KPISection } from "@/components/dashboard/kpi-section";
 import { LiveFeed } from "@/components/dashboard/live-feed";
 import { DailyGoalTracker } from "@/components/dashboard/daily-goal-tracker";
 import { SiteRevenueBar } from "@/components/dashboard/charts/site-revenue-bar";
+import { SiteSummaryTable } from "@/components/dashboard/site-summary-table";
 
 // ── date helpers ───────────────────────────────────────────────────────────────
 
@@ -37,6 +38,11 @@ export default function DashboardPage() {
       {/* KPIs (respect the filter) */}
       <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <KPISection />
+      </Suspense>
+
+      {/* Same figures per site, largest revenue first */}
+      <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+        <SiteSummaryTable />
       </Suspense>
 
       {/* Revenue split by site — same period/product filter as the KPIs above */}
