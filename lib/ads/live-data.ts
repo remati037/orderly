@@ -3,7 +3,6 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import { fetchPaidOrders, fetchRefunds, type RevenueOrder, type RevenueRefund } from "@/lib/metrics";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { belgradeDate, customBounds, dayBounds } from "@/lib/utils/tz";
-import { siteShare, sortedTiers, type BonusProgram } from "@/lib/bonus/program";
 import { averageCpa, ratio, type InsightRow } from "./insights";
 import { buildAccountReport, metricsOf, periodRange, type PeriodKey } from "./report";
 
@@ -96,14 +95,13 @@ async function netBySiteDay(supabase: SupabaseClient, start: string, end: string
 
 /** Everything /reklame shows for one period. */
 export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) {
-  const { fx, accounts, rows, targets } = await loadLiveInsights(supabase, 30);
+  const { fx, accounts, rows, targets } = await loadLiveInsights(supabase, 31);
   const today = belgradeDate();
   const range = periodRange(period, today);
 
-  const [mapRes, sitesRes, cfgRes, recsRes] = await Promise.all([
+  const [mapRes, sitesRes, recsRes] = await Promise.all([
     supabase.from("ad_campaign_map").select("campaign_id, site_id"),
     supabase.from("sites").select("id, name"),
-    supabase.from("settings").select("value").eq("key", "bonus_program").maybeSingle(),
     supabase
       .from("ad_recommendations")
       .select("id, created_at, ad_account_id, level, entity_name, type, priority, text")
@@ -131,9 +129,14 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
 
   const liveAccounts = accounts
     .map((a) => {
-      const target = accountTarget(rows, a.id, targets);
+      // Rows are in base currency; each account shows in its own.
+      const rate = toBase(1, a.currency, fx.rates);
+      const own = rows
+        .filter((r) => r.ad_account_id === a.id)
+        .map((r) => ({ ...r, spend: r.spend / rate, purchase_value: r.purchase_value / rate }));
+      const target = accountTarget(own, a.id, targets[a.id] ? { [a.id]: targets[a.id] / rate } : {});
       const report = buildAccountReport(
-        rows.filter((r) => r.ad_account_id === a.id),
+        own,
         range,
         target.value,
         today,
@@ -143,12 +146,14 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
             site_name: site ? siteName.get(site) ?? null : null,
             real_roas_site: site ? ratio(netBySite.get(site) ?? 0, spendBySite.get(site) ?? 0) : null,
           };
-        }
+        },
+        a.currency
       );
       return {
         id: a.id,
         name: a.name,
         currency: a.currency,
+        fb_account_id: a.fb_account_id,
         status: a.meta_account_status,
         synced_at: a.live_synced_at,
         error: a.live_sync_error,
@@ -157,19 +162,7 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
         ...report,
       };
     })
-    .sort((a, b) => b.metrics.spend - a.metrics.spend);
-
-  const program = cfgRes.data?.value as BonusProgram | undefined;
-  let blackFriday = null;
-  if (program) {
-    const bounds = customBounds(program.from, program.to);
-    const bf = await netBySiteDay(supabase, bounds.start, bounds.end, fx.rates);
-    let counted = 0;
-    for (const sites of bf.values())
-      for (const [siteId, amount] of sites) counted += amount * siteShare(program, siteId);
-    const tiers = sortedTiers(program);
-    blackFriday = { name: program.name, from: program.from, to: program.to, counted, goal: tiers[tiers.length - 1]?.from ?? 0 };
-  }
+    .sort((a, b) => b.card.week.spend * toBase(1, b.currency, fx.rates) - a.card.week.spend * toBase(1, a.currency, fx.rates));
 
   const totals = metricsOf(inRange);
   const prevRows = range.prevFrom ? rows.filter((r) => r.date >= range.prevFrom! && r.date <= range.prevTo!) : null;
@@ -179,7 +172,6 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
     period,
     range,
     synced_at: syncTimes[0] ?? null,
-    black_friday: blackFriday,
     totals,
     previous: prevRows ? metricsOf(prevRows) : null,
     net: netTotal,

@@ -3,14 +3,14 @@
 import { Fragment, useState } from "react";
 import useSWR from "swr";
 import { ChevronRightIcon } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { jsonFetcher } from "@/lib/hooks/json-fetcher";
 import { LoadError } from "@/components/dashboard/load-error";
-import { ChartCard, INK, Segmented, TooltipBox, pct } from "@/components/dashboard/analytics/chart-kit";
-import type { AccountReport, AdsetReport, CampaignReport, DayPoint, Metrics, PeriodKey, Verdict, VerdictLevel } from "@/lib/ads/report";
+import { ChartCard, INK, Legend, Segmented, TooltipBox, pct } from "@/components/dashboard/analytics/chart-kit";
+import { formatMoney, leadCount, type AccountReport, type AdsetReport, type CampaignReport, type Chip, type DayPoint, type Metrics, type PeriodKey, type Tone, type Verdict, type VerdictLevel } from "@/lib/ads/report";
 
 interface Account extends AccountReport {
-  id: string; name: string; currency: string; status: number | null; synced_at: string | null; error: string | null;
+  id: string; name: string; currency: string; fb_account_id: string; status: number | null; synced_at: string | null; error: string | null;
   target_cpa: number | null; target_estimated: boolean;
 }
 interface Recommendation {
@@ -20,7 +20,6 @@ interface Recommendation {
 interface LiveData {
   base_currency: string;
   synced_at: string | null;
-  black_friday: { name: string; from: string; to: string; counted: number; goal: number } | null;
   totals: Metrics;
   previous: Metrics | null;
   net: number;
@@ -38,9 +37,16 @@ const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
   { value: "30d", label: "30 dana" },
 ];
 
-const GREEN = "#16A34A";
 const RED = "#DC2626";
-const BAR = "#2563EB";
+const SPEND_LINE = "#2563EB";
+const REVENUE_LINE = "#EA580C";
+
+const TONE: Record<Tone, { color: string; bg: string; bar: string }> = {
+  good: { color: "#15803D", bg: "#DCFCE7", bar: "#22C55E" },
+  watch: { color: "#92400E", bg: "#FEF3C7", bar: "#F59E0B" },
+  bad: { color: "#B91C1C", bg: "#FEE2E2", bar: "#EF4444" },
+  neutral: { color: INK.secondary, bg: INK.grid, bar: "#A1A1AA" },
+};
 
 const VERDICT: Record<VerdictLevel, { label: string; color: string; bg: string }> = {
   good: { label: "Dobro", color: "#15803D", bg: "#DCFCE7" },
@@ -51,8 +57,7 @@ const VERDICT: Record<VerdictLevel, { label: string; color: string; bg: string }
   idle: { label: "Bez potrošnje", color: INK.secondary, bg: INK.grid },
 };
 
-const money = (v: number | null, cur: string, digits = 2) =>
-  v === null ? "—" : `${v.toLocaleString("de-DE", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${cur === "EUR" ? "€" : cur}`;
+const money = (v: number | null, cur: string, digits = 2) => (v === null ? "—" : formatMoney(v, cur, digits));
 const times = (v: number | null) => (v === null ? "—" : `${v.toFixed(2).replace(".", ",")}x`);
 const count = (v: number) => v.toLocaleString("de-DE");
 const percent = (v: number | null) => (v === null ? "—" : pct(v, 2));
@@ -101,72 +106,56 @@ function Stat({ label, value, delta, hint }: { label: string; value: string; del
   );
 }
 
-function BlackFriday({ data }: { data: NonNullable<LiveData["black_friday"]> }) {
-  const fill = data.goal > 0 ? Math.min(1, Math.max(0, data.counted / data.goal)) : 0;
+function ChipBadge({ chip }: { chip: Chip }) {
+  const t = TONE[chip.tone];
   return (
-    <ChartCard
-      title={`${data.name}: napredak ka ${money(data.goal, "EUR", 0)}`}
-      subtitle={<>Obračunski neto promet <strong style={{ color: INK.primary }}>{money(data.counted, "EUR", 0)}</strong> ({pct(fill, 1)}), isti obračun kao tab Black Friday</>}
-    >
-      <div style={{ height: 14, background: INK.grid, borderRadius: 7, overflow: "hidden" }}>
-        <div style={{ width: `${fill * 100}%`, height: "100%", background: GREEN, borderRadius: 7, transition: "width 300ms" }} />
-      </div>
-    </ChartCard>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: t.color, background: t.bg, borderRadius: 6, padding: "4px 8px", whiteSpace: "nowrap" }}>
+      <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: t.bar }} />
+      {chip.label}
+    </span>
   );
 }
 
-// One row per account, biggest spend first: where the money goes and how it's doing.
-function AccountsOverview({ data, cur }: { data: LiveData; cur: string }) {
+const LINK_HINT = "Koliko kampanja sa potrošnjom u poslednjih 7 dana je povezano sa sajtom, pa može da se uporedi sa stvarnom prodajom u Orderly-ju.";
+
+// Yesterday and the last 7 full days at a glance, independent of the period below.
+function AccountCardTile({ account: a }: { account: Account }) {
+  const { yesterday: y, week: w, trend, link, top_campaigns: top } = a.card;
+  const cur = a.currency;
+  const small: React.CSSProperties = { fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.muted, margin: 0 };
+  const big = y.roas !== null && y.roas < 1 ? "#B91C1C" : "#15803D";
   return (
-    <ChartCard title="Svi nalozi" subtitle="Klikni na nalog za detalje. Iznosi su preračunati u evre.">
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${INK.grid}` }}>
-              <th style={{ ...th, textAlign: "left" }}>Nalog</th>
-              <th style={th}>Potrošnja</th>
-              <th style={th}>Prodaje</th>
-              <th style={th}>Prihod po Meta</th>
-              <th style={th}>Cena prodaje</th>
-              <th style={th}>ROAS</th>
-              <th style={th}>Leadovi</th>
-              <th style={{ ...th, textAlign: "left" }}>Ocena</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.accounts.map((a) => (
-              <tr key={a.id} style={{ borderBottom: `1px solid ${INK.grid}` }} className="hover:bg-zinc-50">
-                <td style={{ ...td, textAlign: "left" }}>
-                  <a href={`#nalog-${a.id}`} style={{ fontWeight: 600, color: INK.primary, textDecoration: "underline", textDecorationColor: INK.border, textUnderlineOffset: 3 }}>{a.name}</a>
-                </td>
-                <td style={{ ...td, fontWeight: 600 }}>{money(a.metrics.spend, cur)}</td>
-                <td style={td}>{count(a.metrics.purchases)}</td>
-                <td style={td}>{money(a.metrics.revenue, cur)}</td>
-                <td style={td}>{money(a.metrics.cpa, cur)}</td>
-                <td style={td}>{times(a.metrics.roas)}</td>
-                <td style={td}>{a.metrics.leads ? count(a.metrics.leads) : "—"}</td>
-                <td style={{ ...td, textAlign: "left" }}><VerdictBadge verdict={a.verdict} /></td>
-              </tr>
-            ))}
-            {data.accounts.length > 1 && (
-              <tr>
-                <td style={{ ...td, textAlign: "left", fontWeight: 700 }}>Ukupno</td>
-                <td style={{ ...td, fontWeight: 700 }}>{money(data.totals.spend, cur)}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{count(data.totals.purchases)}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{money(data.totals.revenue, cur)}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{money(data.totals.cpa, cur)}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{times(data.totals.roas)}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{data.totals.leads ? count(data.totals.leads) : "—"}</td>
-                <td style={td} />
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <a href={`#nalog-${a.id}`} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#fff", border: `1px solid ${INK.border}`, borderTop: `4px solid ${TONE[trend.tone].bar}`, borderRadius: 12, padding: "16px 18px", color: "inherit", textDecoration: "none", minWidth: 0 }}>
+      <div>
+        <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: INK.primary, overflowWrap: "anywhere" }}>{a.name}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: INK.secondary, background: INK.grid, borderRadius: 5, padding: "2px 6px" }}>{cur}</span>
+        </p>
+        <p style={{ fontSize: 12, color: INK.secondary, margin: "4px 0 0", lineHeight: 1.4, overflowWrap: "anywhere" }}>
+          {[...top.map((c) => `${c.name} ${money(c.spend, cur)}`), a.fb_account_id.replace(/^act_/, "")].join(" · ")}
+        </p>
       </div>
-      <p style={{ fontSize: 12, color: INK.muted, margin: "12px 0 0" }}>
-        Orderly neto za isti period, svi sajtovi: <strong style={{ color: INK.secondary }}>{money(data.net, cur, 0)}</strong>, što je {times(data.real_roas)} u odnosu na potrošnju. U taj broj ulazi i prodaja koja nije od reklama.
-      </p>
-    </ChartCard>
+      <div><ChipBadge chip={trend} /></div>
+      <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) minmax(0, 1fr)", gap: 14, alignItems: "end" }}>
+        <div>
+          <p style={small}>ROAS juče</p>
+          <p style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1, color: y.roas === null ? INK.muted : big, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>
+            {y.roas === null ? "—" : y.roas.toFixed(2).replace(".", ",")}
+          </p>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={small}>Juče</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: INK.primary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>{money(y.spend, cur)}</p>
+          <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0" }}>{count(y.purchases)} kup. · {money(y.revenue, cur)}</p>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={small}>7 dana ROAS</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: INK.primary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>{w.roas === null ? "—" : w.roas.toFixed(2).replace(".", ",")}</p>
+          <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0" }}>{money(w.spend, cur)} · {count(w.purchases)} kup.</p>
+        </div>
+      </div>
+      <div title={LINK_HINT}><ChipBadge chip={link} /></div>
+    </a>
   );
 }
 
@@ -198,27 +187,40 @@ function Funnel({ m, cur }: { m: Metrics; cur: string }) {
   );
 }
 
-function DailyBars({ title, data, dataKey, format }: {
-  title: string; data: DayPoint[]; dataKey: "spend" | "purchases"; format: (v: number) => string;
-}) {
+// Spend and revenue share a currency, so both fit one axis and the gap between
+// them reads directly. The number of sales is in the tooltip.
+function DailyChart({ data, cur }: { data: DayPoint[]; cur: string }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: INK.secondary, margin: "0 0 6px" }}>{title}</p>
-      <ResponsiveContainer width="100%" height={130}>
-        <BarChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap={3}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: INK.primary, margin: 0 }}>Potrošnja i prodaja po danu, 14 punih dana</p>
+        <Legend items={[{ key: "spend", label: "Potrošnja", color: SPEND_LINE }, { key: "revenue", label: "Prihod od prodaje (Meta)", color: REVENUE_LINE }]} />
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke={INK.grid} />
-          <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fontSize: 10, fill: INK.muted }} axisLine={false} tickLine={false} interval={3} />
-          <YAxis tick={{ fontSize: 10, fill: INK.muted }} axisLine={false} tickLine={false} width={34} allowDecimals={dataKey === "spend"} />
+          <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fontSize: 11, fill: INK.muted }} axisLine={false} tickLine={false} interval={1} />
+          <YAxis tick={{ fontSize: 11, fill: INK.muted }} axisLine={false} tickLine={false} width={46} />
           <Tooltip
-            cursor={{ fill: INK.grid }}
+            cursor={{ stroke: INK.border }}
             content={({ active, payload }) => {
               const d = active ? (payload?.[0]?.payload as DayPoint | undefined) : undefined;
               if (!d) return null;
-              return <TooltipBox title={dayLabel(d.date)} rows={[{ key: dataKey, label: title, value: format(d[dataKey]) }]} />;
+              return (
+                <TooltipBox
+                  title={dayLabel(d.date)}
+                  rows={[
+                    { key: "spend", label: "Potrošnja", value: money(d.spend, cur), color: SPEND_LINE },
+                    { key: "revenue", label: "Prihod od prodaje", value: money(d.revenue, cur), color: REVENUE_LINE },
+                    { key: "purchases", label: "Broj prodaja", value: count(d.purchases) },
+                  ]}
+                />
+              );
             }}
           />
-          <Bar dataKey={dataKey} fill={BAR} radius={[4, 4, 0, 0]} isAnimationActive={false} />
-        </BarChart>
+          <Line type="monotone" dataKey="spend" stroke={SPEND_LINE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+          <Line type="monotone" dataKey="revenue" stroke={REVENUE_LINE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -286,7 +288,7 @@ function CampaignRow({ campaign: c, cur }: { campaign: CampaignReport; cur: stri
           {money(c.metrics.spend, cur)}
           {change !== null && <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: INK.muted }}>{change > 0 ? "+" : ""}{pct(change, 0)}</span>}
         </td>
-        <td style={td}>{count(c.metrics.purchases)}{c.metrics.leads > 0 && <span style={{ display: "block", fontSize: 11, color: INK.muted }}>{count(c.metrics.leads)} leadova</span>}</td>
+        <td style={td}>{count(c.metrics.purchases)}{c.metrics.leads > 0 && <span style={{ display: "block", fontSize: 11, color: INK.muted }}>{leadCount(c.metrics.leads)}</span>}</td>
         <td style={{ ...td, color: c.verdict.level === "bad" && c.metrics.cpa !== null ? RED : INK.primary }}>{money(c.metrics.cpa, cur)}</td>
         <td style={td}>{times(c.metrics.roas)}</td>
         <td style={td}>{percent(c.metrics.ctr)}</td>
@@ -335,14 +337,14 @@ function AdList({ title, empty, items, cur }: { title: string; empty: string; it
   );
 }
 
-function AccountSection({ account: a, cur }: { account: Account; cur: string }) {
+function AccountSection({ account: a }: { account: Account }) {
+  const cur = a.currency;
   const m = a.metrics;
   const p = a.previous;
   const subtitle = [
     a.target_cpa !== null
       ? `Prag cene prodaje ${money(a.target_cpa, cur)}${a.target_estimated ? " (procena: prosek naloga za 30 dana)" : ""}`
       : "Prag cene prodaje nije određen",
-    a.currency !== cur ? `nalog je u ${a.currency}, prikazano u ${cur}` : null,
     a.synced_at ? `osveženo u ${timeLabel(a.synced_at)}` : "još nije sinhronizovano",
   ].filter(Boolean).join(" · ");
 
@@ -356,13 +358,13 @@ function AccountSection({ account: a, cur }: { account: Account; cur: string }) 
             </p>
           )}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
-            <VerdictBadge verdict={a.verdict} withReason />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><span style={{ fontSize: 12, color: INK.muted }}>Ocena za 7 dana:</span><VerdictBadge verdict={a.verdict} withReason /></span>
             {p && <span style={{ fontSize: 12, color: INK.muted }}>Procenti: promena u odnosu na prethodni isti period</span>}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" style={{ gap: 8 }}>
             <Stat label="Potrošnja" value={money(m.spend, cur)} delta={<Delta now={m.spend} before={p?.spend} />} />
-            <Stat label="Prodaje" value={count(m.purchases)} delta={<Delta now={m.purchases} before={p?.purchases} goodWhenUp />} hint={m.leads ? `${count(m.leads)} leadova` : undefined} />
+            <Stat label="Prodaje" value={count(m.purchases)} delta={<Delta now={m.purchases} before={p?.purchases} goodWhenUp />} hint={m.leads ? leadCount(m.leads) : undefined} />
             <Stat label="Prihod po Meta" value={money(m.revenue, cur)} delta={<Delta now={m.revenue} before={p?.revenue} goodWhenUp />} />
             <Stat label="Cena prodaje (CPA)" value={money(m.cpa, cur)} delta={<Delta now={m.cpa} before={p?.cpa} />} />
             <Stat label="ROAS po Meta" value={times(m.roas)} delta={<Delta now={m.roas} before={p?.roas} goodWhenUp />} />
@@ -371,10 +373,7 @@ function AccountSection({ account: a, cur }: { account: Account; cur: string }) 
 
           <Funnel m={m} cur={cur} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
-            <DailyBars title="Potrošnja po danu, 14 dana" data={a.daily} dataKey="spend" format={(v) => money(v, cur)} />
-            <DailyBars title="Prodaje po danu, 14 dana" data={a.daily} dataKey="purchases" format={count} />
-          </div>
+          <DailyChart data={a.daily} cur={cur} />
 
           {a.campaigns.length === 0 ? (
             <p style={{ fontSize: 13, color: INK.muted, margin: 0 }}>Nema potrošnje u ovom periodu.</p>
@@ -394,7 +393,7 @@ function AccountSection({ account: a, cur }: { account: Account; cur: string }) 
                       <th style={th}>CTR</th>
                       <th style={th}>CPM</th>
                       <th style={th}>Frekv.</th>
-                      <th style={{ ...th, textAlign: "left" }}>Ocena</th>
+                      <th style={{ ...th, textAlign: "left" }}>Ocena (7 dana)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -406,8 +405,8 @@ function AccountSection({ account: a, cur }: { account: Account; cur: string }) 
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20, alignItems: "start" }}>
-            <AdList title="Oglasi koji rade najbolje" empty="Nijedan oglas još nema prodaju uz dovoljno potrošnje." items={a.best_ads} cur={cur} />
-            <AdList title="Oglasi koji ne rade" empty="Nema oglasa sa lošim rezultatom u ovom periodu." items={a.worst_ads} cur={cur} />
+            <AdList title="Oglasi koji rade najbolje, poslednjih 7 punih dana" empty="Nijedan oglas nema prodaju uz dovoljno potrošnje u poslednjih 7 dana." items={a.best_ads} cur={cur} />
+            <AdList title="Oglasi koji ne rade, poslednjih 7 punih dana" empty="Nema oglasa sa lošim rezultatom u poslednjih 7 dana." items={a.worst_ads} cur={cur} />
           </div>
 
           {a.idle_campaigns.length > 0 && (
@@ -485,19 +484,16 @@ function Recommendations({ items, onDone }: { items: Recommendation[]; onDone: (
 
 export default function ReklamePage() {
   const [period, setPeriod] = useState<PeriodKey>("7d");
-  const { data, error, isLoading, mutate } = useSWR<LiveData>(`/api/ads/live?period=${period}`, jsonFetcher, { refreshInterval: 60_000 });
+  const { data, error, isLoading, mutate } = useSWR<LiveData>(`/api/ads/live?period=${period}`, jsonFetcher, { refreshInterval: 60_000, keepPreviousData: true });
   const cur = data?.base_currency ?? "EUR";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>Reklame</h1>
-          <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0" }}>
-            {data?.synced_at ? `Meta podaci osveženi u ${timeLabel(data.synced_at)}` : "Meta kampanje po nalozima"}
-          </p>
-        </div>
-        <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
+      <div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>Reklame</h1>
+        <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0" }}>
+          {data?.synced_at ? `Meta podaci osveženi u ${timeLabel(data.synced_at)}` : "Meta kampanje po nalozima"}
+        </p>
       </div>
 
       {error && !data ? (
@@ -506,8 +502,10 @@ export default function ReklamePage() {
         <div style={{ height: 320, background: INK.grid, borderRadius: 12 }} className={isLoading ? "animate-pulse" : undefined} />
       ) : (
         <>
-          {data.black_friday && <BlackFriday data={data.black_friday} />}
-          <AccountsOverview data={data} cur={cur} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 380px), 1fr))", gap: 14 }}>
+            {data.accounts.map((a) => <AccountCardTile key={a.id} account={a} />)}
+          </div>
+
           <Recommendations items={data.recommendations} onDone={() => mutate()} />
 
           {data.unmapped_spending > 0 && (
@@ -516,7 +514,17 @@ export default function ReklamePage() {
             </p>
           )}
 
-          {data.accounts.map((a) => <AccountSection key={a.id} account={a} cur={cur} />)}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 700, color: INK.primary, margin: 0 }}>Svi nalozi</h2>
+              <p style={{ fontSize: 12, color: INK.muted, margin: "2px 0 0" }}>
+                Orderly neto za izabrani period, svi sajtovi: {money(data.net, cur, 0)}, {times(data.real_roas)} u odnosu na potrošnju. Tu ulazi i prodaja koja nije od reklama.
+              </p>
+            </div>
+            <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
+          </div>
+
+          {data.accounts.map((a) => <AccountSection key={a.id} account={a} />)}
         </>
       )}
     </div>
