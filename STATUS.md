@@ -35,7 +35,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Nalog određuje sajt (`ad_accounts.site_id`, migracija 034): Vladsdigital na AI Profit Lab, AF $ BP ANT 01 na Nemanja Antic, Filip Ćirić i Biznis Priče na svoje sajtove; nove kampanje nasleđuju sajt, ručne veze ostaju. Dashboard tabela po sajtovima: Prihod, Porudžbine, AOV, Facebook reklame (nije oduzeta od zarade), Neto zarada; Stripe naknade uklonjene iz tabele.
 
 ## Sledeći korak
-- Meta live: napraviti zakazani Claude zadatak po `docs/meta-preporuke-zadatak.md` (9, 14 i 20h).
+- Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
 - Circle: test sa jednim email-om, pa `enabled = true` i merge grane `feat/circle-access`.
