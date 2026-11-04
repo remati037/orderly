@@ -37,6 +37,8 @@ function firstAction(list: ActionValue[] | undefined, types: string[]): number {
 const PURCHASE = ["purchase", "offsite_conversion.fb_pixel_purchase"];
 const ADD_TO_CART = ["add_to_cart", "offsite_conversion.fb_pixel_add_to_cart"];
 const CHECKOUT = ["initiate_checkout", "offsite_conversion.fb_pixel_initiate_checkout"];
+const LEAD = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
+const LANDING = ["landing_page_view"];
 
 export function parseInsightRow(row: GraphInsightRow, accountId: string, meta?: AdMeta) {
   return {
@@ -59,6 +61,8 @@ export function parseInsightRow(row: GraphInsightRow, accountId: string, meta?: 
     purchase_value: firstAction(row.action_values, PURCHASE),
     add_to_cart: firstAction(row.actions, ADD_TO_CART),
     initiate_checkout: firstAction(row.actions, CHECKOUT),
+    leads: firstAction(row.actions, LEAD),
+    landing_page_views: firstAction(row.actions, LANDING),
     effective_status: meta?.status ?? null,
     thumbnail_url: meta?.thumbnail ?? null,
     updated_at: new Date().toISOString(),
@@ -76,10 +80,15 @@ export interface InsightRow {
   date: string;
   spend: number;
   impressions: number;
+  inline_link_clicks: number;
   frequency: number;
   ctr: number;
   purchases: number;
   purchase_value: number;
+  add_to_cart: number;
+  initiate_checkout: number;
+  leads: number;
+  landing_page_views: number;
   effective_status: string | null;
   thumbnail_url: string | null;
 }
@@ -91,69 +100,6 @@ export const ratio = (value: number, spend: number) => (spend > 0 ? value / spen
 export function averageCpa(rows: InsightRow[]): number | null {
   const spend = rows.reduce((n, r) => n + r.spend, 0);
   return cpa(spend, rows.reduce((n, r) => n + r.purchases, 0));
-}
-
-export type CampaignFlag = "no_purchase" | "cpa_high" | null;
-
-export interface CampaignRow {
-  campaign_id: string;
-  name: string;
-  active: boolean;
-  spend_today: number;
-  spend_yesterday: number;
-  change: number | null;
-  purchases_today: number;
-  purchases_yesterday: number;
-  cpa_today: number | null;
-  roas_meta_today: number | null;
-  flag: CampaignFlag;
-}
-
-// Red at target CPA spent without a purchase: below that a campaign simply
-// hasn't spent enough to judge (M4 rule Č12).
-export function campaignFlag(spend: number, purchases: number, target: number | null): CampaignFlag {
-  if (!target) return null;
-  if (purchases === 0) return spend >= target ? "no_purchase" : null;
-  return spend / purchases > target ? "cpa_high" : null;
-}
-
-/** One row per campaign with activity on either day or an active ad, biggest spend first. */
-export function buildCampaigns(rows: InsightRow[], today: string, yesterday: string, target: number | null): CampaignRow[] {
-  const byCampaign = new Map<string, InsightRow[]>();
-  for (const r of rows) {
-    if (r.date !== today && r.date !== yesterday) continue;
-    const list = byCampaign.get(r.campaign_id);
-    if (list) list.push(r);
-    else byCampaign.set(r.campaign_id, [r]);
-  }
-
-  const campaigns: CampaignRow[] = [];
-  for (const [campaign_id, list] of byCampaign) {
-    const on = (date: string) => list.filter((r) => r.date === date);
-    const sum = (day: InsightRow[], f: (r: InsightRow) => number) => day.reduce((n, r) => n + f(r), 0);
-    const t = on(today);
-    const y = on(yesterday);
-    const spendToday = sum(t, (r) => r.spend);
-    const spendYesterday = sum(y, (r) => r.spend);
-    const purchasesToday = sum(t, (r) => r.purchases);
-    const active = list.some((r) => r.effective_status === "ACTIVE");
-    if (!active && spendToday === 0 && spendYesterday === 0) continue;
-
-    campaigns.push({
-      campaign_id,
-      name: list.find((r) => r.campaign_name)?.campaign_name ?? campaign_id,
-      active,
-      spend_today: spendToday,
-      spend_yesterday: spendYesterday,
-      change: spendYesterday > 0 ? spendToday / spendYesterday - 1 : null,
-      purchases_today: purchasesToday,
-      purchases_yesterday: sum(y, (r) => r.purchases),
-      cpa_today: cpa(spendToday, purchasesToday),
-      roas_meta_today: ratio(sum(t, (r) => r.purchase_value), spendToday),
-      flag: campaignFlag(spendToday, purchasesToday, target),
-    });
-  }
-  return campaigns.sort((a, b) => b.spend_today - a.spend_today || b.spend_yesterday - a.spend_yesterday);
 }
 
 // Below this many impressions a day's CTR is mostly noise.
@@ -187,7 +133,8 @@ export function rankCreatives(
   today: string,
   yesterday: string,
   minSpend: (accountId: string) => number,
-  size = 5
+  size = 5,
+  fatigueRows: InsightRow[] = rows
 ): { best: CreativeRow[]; worst: CreativeRow[] } {
   const byAd = new Map<string, InsightRow[]>();
   for (const r of rows) {
@@ -216,7 +163,10 @@ export function rankCreatives(
       cpa: cpa(spend, purchases),
       ctr: impressions > 0 ? list.reduce((n, r) => n + r.ctr * r.impressions, 0) / impressions : 0,
       frequency: latest.frequency,
-      fatigued: isFatigued(list.find((r) => r.date === today), list.find((r) => r.date === yesterday)),
+      fatigued: isFatigued(
+        fatigueRows.find((r) => r.ad_id === ad_id && r.date === today),
+        fatigueRows.find((r) => r.ad_id === ad_id && r.date === yesterday)
+      ),
     });
   }
 

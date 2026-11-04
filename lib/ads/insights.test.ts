@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildCampaigns, campaignFlag, evaluateAlerts, isFatigued, parseInsightRow, rankCreatives, type InsightRow,
-} from "./insights";
+import { evaluateAlerts, isFatigued, parseInsightRow, rankCreatives, type InsightRow } from "./insights";
 
 const row = (over: Partial<InsightRow>): InsightRow => ({
   ad_account_id: "acc", campaign_id: "c1", campaign_name: "Kampanja", adset_id: "s1", adset_name: "Set",
-  ad_id: "a1", ad_name: "Oglas", date: "2026-11-04", spend: 0, impressions: 0, frequency: 1, ctr: 1,
-  purchases: 0, purchase_value: 0, effective_status: "ACTIVE", thumbnail_url: null, ...over,
+  ad_id: "a1", ad_name: "Oglas", date: "2026-11-04", spend: 0, impressions: 0, inline_link_clicks: 0, frequency: 1, ctr: 1,
+  purchases: 0, purchase_value: 0, add_to_cart: 0, initiate_checkout: 0, leads: 0, landing_page_views: 0, effective_status: "ACTIVE", thumbnail_url: null, ...over,
 });
 
 const TODAY = "2026-11-04";
@@ -34,44 +32,18 @@ describe("parseInsightRow", () => {
     expect(parsed.purchases).toBe(2);
   });
 
+  it("reads leads and landing page views", () => {
+    const parsed = parseInsightRow({ ...base, actions: [
+      { action_type: "lead", value: "4" },
+      { action_type: "onsite_conversion.lead_grouped", value: "4" },
+      { action_type: "landing_page_view", value: "9" },
+    ] }, "acc");
+    expect(parsed).toMatchObject({ leads: 4, landing_page_views: 9 });
+  });
+
   it("treats missing metrics as zero and takes status from the ad list", () => {
     const parsed = parseInsightRow(base, "acc", { status: "PAUSED", thumbnail: "t.jpg" });
     expect(parsed).toMatchObject({ spend: 0, purchases: 0, effective_status: "PAUSED", thumbnail_url: "t.jpg" });
-  });
-});
-
-describe("campaignFlag", () => {
-  it("stays quiet without a target or before target spend", () => {
-    expect(campaignFlag(100, 0, null)).toBeNull();
-    expect(campaignFlag(19, 0, 20)).toBeNull();
-  });
-  it("flags spend without a purchase and CPA over target", () => {
-    expect(campaignFlag(20, 0, 20)).toBe("no_purchase");
-    expect(campaignFlag(50, 2, 20)).toBe("cpa_high");
-    expect(campaignFlag(40, 2, 20)).toBeNull();
-  });
-});
-
-describe("buildCampaigns", () => {
-  it("sums ads per campaign per day", () => {
-    const [c] = buildCampaigns([
-      row({ ad_id: "a1", spend: 10, purchases: 1, purchase_value: 40 }),
-      row({ ad_id: "a2", spend: 20, purchases: 1, purchase_value: 20 }),
-      row({ ad_id: "a1", date: YESTERDAY, spend: 15 }),
-    ], TODAY, YESTERDAY, 100);
-    expect(c).toMatchObject({ spend_today: 30, spend_yesterday: 15, change: 1, purchases_today: 2, cpa_today: 15, roas_meta_today: 2 });
-  });
-
-  it("keeps an active campaign with no spend and drops an idle paused one", () => {
-    const campaigns = buildCampaigns([
-      row({ campaign_id: "live" }),
-      row({ campaign_id: "off", effective_status: "PAUSED" }),
-    ], TODAY, YESTERDAY, null);
-    expect(campaigns.map((c) => c.campaign_id)).toEqual(["live"]);
-  });
-
-  it("ignores days other than today and yesterday", () => {
-    expect(buildCampaigns([row({ date: "2026-10-20", spend: 99 })], TODAY, YESTERDAY, null)).toEqual([]);
   });
 });
 

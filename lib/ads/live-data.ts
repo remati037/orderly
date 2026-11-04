@@ -4,15 +4,11 @@ import { fetchPaidOrders, fetchRefunds, type RevenueOrder, type RevenueRefund } 
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { belgradeDate, customBounds, dayBounds } from "@/lib/utils/tz";
 import { siteShare, sortedTiers, type BonusProgram } from "@/lib/bonus/program";
-import {
-  averageCpa, buildCampaigns, ratio, rankCreatives, type CampaignRow, type InsightRow,
-} from "./insights";
+import { averageCpa, ratio, type InsightRow } from "./insights";
+import { buildAccountReport, metricsOf, periodRange, type PeriodKey } from "./report";
 
 const INSIGHT_COLUMNS =
-  "ad_account_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, date, spend, impressions, frequency, ctr, purchases, purchase_value, effective_status, thumbnail_url";
-
-// Spend an ad needs for the creative ranking when an account has no target CPA at all.
-const FALLBACK_MIN_SPEND = 10;
+  "ad_account_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, date, spend, impressions, inline_link_clicks, frequency, ctr, purchases, purchase_value, add_to_cart, initiate_checkout, leads, landing_page_views, effective_status, thumbnail_url";
 
 export interface LiveAccount {
   id: string;
@@ -55,6 +51,11 @@ export async function loadLiveInsights(supabase: SupabaseClient, days: number) {
         spend: toBase(Number(r.spend), cur, fx.rates),
         purchase_value: toBase(Number(r.purchase_value), cur, fx.rates),
         impressions: Number(r.impressions),
+        inline_link_clicks: Number(r.inline_link_clicks),
+        add_to_cart: Number(r.add_to_cart),
+        initiate_checkout: Number(r.initiate_checkout),
+        leads: Number(r.leads),
+        landing_page_views: Number(r.landing_page_views),
         frequency: Number(r.frequency),
         ctr: Number(r.ctr),
         purchases: Number(r.purchases),
@@ -93,19 +94,11 @@ async function netBySiteDay(supabase: SupabaseClient, start: string, end: string
   return net;
 }
 
-const total = (sites: Map<string, number> | undefined) => [...(sites?.values() ?? [])].reduce((n, v) => n + v, 0);
-
-export interface LiveCampaign extends CampaignRow {
-  site_name: string | null;
-  real_roas_site: number | null;
-}
-
-/** Everything /reklame shows. */
-export async function loadLivePage(supabase: SupabaseClient) {
+/** Everything /reklame shows for one period. */
+export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) {
   const { fx, accounts, rows, targets } = await loadLiveInsights(supabase, 30);
   const today = belgradeDate();
-  const yesterday = belgradeDate(dayBounds(-1).start);
-  const weekAgo = belgradeDate(dayBounds(-6).start);
+  const range = periodRange(period, today);
 
   const [mapRes, sitesRes, cfgRes, recsRes] = await Promise.all([
     supabase.from("ad_campaign_map").select("campaign_id, site_id"),
@@ -119,66 +112,58 @@ export async function loadLivePage(supabase: SupabaseClient) {
       .order("created_at", { ascending: false }),
   ]);
 
-  const net = await netBySiteDay(supabase, dayBounds(-1).start, dayBounds(0).end, fx.rates);
+  const { start, end } = customBounds(range.from, range.to);
+  const net = await netBySiteDay(supabase, start, end, fx.rates);
+  const netBySite = new Map<string, number>();
+  for (const sites of net.values())
+    for (const [siteId, amount] of sites) netBySite.set(siteId, (netBySite.get(siteId) ?? 0) + amount);
+  const netTotal = [...netBySite.values()].reduce((n, v) => n + v, 0);
+
   const siteName = new Map((sitesRes.data ?? []).map((s) => [s.id, s.name as string]));
   const siteOf = new Map((mapRes.data ?? []).map((m) => [m.campaign_id, m.site_id as string | null]));
 
+  const inRange = rows.filter((r) => r.date >= range.from && r.date <= range.to);
   const spendBySite = new Map<string, number>();
-  for (const r of rows) {
+  for (const r of inRange) {
     const site = siteOf.get(r.campaign_id);
-    if (r.date === today && site) spendBySite.set(site, (spendBySite.get(site) ?? 0) + r.spend);
+    if (site) spendBySite.set(site, (spendBySite.get(site) ?? 0) + r.spend);
   }
 
-  const dayTotals = (day: string) => {
-    const dayRows = rows.filter((r) => r.date === day);
-    const spend = dayRows.reduce((n, r) => n + r.spend, 0);
-    const netRevenue = total(net.get(day));
-    return {
-      spend,
-      meta_revenue: dayRows.reduce((n, r) => n + r.purchase_value, 0),
-      purchases: dayRows.reduce((n, r) => n + r.purchases, 0),
-      net: netRevenue,
-      real_roas: ratio(netRevenue, spend),
-    };
-  };
-
-  const liveAccounts = accounts.map((a) => {
-    const target = accountTarget(rows, a.id, targets);
-    const campaigns: LiveCampaign[] = buildCampaigns(rows.filter((r) => r.ad_account_id === a.id), today, yesterday, target.value)
-      .map((c) => {
-        const site = siteOf.get(c.campaign_id) ?? null;
-        return {
-          ...c,
-          site_name: site ? siteName.get(site) ?? null : null,
-          real_roas_site: site ? ratio(net.get(today)?.get(site) ?? 0, spendBySite.get(site) ?? 0) : null,
-        };
-      });
-    return {
-      id: a.id,
-      name: a.name,
-      currency: a.currency,
-      status: a.meta_account_status,
-      synced_at: a.live_synced_at,
-      error: a.live_sync_error,
-      target_cpa: target.value,
-      target_estimated: target.estimated,
-      campaigns,
-    };
-  });
-
-  const targetOf = new Map(liveAccounts.map((a) => [a.id, a.target_cpa]));
-  const creatives = rankCreatives(
-    rows.filter((r) => r.date >= weekAgo),
-    today,
-    yesterday,
-    (id) => targetOf.get(id) ?? FALLBACK_MIN_SPEND
-  );
+  const liveAccounts = accounts
+    .map((a) => {
+      const target = accountTarget(rows, a.id, targets);
+      const report = buildAccountReport(
+        rows.filter((r) => r.ad_account_id === a.id),
+        range,
+        target.value,
+        today,
+        (campaignId) => {
+          const site = siteOf.get(campaignId) ?? null;
+          return {
+            site_name: site ? siteName.get(site) ?? null : null,
+            real_roas_site: site ? ratio(netBySite.get(site) ?? 0, spendBySite.get(site) ?? 0) : null,
+          };
+        }
+      );
+      return {
+        id: a.id,
+        name: a.name,
+        currency: a.currency,
+        status: a.meta_account_status,
+        synced_at: a.live_synced_at,
+        error: a.live_sync_error,
+        target_cpa: target.value,
+        target_estimated: target.estimated,
+        ...report,
+      };
+    })
+    .sort((a, b) => b.metrics.spend - a.metrics.spend);
 
   const program = cfgRes.data?.value as BonusProgram | undefined;
   let blackFriday = null;
   if (program) {
-    const { start, end } = customBounds(program.from, program.to);
-    const bf = await netBySiteDay(supabase, start, end, fx.rates);
+    const bounds = customBounds(program.from, program.to);
+    const bf = await netBySiteDay(supabase, bounds.start, bounds.end, fx.rates);
     let counted = 0;
     for (const sites of bf.values())
       for (const [siteId, amount] of sites) counted += amount * siteShare(program, siteId);
@@ -186,16 +171,21 @@ export async function loadLivePage(supabase: SupabaseClient) {
     blackFriday = { name: program.name, from: program.from, to: program.to, counted, goal: tiers[tiers.length - 1]?.from ?? 0 };
   }
 
+  const totals = metricsOf(inRange);
+  const prevRows = range.prevFrom ? rows.filter((r) => r.date >= range.prevFrom! && r.date <= range.prevTo!) : null;
   const syncTimes = accounts.map((a) => a.live_synced_at).filter((t): t is string => !!t).sort();
   return {
     base_currency: fx.baseCurrency,
+    period,
+    range,
     synced_at: syncTimes[0] ?? null,
     black_friday: blackFriday,
-    today: dayTotals(today),
-    yesterday: dayTotals(yesterday),
+    totals,
+    previous: prevRows ? metricsOf(prevRows) : null,
+    net: netTotal,
+    real_roas: ratio(netTotal, totals.spend),
     accounts: liveAccounts,
-    creatives,
-    unmapped_active: liveAccounts.flatMap((a) => a.campaigns).filter((c) => c.active && !c.site_name && (c.spend_today > 0 || c.spend_yesterday > 0)).length,
+    unmapped_spending: liveAccounts.flatMap((a) => a.campaigns).filter((c) => !c.site_name).length,
     recommendations: (recsRes.data ?? []).map((r) => ({
       ...r,
       account_name: accounts.find((a) => a.id === r.ad_account_id)?.name ?? null,
@@ -220,7 +210,8 @@ export async function loadLiveSummary(supabase: SupabaseClient) {
     const spend = list.reduce((n, r) => n + r.spend, 0);
     const purchases = list.reduce((n, r) => n + r.purchases, 0);
     const value = list.reduce((n, r) => n + r.purchase_value, 0);
-    return { spend, purchases, purchase_value: value, cpa: purchases ? spend / purchases : null, roas: ratio(value, spend) };
+    const leads = list.reduce((n, r) => n + r.leads, 0);
+    return { spend, purchases, purchase_value: value, leads, cpa: purchases ? spend / purchases : null, roas: ratio(value, spend) };
   };
   const periods = (list: InsightRow[]) => ({
     today: stats(list.filter((r) => r.date === today)),
