@@ -30,7 +30,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - `/reklame` prikazuje samo naloge sa potrošnjom danas ili juče; ostali se i dalje sinhronizuju i vraćaju se sami kad krenu.
 
-- Povezano 13 kampanja sa sajtovima po odobrenom predlogu (Filip Ćirić, Odgovori Univerzuma, Biznis priče, AI Profit Lab, Vladsdigital). Kampanje naloga AF $ BP ANT 01 čekaju odluku koji je sajt.
+- Povezano 13 kampanja sa sajtovima po odobrenom predlogu (Filip Ćirić, Odgovori Univerzuma, Biznis priče, AI Profit Lab). AI Video Editor kampanja ide na AI Profit Lab, jer se tamo prodaje, ne na Vladsdigital kako je predlog glasio. Kampanje naloga AF $ BP ANT 01 čekaju odluku koji je sajt.
 
 ## Sledeći korak
 - Meta live: napraviti mašinski token (hash u `settings.meta_live_token_sha256`, token u Keychain `orderly-meta-live` i Vault `meta_live_token`), merge i push, primeniti migraciju 034 (cron na 15 minuta), napraviti Claude zadatak za 9, 14 i 20h.
