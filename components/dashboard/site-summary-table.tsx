@@ -20,6 +20,7 @@ interface SiteRow {
   aov_trend: number | null;
   net_profit: number;
   fees: number;
+  ad_spend: number | null;
 }
 
 interface BySite {
@@ -33,6 +34,7 @@ interface BySite {
   total_aov_trend: number | null;
   total_net_profit: number;
   total_fees: number;
+  total_ad_spend: number | null;
   sites: SiteRow[];
 }
 
@@ -97,7 +99,7 @@ export function SiteSummaryTable() {
   return (
     <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, padding: "14px 8px 8px" }}>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
           <thead>
             <tr>
               <th style={{ ...th, textAlign: "left" }}>Sajt</th>
@@ -105,6 +107,7 @@ export function SiteSummaryTable() {
               <th style={thWithChange}>Porudžbine</th>
               <th style={thWithChange}>AOV</th>
               <th style={th}>Neto zarada</th>
+              <th style={th} title="Potrošnja kampanja povezanih sa ovim sajtom. Nije oduzeta od neto zarade.">Facebook reklame</th>
               <th style={th}>Stripe naknade</th>
             </tr>
           </thead>
@@ -142,6 +145,7 @@ export function SiteSummaryTable() {
                     <Change value={s.aov_trend} label={label} />
                   </td>
                   <td style={cell}>{formatCurrency(s.net_profit, cur)}</td>
+                  <td style={cell}>{s.ad_spend === null ? "—" : formatCurrency(s.ad_spend, cur)}</td>
                   <td style={cell}>{formatCurrency(s.fees, cur)}</td>
                 </tr>
               );
@@ -163,6 +167,7 @@ export function SiteSummaryTable() {
                 <Change value={data.total_aov_trend} label={label} />
               </td>
               <td style={{ ...td, fontWeight: 600 }}>{formatCurrency(data.total_net_profit, cur)}</td>
+              <td style={{ ...td, fontWeight: 600 }}>{data.total_ad_spend === null ? "—" : formatCurrency(data.total_ad_spend, cur)}</td>
               <td style={{ ...td, fontWeight: 600 }}>{formatCurrency(data.total_fees, cur)}</td>
             </tr>
           </tfoot>

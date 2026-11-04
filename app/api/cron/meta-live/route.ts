@@ -4,7 +4,7 @@ import { hasMetaLiveToken } from "@/lib/auth/service-token";
 import { syncMetaLive } from "@/lib/sync/sync-meta-live";
 import { runMetaAlerts } from "@/lib/ads/alerts";
 
-// Every 15 minutes from Supabase pg_cron (migration 034), since Vercel Hobby
+// Every 15 minutes from Supabase pg_cron (migration 035), since Vercel Hobby
 // crons run once a day. `?backfill=7` or `30` loads past days once.
 export const maxDuration = 300;
 

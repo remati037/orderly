@@ -112,6 +112,13 @@ export function belgradeDate(date: Date | string = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(date));
 }
 
+// Days covered by an instant window, as "YYYY-MM-DD" with an exclusive end, for
+// tables keyed by date. A window ending mid-day ("today so far") includes that day.
+export function belgradeDateRange(start: string, end: string): { from: string; to: string } {
+  const last = new Date(new Date(end).getTime() - 1);
+  return { from: belgradeDate(start), to: belgradeDate(dayBoundsForDate(last).end) };
+}
+
 // "DD.MM" label of the Belgrade calendar day an instant falls on.
 export function belgradeDayLabel(date: Date | string): string {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "2-digit", month: "2-digit" })

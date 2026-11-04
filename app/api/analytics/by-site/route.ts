@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
+import { getMappedSpend } from "@/lib/utils/ad-spend";
+import { belgradeDateRange } from "@/lib/utils/tz";
 import { periodBounds, compareLabel, compareOptions, parseCompare } from "@/lib/utils/kpi-period";
 import {
   fetchPaidOrders, fetchRefunds, summarizeRevenueBy, relativeChange, type RevenueOrder, type RevenueRefund,
@@ -10,7 +12,7 @@ import {
 type Row = RevenueOrder & { site_id: string };
 type RefundRow = RevenueRefund & { site_id: string };
 
-// Revenue, orders, AOV, net profit, fees and share per site for the selected KPI
+// Revenue, orders, AOV, net profit, fees, Facebook ad spend and share per site for the selected KPI
 // period, plus changes vs the comparison window (same filters as /api/stats/kpi).
 // Revenue is net revenue (gross − refunds made in the window), see lib/metrics.
 export async function GET(request: NextRequest) {
@@ -41,6 +43,10 @@ export async function GET(request: NextRequest) {
   if (cur.error || prv.error)
     return NextResponse.json({ error: "Failed to load orders" }, { status: 500 });
 
+  // Ads pay for a site, not a product, so a product filter has no spend to show.
+  const range = belgradeDateRange(current.start, current.end);
+  const adSpend = products?.length ? null : await getMappedSpend(supabase, range.from, range.to, fx.rates);
+
   const sum = (w: { orders: Row[]; refunds: RefundRow[] }) => {
     const bySite = summarizeRevenueBy(w.orders, w.refunds, fx.rates, (o) => o.site_id, (r) => r.site_id);
     return new Map([...bySite].map(([k, s]) => [k, { revenue: s.net, orders: s.orders, netProfit: s.netProfit, fees: s.fees }]));
@@ -70,6 +76,7 @@ export async function GET(request: NextRequest) {
         aov: aovOf(c.revenue, c.orders),
         net_profit: c.netProfit,
         fees: c.fees,
+        ad_spend: adSpend ? adSpend.bySite[s.id] ?? 0 : null,
         share: totalRevenue ? c.revenue / totalRevenue : 0,
         prev_revenue: p.revenue,
         prev_orders: p.orders,
@@ -78,7 +85,7 @@ export async function GET(request: NextRequest) {
         aov_trend: aovChange(c.revenue, c.orders, p.revenue, p.orders),
       };
     })
-    .filter((s) => s.revenue !== 0 || s.prev_revenue !== 0)
+    .filter((s) => s.revenue !== 0 || s.prev_revenue !== 0 || !!s.ad_spend)
     .sort((a, b) => b.revenue - a.revenue);
 
   const mode = parseCompare(compare);
@@ -94,6 +101,7 @@ export async function GET(request: NextRequest) {
     total_aov_trend: aovChange(totalRevenue, cur.orders.length, prevTotalRevenue, prv.orders.length),
     total_net_profit: total(now, "netProfit"),
     total_fees: total(now, "fees"),
+    total_ad_spend: adSpend ? adSpend.total : null,
     sites,
   });
 }

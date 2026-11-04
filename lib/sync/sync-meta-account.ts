@@ -25,7 +25,7 @@ export interface MetaSyncResult {
 
 // Pulls daily campaign-level spend for the given window and upserts it into
 // ad_spend, refreshing campaign names in ad_campaign_map. Mapping (site/product)
-// set by the user is preserved across syncs.
+// set by the user is preserved across syncs; unset sites follow the account.
 export async function syncMetaAccount(
   accountId: string,
   days = 30
@@ -34,7 +34,7 @@ export async function syncMetaAccount(
 
   const { data: account, error: accErr } = await supabase
     .from("ad_accounts")
-    .select("id, fb_account_id, access_token, currency")
+    .select("id, fb_account_id, access_token, currency, site_id")
     .eq("id", accountId)
     .single();
 
@@ -91,6 +91,15 @@ export async function syncMetaAccount(
         { campaign_id, ad_account_id: account.id, campaign_name, updated_at: new Date().toISOString() },
         { onConflict: "campaign_id", ignoreDuplicates: false }
       );
+  }
+
+  // A campaign with no site of its own takes its account's site.
+  if (account.site_id) {
+    await supabase
+      .from("ad_campaign_map")
+      .update({ site_id: account.site_id, updated_at: new Date().toISOString() })
+      .eq("ad_account_id", account.id)
+      .is("site_id", null);
   }
 
   await supabase

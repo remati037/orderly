@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { belgradeDate, belgradeDayLabel, belgradeMonthProgress, customBounds, dayBounds, monthBounds } from "./tz";
+import { belgradeDate, belgradeDateRange, belgradeDayLabel, belgradeMonthProgress, customBounds, dayBounds, monthBounds } from "./tz";
 
 afterEach(() => vi.useRealTimers());
 
@@ -47,5 +47,14 @@ describe("belgradeDate", () => {
   it("gives the Belgrade day of a bound whose UTC date is the day before", () => {
     expect(belgradeDate("2026-10-31T23:00:00.000Z")).toBe("2026-11-01");
     expect(belgradeDate("2026-07-31T22:00:00.000Z")).toBe("2026-08-01");
+  });
+});
+
+describe("belgradeDateRange", () => {
+  it("includes the day a window ends in", () => {
+    expect(belgradeDateRange("2026-11-03T23:00:00.000Z", "2026-11-04T10:30:00.000Z")).toEqual({ from: "2026-11-04", to: "2026-11-05" });
+  });
+  it("stops at a window ending exactly at midnight", () => {
+    expect(belgradeDateRange("2026-10-31T23:00:00.000Z", "2026-11-30T23:00:00.000Z")).toEqual({ from: "2026-11-01", to: "2026-12-01" });
   });
 });
