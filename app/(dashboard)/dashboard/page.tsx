@@ -24,10 +24,10 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
           Dashboard
         </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0", textTransform: "capitalize" }} suppressHydrationWarning>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0", textTransform: "capitalize" }} suppressHydrationWarning>
           {todaySr()}
         </p>
       </div>
@@ -36,22 +36,22 @@ export default function DashboardPage() {
       <DailyGoalTracker />
 
       {/* KPIs (respect the filter) */}
-      <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+      <Suspense fallback={<div style={{ height: 120, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <KPISection />
       </Suspense>
 
       {/* Same figures per site, largest revenue first */}
-      <Suspense fallback={<div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+      <Suspense fallback={<div style={{ height: 120, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <SiteSummaryTable />
       </Suspense>
 
       {/* Revenue split by site — same period/product filter as the KPIs above */}
-      <Suspense fallback={<div style={{ height: 64, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+      <Suspense fallback={<div style={{ height: 64, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <SiteRevenueBar />
       </Suspense>
 
       {/* Live feed — full width, follows the site/product filter */}
-      <Suspense fallback={<div style={{ height: 200, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
+      <Suspense fallback={<div style={{ height: 200, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />}>
         <LiveFeed />
       </Suspense>
 

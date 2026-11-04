@@ -123,18 +123,18 @@ function UploadZone({
           alignItems: "center",
           gap: 10,
           padding: "10px 14px",
-          background: "#F0FDF4",
-          border: "1px solid #BBF7D0",
+          background: "var(--tone-green-1)",
+          border: "1px solid var(--tone-green-3)",
           borderRadius: 8,
         }}>
-          <Volume2Icon style={{ width: 14, height: 14, color: "#16A34A", flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: "#15803D", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <Volume2Icon style={{ width: 14, height: 14, color: "var(--tone-green)", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "var(--tone-green-strong)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {soundFilename ?? "custom.mp3"}
           </span>
           <button
             onClick={() => playPreview(soundUrl, volume)}
             title="Pusti test"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#16A34A", fontWeight: 500 }}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--tone-green)", fontWeight: 500 }}
           >
             <PlayIcon style={{ width: 12, height: 12 }} />
             Test
@@ -142,7 +142,7 @@ function UploadZone({
           <button
             onClick={onRemove}
             title="Ukloni"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, borderRadius: 4, color: "#9CA3AF" }}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, borderRadius: 4, color: "var(--ui-faint)" }}
           >
             <TrashIcon style={{ width: 13, height: 13 }} />
           </button>
@@ -155,12 +155,12 @@ function UploadZone({
         onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
         onClick={() => !uploading && inputRef.current?.click()}
         style={{
-          border: `2px dashed ${dragging ? "#16A34A" : "#E4E4E7"}`,
+          border: `2px dashed ${dragging ? "#16A34A" : "var(--ui-border)"}`,
           borderRadius: 8,
           padding: "16px 12px",
           textAlign: "center",
           cursor: uploading ? "wait" : "pointer",
-          background: dragging ? "#DCFCE7" : "#FAFAFA",
+          background: dragging ? "var(--tone-green-2)" : "var(--ui-sidebar)",
           transition: "all 150ms",
         }}
       >
@@ -171,8 +171,8 @@ function UploadZone({
           style={{ display: "none" }}
           onChange={(e) => handleFiles(e.target.files)}
         />
-        <UploadIcon style={{ width: 18, height: 18, color: "#A1A1AA", margin: "0 auto 6px" }} />
-        <p style={{ fontSize: 12, color: "#A1A1AA", margin: 0 }}>
+        <UploadIcon style={{ width: 18, height: 18, color: "var(--ui-faint)", margin: "0 auto 6px" }} />
+        <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: 0 }}>
           {uploading ? "Učitavanje…" : "Klikni ili prevuci MP3/WAV  ·  max 2 MB"}
         </p>
       </div>
@@ -282,17 +282,17 @@ export default function SoundSettingsPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (loading) {
-    return <div style={{ color: "#A1A1AA", fontSize: 13, padding: "40px 0" }}>Učitavanje…</div>;
+    return <div style={{ color: "var(--ui-faint)", fontSize: 13, padding: "40px 0" }}>Učitavanje…</div>;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 600 }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0 }}>
           Zvučna obaveštenja
         </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
           Zvuk koji svira pri novim porudžbinama. Bucket "sounds" mora biti kreiran u Supabase Storage.
         </p>
       </div>
@@ -302,7 +302,7 @@ export default function SoundSettingsPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <p style={labelStyle}>Globalni zvuk</p>
-            <p style={{ fontSize: 12, color: "#A1A1AA", margin: "2px 0 0" }}>
+            <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "2px 0 0" }}>
               Primenjuje se na sve sajtove koji nemaju sopstveni zvuk.
             </p>
           </div>
@@ -336,19 +336,19 @@ export default function SoundSettingsPage() {
         <div style={{ marginBottom: 4 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <label style={labelStyle}>Jačina zvuka</label>
-            <span style={{ fontSize: 12, color: "#71717A", fontWeight: 600 }}>{global.volume}%</span>
+            <span style={{ fontSize: 12, color: "var(--ui-muted)", fontWeight: 600 }}>{global.volume}%</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <VolumeXIcon style={{ width: 14, height: 14, color: "#A1A1AA", flexShrink: 0 }} />
+            <VolumeXIcon style={{ width: 14, height: 14, color: "var(--ui-faint)", flexShrink: 0 }} />
             <input
               type="range"
               min={0}
               max={100}
               value={global.volume}
               onChange={(e) => setGlobal((p) => ({ ...p, volume: Number(e.target.value) }))}
-              style={{ flex: 1, accentColor: "#16A34A" }}
+              style={{ flex: 1, accentColor: "var(--tone-green)" }}
             />
-            <Volume2Icon style={{ width: 14, height: 14, color: "#A1A1AA", flexShrink: 0 }} />
+            <Volume2Icon style={{ width: 14, height: 14, color: "var(--ui-faint)", flexShrink: 0 }} />
           </div>
         </div>
       </div>
@@ -356,7 +356,7 @@ export default function SoundSettingsPage() {
       {/* ── Trigger statuses ─────────────────────────────────────────────── */}
       <div style={cardStyle}>
         <p style={{ ...labelStyle, marginBottom: 4 }}>Okidač statusa</p>
-        <p style={{ fontSize: 12, color: "#A1A1AA", margin: "0 0 16px" }}>
+        <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "0 0 16px" }}>
           Zvuk svira samo za nove porudžbine sa ovim statusima.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -373,9 +373,9 @@ export default function SoundSettingsPage() {
                       ? p.triggerStatuses.filter((s) => s !== status)
                       : [...p.triggerStatuses, status],
                   }))}
-                  style={{ width: 15, height: 15, accentColor: "#16A34A", cursor: "pointer" }}
+                  style={{ width: 15, height: 15, accentColor: "var(--tone-green)", cursor: "pointer" }}
                 />
-                <span style={{ fontSize: 13, color: "#18181B" }}>{label}</span>
+                <span style={{ fontSize: 13, color: "var(--ui-text)" }}>{label}</span>
               </label>
             );
           })}
@@ -386,7 +386,7 @@ export default function SoundSettingsPage() {
       {sites.length > 0 && (
         <div style={cardStyle}>
           <p style={{ ...labelStyle, marginBottom: 4 }}>Zvuk po sajtu</p>
-          <p style={{ fontSize: 12, color: "#A1A1AA", margin: "0 0 16px" }}>
+          <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "0 0 16px" }}>
             Svaki sajt može da koristi sopstveni zvuk umesto globalnog.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -394,7 +394,7 @@ export default function SoundSettingsPage() {
               const ov = overrides[site.id] ?? { useCustom: false, soundUrl: null, soundFilename: null };
               return (
                 <div key={site.id} style={{
-                  border: "1px solid #E4E4E7",
+                  border: "1px solid var(--ui-border)",
                   borderRadius: 10,
                   padding: "14px 16px",
                   display: "flex",
@@ -408,7 +408,7 @@ export default function SoundSettingsPage() {
                         width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
                         backgroundColor: site.color_hex,
                       }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
                         {site.name}
                       </span>
                     </div>
@@ -420,9 +420,9 @@ export default function SoundSettingsPage() {
                           ...prev,
                           [site.id]: { ...ov, useCustom: e.target.checked },
                         }))}
-                        style={{ width: 14, height: 14, accentColor: "#16A34A", cursor: "pointer" }}
+                        style={{ width: 14, height: 14, accentColor: "var(--tone-green)", cursor: "pointer" }}
                       />
-                      <span style={{ fontSize: 12, color: "#52525B" }}>Prilagođeni zvuk</span>
+                      <span style={{ fontSize: 12, color: "var(--ui-text-3)" }}>Prilagođeni zvuk</span>
                     </label>
                   </div>
 
@@ -456,7 +456,7 @@ export default function SoundSettingsPage() {
             borderRadius: 8,
             fontSize: 13,
             fontWeight: 600,
-            background: saving ? "#D4D4D8" : "#18181B",
+            background: saving ? "var(--ui-border-strong)" : "var(--ui-fill)",
             color: "#fff",
             border: "none",
             cursor: saving ? "not-allowed" : "pointer",
@@ -465,8 +465,8 @@ export default function SoundSettingsPage() {
         >
           {saving ? "Čuvanje…" : "Sačuvaj"}
         </button>
-        {saved  && <span style={{ fontSize: 13, color: "#16A34A", fontWeight: 500 }}>Sačuvano ✓</span>}
-        {error  && <span style={{ fontSize: 13, color: "#DC2626" }}>{error}</span>}
+        {saved  && <span style={{ fontSize: 13, color: "var(--tone-green)", fontWeight: 500 }}>Sačuvano ✓</span>}
+        {error  && <span style={{ fontSize: 13, color: "var(--tone-red)" }}>{error}</span>}
       </div>
     </div>
   );
@@ -475,8 +475,8 @@ export default function SoundSettingsPage() {
 // ── style constants ────────────────────────────────────────────────────────────
 
 const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #E4E4E7",
+  background: "var(--ui-surface)",
+  border: "1px solid var(--ui-border)",
   borderRadius: 12,
   padding: "20px 24px",
 };
@@ -484,7 +484,7 @@ const cardStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
-  color: "#18181B",
+  color: "var(--ui-text)",
   margin: 0,
 };
 
@@ -494,9 +494,9 @@ const testBtnStyle: React.CSSProperties = {
   gap: 5,
   marginTop: 8,
   fontSize: 12,
-  color: "#52525B",
+  color: "var(--ui-text-3)",
   background: "none",
-  border: "1px solid #E4E4E7",
+  border: "1px solid var(--ui-border)",
   borderRadius: 6,
   padding: "4px 10px",
   cursor: "pointer",
@@ -514,7 +514,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
         width: 40,
         height: 22,
         borderRadius: 11,
-        background: value ? "#18181B" : "#E4E4E7",
+        background: value ? "var(--ui-fill)" : "var(--ui-border)",
         border: "none",
         cursor: "pointer",
         position: "relative",
@@ -529,7 +529,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
         width: 16,
         height: 16,
         borderRadius: "50%",
-        background: "#fff",
+        background: "var(--ui-surface)",
         transition: "left 200ms",
         boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
       }} />

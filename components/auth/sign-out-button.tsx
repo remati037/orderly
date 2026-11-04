@@ -22,7 +22,7 @@ export function SignOutButton({ label = "Odjavi se" }: { label?: string }) {
         gap: 7,
         fontSize: 12.5,
         fontWeight: 500,
-        color: "#71717A",
+        color: "var(--ui-muted)",
         background: "transparent",
         border: "none",
         padding: "4px 2px",

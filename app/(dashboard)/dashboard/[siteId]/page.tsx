@@ -21,8 +21,8 @@ function PlatformBadge({ platform }: { platform: string }) {
       padding: "3px 10px",
       borderRadius: 99,
       letterSpacing: "0.02em",
-      background: isThinkific ? "#EDE9FE" : "#F4F4F5",
-      color: isThinkific ? "#4338CA" : "#52525B",
+      background: isThinkific ? "var(--tone-violet-2)" : "var(--ui-subtle)",
+      color: isThinkific ? "var(--tone-indigo-strong)" : "var(--ui-text-3)",
     }}>
       {isThinkific ? "Thinkific" : "WooCommerce"}
     </span>
@@ -31,9 +31,9 @@ function PlatformBadge({ platform }: { platform: string }) {
 
 function ProjectTypeBadge({ type }: { type: string }) {
   const config: Record<string, { bg: string; color: string; label: string }> = {
-    standard:     { bg: "#F4F4F5", color: "#52525B",   label: "Standard" },
-    subscription: { bg: "#F0FDF4", color: "#166534",   label: "Pretplata" },
-    digital:      { bg: "#EEF2FF", color: "#4338CA",   label: "Digital" },
+    standard:     { bg: "var(--ui-subtle)", color: "var(--ui-text-3)",   label: "Standard" },
+    subscription: { bg: "var(--tone-green-1)", color: "var(--tone-green-deep)",   label: "Pretplata" },
+    digital:      { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo-strong)",   label: "Digital" },
   };
   const c = config[type] ?? config.standard;
   return (
@@ -108,13 +108,13 @@ export default async function SiteDashboardPage({ params }: PageProps) {
               background: site.color_hex ?? "#16A34A",
               flexShrink: 0,
             }} />
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
               {site.name}
             </h1>
             <PlatformBadge platform={site.platform} />
             <ProjectTypeBadge type={site.project_type ?? "standard"} />
           </div>
-          <p style={{ fontSize: 12, color: "#A1A1AA", margin: "6px 0 0 22px" }}>
+          <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "6px 0 0 22px" }}>
             {lastSync
               ? `Poslednja sinhronizacija: ${relativeTime(lastSync.created_at)}`
               : "Još uvek nije sinhronizovano"}

@@ -22,8 +22,8 @@ interface Campaign {
 }
 
 const CARD: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #E4E4E7",
+  background: "var(--ui-surface)",
+  border: "1px solid var(--ui-border)",
   borderRadius: 12,
   padding: "20px 22px",
   marginBottom: 16,
@@ -33,7 +33,7 @@ const INPUT: React.CSSProperties = {
   width: "100%",
   fontSize: 13,
   padding: "8px 10px",
-  border: "1px solid #E4E4E7",
+  border: "1px solid var(--ui-border)",
   borderRadius: 7,
   outline: "none",
 };
@@ -41,7 +41,7 @@ const INPUT: React.CSSProperties = {
 const LABEL: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
-  color: "#71717A",
+  color: "var(--ui-muted)",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   display: "block",
@@ -56,9 +56,9 @@ function btn(primary = false): React.CSSProperties {
     borderRadius: 7,
     border: "1px solid",
     cursor: "pointer",
-    background: primary ? "#16A34A" : "#fff",
-    borderColor: primary ? "#16A34A" : "#E4E4E7",
-    color: primary ? "#fff" : "#52525B",
+    background: primary ? "#16A34A" : "var(--ui-surface)",
+    borderColor: primary ? "#16A34A" : "var(--ui-border)",
+    color: primary ? "#fff" : "var(--ui-text-3)",
   };
 }
 
@@ -140,22 +140,22 @@ export default function AdsManager() {
 
   return (
     <div style={{ maxWidth: 920 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 700, color: "#18181B", marginBottom: 4 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--ui-text)", marginBottom: 4 }}>
         Facebook Ads
       </h1>
-      <p style={{ fontSize: 13, color: "#71717A", marginBottom: 20 }}>
+      <p style={{ fontSize: 13, color: "var(--ui-muted)", marginBottom: 20 }}>
         Poveži Meta ad nalog, povuci potrošnju i mapiraj kampanje na proizvode da bi se reklama oduzela od profita.
       </p>
 
       {msg && (
-        <div style={{ ...CARD, padding: "12px 16px", fontSize: 13, color: "#18181B", background: "#F4F4F5" }}>
+        <div style={{ ...CARD, padding: "12px 16px", fontSize: 13, color: "var(--ui-text)", background: "var(--ui-subtle)" }}>
           {msg}
         </div>
       )}
 
       {/* Connect form */}
       <div style={CARD}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 14 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 14 }}>
           Poveži novi nalog
         </span>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -186,17 +186,17 @@ export default function AdsManager() {
       {/* Connected accounts */}
       {accounts.length > 0 && (
         <div style={CARD}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 14 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 14 }}>
             Povezani nalozi
           </span>
           {accounts.map((a) => (
             <div key={a.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "10px 0", borderTop: "1px solid #F4F4F5",
+              padding: "10px 0", borderTop: "1px solid var(--ui-subtle)",
             }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>{a.name}</div>
-                <div style={{ fontSize: 12, color: "#A1A1AA" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>{a.name}</div>
+                <div style={{ fontSize: 12, color: "var(--ui-faint)" }}>
                   {a.fb_account_id} · {a.currency}
                   {a.last_synced_at ? ` · sync ${new Date(a.last_synced_at).toLocaleString("sr-RS")}` : " · nije sinhronizovan"}
                 </div>
@@ -213,10 +213,10 @@ export default function AdsManager() {
       {/* Campaign mapping */}
       {campaigns.length > 0 && (
         <div style={CARD}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 4 }}>
             Mapiranje kampanja
           </span>
-          <p style={{ fontSize: 12, color: "#A1A1AA", marginBottom: 14 }}>
+          <p style={{ fontSize: 12, color: "var(--ui-faint)", marginBottom: 14 }}>
             Izaberi sajt i (opciono) proizvod za svaku kampanju. Bez proizvoda, potrošnja se vezuje za ceo sajt.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 150px 170px", gap: 10, alignItems: "center" }}>
@@ -240,10 +240,10 @@ function Row({ c, sites, productsBySite, onSave }: {
   const select: React.CSSProperties = { ...INPUT, padding: "6px 8px", fontSize: 12 };
   return (
     <>
-      <div style={{ fontSize: 13, color: "#18181B", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div style={{ fontSize: 13, color: "var(--ui-text)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {c.campaign_name}
       </div>
-      <div style={{ fontSize: 12, color: "#71717A", textAlign: "right", whiteSpace: "nowrap" }}>
+      <div style={{ fontSize: 12, color: "var(--ui-muted)", textAlign: "right", whiteSpace: "nowrap" }}>
         {c.spend.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </div>
       <select style={select} value={c.site_id ?? ""}

@@ -111,7 +111,7 @@ export default function GeneralSettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ color: "#A1A1AA", fontSize: 13, padding: "40px 0" }}>
+      <div style={{ color: "var(--ui-faint)", fontSize: 13, padding: "40px 0" }}>
         Učitavanje…
       </div>
     );
@@ -121,18 +121,18 @@ export default function GeneralSettingsPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 560 }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0 }}>
           Opšta podešavanja
         </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
           Osnovna valuta i kursevi za prikaz prihoda.
         </p>
       </div>
 
       {/* Card */}
       <div style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 12,
         padding: "24px",
         display: "flex",
@@ -142,7 +142,7 @@ export default function GeneralSettingsPage() {
 
         {/* Base currency */}
         <div>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#18181B", marginBottom: 8 }}>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ui-text)", marginBottom: 8 }}>
             Osnovna valuta
           </label>
           <div style={{ display: "flex", gap: 8 }}>
@@ -155,9 +155,9 @@ export default function GeneralSettingsPage() {
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 600,
-                  border: baseCurrency === c ? "none" : "1px solid #E4E4E7",
-                  background: baseCurrency === c ? "#18181B" : "#fff",
-                  color: baseCurrency === c ? "#fff" : "#52525B",
+                  border: baseCurrency === c ? "none" : "1px solid var(--ui-border)",
+                  background: baseCurrency === c ? "var(--ui-fill)" : "var(--ui-surface)",
+                  color: baseCurrency === c ? "#fff" : "var(--ui-text-3)",
                   cursor: "pointer",
                   transition: "all 120ms",
                 }}
@@ -171,10 +171,10 @@ export default function GeneralSettingsPage() {
         {/* Exchange rates */}
         <div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
               Kursevi
             </label>
-            <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+            <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>
               Kursevi se ažuriraju ručno
             </span>
           </div>
@@ -186,15 +186,15 @@ export default function GeneralSettingsPage() {
               alignItems: "center",
               gap: 12,
               padding: "10px 14px",
-              background: "#F4F4F5",
+              background: "var(--ui-subtle)",
               borderRadius: 8,
               fontSize: 13,
             }}>
-              <span style={{ color: "#A1A1AA", minWidth: 160 }}>
+              <span style={{ color: "var(--ui-faint)", minWidth: 160 }}>
                 {CURRENCY_LABELS[baseCurrency]}
               </span>
-              <span style={{ fontWeight: 700, color: "#18181B" }}>= 1</span>
-              <span style={{ fontSize: 11, color: "#A1A1AA" }}>(osnovna)</span>
+              <span style={{ fontWeight: 700, color: "var(--ui-text)" }}>= 1</span>
+              <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>(osnovna)</span>
             </div>
 
             {rateRows.map((row) => (
@@ -203,13 +203,13 @@ export default function GeneralSettingsPage() {
                 alignItems: "center",
                 gap: 12,
                 padding: "10px 14px",
-                border: "1px solid #E4E4E7",
+                border: "1px solid var(--ui-border)",
                 borderRadius: 8,
               }}>
-                <span style={{ fontSize: 13, color: "#52525B", minWidth: 160 }}>
+                <span style={{ fontSize: 13, color: "var(--ui-text-3)", minWidth: 160 }}>
                   {row.label}
                 </span>
-                <span style={{ fontSize: 13, color: "#A1A1AA" }}>= </span>
+                <span style={{ fontSize: 13, color: "var(--ui-faint)" }}>= </span>
                 <input
                   type="number"
                   step="0.00001"
@@ -220,14 +220,14 @@ export default function GeneralSettingsPage() {
                   style={{
                     width: 120,
                     padding: "5px 10px",
-                    border: "1px solid #E4E4E7",
+                    border: "1px solid var(--ui-border)",
                     borderRadius: 6,
                     fontSize: 13,
                     outline: "none",
-                    color: "#18181B",
+                    color: "var(--ui-text)",
                   }}
                 />
-                <span style={{ fontSize: 12, color: "#A1A1AA" }}>
+                <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>
                   {baseCurrency}
                 </span>
               </div>
@@ -245,7 +245,7 @@ export default function GeneralSettingsPage() {
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              background: saving ? "#D4D4D8" : "#18181B",
+              background: saving ? "var(--ui-border-strong)" : "var(--ui-fill)",
               color: "#fff",
               border: "none",
               cursor: saving ? "not-allowed" : "pointer",
@@ -255,12 +255,12 @@ export default function GeneralSettingsPage() {
             {saving ? "Čuvanje…" : "Sačuvaj"}
           </button>
           {saved && (
-            <span style={{ fontSize: 13, color: "#16A34A", fontWeight: 500 }}>
+            <span style={{ fontSize: 13, color: "var(--tone-green)", fontWeight: 500 }}>
               Sačuvano
             </span>
           )}
           {error && (
-            <span style={{ fontSize: 13, color: "#DC2626" }}>{error}</span>
+            <span style={{ fontSize: 13, color: "var(--tone-red)" }}>{error}</span>
           )}
         </div>
       </div>

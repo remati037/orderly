@@ -21,8 +21,8 @@ interface Site {
 
 const ACTIVE_STYLE: React.CSSProperties = {
   borderColor: "#16A34A",
-  color: "#16A34A",
-  background: "#DCFCE7",
+  color: "var(--tone-green)",
+  background: "var(--tone-green-2)",
 };
 
 const PRESETS = [
@@ -106,10 +106,10 @@ function CompareToggle({
     <div
       style={{
         display: "inline-flex",
-        border: "1px solid #E4E4E7",
+        border: "1px solid var(--ui-border)",
         borderRadius: 8,
         padding: 2,
-        background: "#fff",
+        background: "var(--ui-surface)",
         gap: 2,
       }}
     >
@@ -126,8 +126,8 @@ function CompareToggle({
               borderRadius: 6,
               border: "none",
               cursor: "pointer",
-              background: active ? "#DCFCE7" : "transparent",
-              color: active ? "#15803D" : "#71717A",
+              background: active ? "var(--tone-green-2)" : "transparent",
+              color: active ? "var(--tone-green-strong)" : "var(--ui-muted)",
               transition: "background 120ms, color 120ms",
             }}
           >
@@ -509,7 +509,7 @@ export function KpiFilters() {
         <Button
           variant="ghost"
           onClick={f.reset}
-          style={{ fontSize: 13, color: "#71717A", marginLeft: "auto" }}
+          style={{ fontSize: 13, color: "var(--ui-muted)", marginLeft: "auto" }}
         >
           <XIcon className="size-3.5" />
           Resetuj

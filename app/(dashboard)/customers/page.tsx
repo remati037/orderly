@@ -43,7 +43,7 @@ function initials(name: string | null, email: string | null): string {
 }
 
 function avatarColor(str: string): string {
-  const colors = ["#16A34A", "#7C3AED", "#DB2777", "#0891B2", "#059669", "#D97706", "#DC2626"];
+  const colors = ["var(--tone-green)", "var(--tone-violet)", "var(--tone-pink)", "var(--tone-cyan)", "var(--tone-emerald)", "var(--tone-amber)", "var(--tone-red)"];
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
@@ -63,9 +63,9 @@ function relativeTime(dateStr: string | null): string {
 const SEGMENT_LABEL: Record<Customer["segment"], string> = { VIP: "VIP", Regular: "Redovan", New: "Nov" };
 
 const SEGMENT_STYLE: Record<string, { bg: string; color: string }> = {
-  VIP:     { bg: "#FFF7ED", color: "#C2410C" },
-  Regular: { bg: "#F0FDF4", color: "#166534" },
-  New:     { bg: "#EEF2FF", color: "#4338CA" },
+  VIP:     { bg: "var(--tone-orange-1)", color: "var(--tone-orange-strong)" },
+  Regular: { bg: "var(--tone-green-1)", color: "var(--tone-green-deep)" },
+  New:     { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo-strong)" },
 };
 
 // ── Header cell ───────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function SortHeader({
       style={{
         padding: "10px 16px",
         fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
-        color: active ? "#18181B" : "#A1A1AA",
+        color: active ? "var(--ui-text)" : "var(--ui-faint)",
         cursor: "pointer", userSelect: "none", whiteSpace: "nowrap",
         textAlign: "left",
       }}
@@ -162,10 +162,10 @@ export default function CustomersPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0 }}>
             Kupci
           </h1>
-          <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+          <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
             {loading ? "Učitavanje..." : `${total.toLocaleString("sr-RS")} ${query ? "pronađeno" : "kupaca"}`}
           </p>
         </div>
@@ -175,18 +175,18 @@ export default function CustomersPage() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Ime, email ili grad"
           aria-label="Pretraga kupaca"
-          className="h-8 w-full max-w-[260px] rounded-md border border-input bg-white px-3 text-[13px] outline-none focus:border-ring"
+          className="h-8 w-full max-w-[260px] rounded-md border border-input bg-[var(--ui-surface)] px-3 text-[13px] outline-none focus:border-ring"
         />
       </div>
 
       {/* Table */}
-      <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: "64px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+          <div style={{ padding: "64px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
             Učitavanje...
           </div>
         ) : sorted.length === 0 ? (
-          <div style={{ padding: "64px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <div style={{ padding: "64px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <UsersIcon style={{ width: 36, height: 36, opacity: 0.3 }} />
             {query ? `Nema kupaca za „${query}”` : "Nema kupaca — porudžbine će se pojaviti ovde nakon sinhronizacije"}
           </div>
@@ -194,16 +194,16 @@ export default function CustomersPage() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #F4F4F5" }}>
-                  <th style={{ padding: "10px 20px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
+                <tr style={{ borderBottom: "1px solid var(--ui-subtle)" }}>
+                  <th style={{ padding: "10px 20px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ui-faint)", textAlign: "left" }}>
                     Kupac
                   </th>
                   <SortHeader label="Potrošeno" sortKey="total_spent" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
                   <SortHeader label="Porudžbine" sortKey="order_count" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
-                  <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
+                  <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ui-faint)", textAlign: "left" }}>
                     LTV/mes
                   </th>
-                  <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
+                  <th style={{ padding: "10px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ui-faint)", textAlign: "left" }}>
                     Sajt
                   </th>
                   <SortHeader label="Poslednja" sortKey="last_order_at" currentSort={sortKey} currentAsc={sortAsc} onSort={handleSort} />
@@ -220,8 +220,8 @@ export default function CustomersPage() {
                     <tr
                       key={c.id}
                       onClick={() => router.push(`/customers/${c.id}`)}
-                      style={{ cursor: "pointer", borderBottom: "1px solid #F4F4F5", transition: "background 80ms" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#FAFAFA")}
+                      style={{ cursor: "pointer", borderBottom: "1px solid var(--ui-subtle)", transition: "background 80ms" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ui-sidebar)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       {/* Avatar + name + email */}
@@ -236,10 +236,10 @@ export default function CustomersPage() {
                             {init}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: "#18181B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {c.name || "—"}
                             </p>
-                            <p style={{ fontSize: 11, color: "#A1A1AA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <p style={{ fontSize: 11, color: "var(--ui-faint)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {c.email}
                             </p>
                           </div>
@@ -253,18 +253,18 @@ export default function CustomersPage() {
                       </td>
 
                       {/* Total spent */}
-                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "#18181B", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "var(--ui-text)", whiteSpace: "nowrap" }}>
                         {formatRSD(c.total_spent ?? 0)}
                       </td>
 
                       {/* Order count */}
-                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 13, color: "#52525B" }}>
+                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 13, color: "var(--ui-text-3)" }}>
                         {c.order_count ?? 0}
                       </td>
 
                       {/* LTV score */}
-                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 13, color: "#52525B", whiteSpace: "nowrap" }}>
-                        {formatRSD(c.ltv_score)}<span style={{ fontSize: 11, color: "#A1A1AA" }}>/mes</span>
+                      <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 13, color: "var(--ui-text-3)", whiteSpace: "nowrap" }}>
+                        {formatRSD(c.ltv_score)}<span style={{ fontSize: 11, color: "var(--ui-faint)" }}>/mes</span>
                       </td>
 
                       {/* Primary site */}
@@ -272,15 +272,15 @@ export default function CustomersPage() {
                         {c.primary_site ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.primary_site.color, flexShrink: 0, display: "inline-block" }} />
-                            <span style={{ fontSize: 12, color: "#52525B" }}>{c.primary_site.name}</span>
+                            <span style={{ fontSize: 12, color: "var(--ui-text-3)" }}>{c.primary_site.name}</span>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 12, color: "#A1A1AA" }}>—</span>
+                          <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>—</span>
                         )}
                       </td>
 
                       {/* Last order */}
-                      <td style={{ padding: "10px 20px 10px 16px", verticalAlign: "middle", fontSize: 12, color: "#A1A1AA", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "10px 20px 10px 16px", verticalAlign: "middle", fontSize: 12, color: "var(--ui-faint)", whiteSpace: "nowrap" }}>
                         {relativeTime(c.last_order_at)}
                       </td>
                     </tr>
@@ -293,14 +293,14 @@ export default function CustomersPage() {
       </div>
 
       {pageCount > 1 && (
-        <nav aria-label="Stranice" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "#71717A" }}>
+        <nav aria-label="Stranice" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "var(--ui-muted)" }}>
           <span>Strana {page} od {pageCount}</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="button"
               onClick={() => setPage((p) => p - 1)}
               disabled={page <= 1 || loading}
-              className="h-8 rounded-md border border-input bg-white px-3 disabled:opacity-40"
+              className="h-8 rounded-md border border-input bg-[var(--ui-surface)] px-3 disabled:opacity-40"
             >
               ← Nazad
             </button>
@@ -308,7 +308,7 @@ export default function CustomersPage() {
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= pageCount || loading}
-              className="h-8 rounded-md border border-input bg-white px-3 disabled:opacity-40"
+              className="h-8 rounded-md border border-input bg-[var(--ui-surface)] px-3 disabled:opacity-40"
             >
               Napred →
             </button>

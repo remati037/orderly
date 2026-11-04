@@ -37,13 +37,13 @@ interface BySite {
 }
 
 const th: React.CSSProperties = {
-  padding: "0 10px 6px", fontSize: 11, fontWeight: 500, color: "#A1A1AA",
-  textAlign: "right", whiteSpace: "nowrap", borderBottom: "1px solid #F4F4F5",
+  padding: "0 10px 6px", fontSize: 11, fontWeight: 500, color: "var(--ui-faint)",
+  textAlign: "right", whiteSpace: "nowrap", borderBottom: "1px solid var(--ui-subtle)",
 };
 // Headers of columns with a change box sit over the figure, not over the box.
 const thWithChange: React.CSSProperties = { ...th, paddingRight: 54 };
 const td: React.CSSProperties = {
-  padding: "6px 10px", fontSize: 12.5, color: "#18181B", textAlign: "right",
+  padding: "6px 10px", fontSize: 12.5, color: "var(--ui-text)", textAlign: "right",
   whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums",
 };
 
@@ -54,7 +54,7 @@ function Change({ value, label }: { value: number | null; label: string }) {
   if (value === null) return <span aria-hidden style={changeBox} />;
   const rounded = Math.round(Math.abs(value) * 100);
   const sign = rounded === 0 ? "" : value > 0 ? "+" : "−";
-  const color = rounded === 0 ? "#A1A1AA" : value > 0 ? "#15803D" : "#B91C1C";
+  const color = rounded === 0 ? "var(--ui-faint)" : value > 0 ? "var(--tone-green-strong)" : "var(--tone-red-strong)";
   return (
     <span title={`u odnosu na ${label}`} style={{ ...changeBox, color }}>
       {rounded > 999 ? `${sign}>999%` : `${sign}${rounded}%`}
@@ -87,7 +87,7 @@ export function SiteSummaryTable() {
   if (sp.get("kpi_site")) return null;
   if (error && !data) return <LoadError onRetry={() => mutate()} compact />;
   if (isLoading && !data) {
-    return <div style={{ height: 120, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />;
+    return <div style={{ height: 120, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />;
   }
   if (!data?.sites.length) return null;
 
@@ -95,7 +95,7 @@ export function SiteSummaryTable() {
   const label = data.compare_label;
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, padding: "14px 8px 8px" }}>
+    <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12, padding: "14px 8px 8px" }}>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
           <thead>
@@ -111,14 +111,14 @@ export function SiteSummaryTable() {
           <tbody>
             {data.sites.map((s) => {
               const idle = s.orders === 0 && s.revenue === 0;
-              const cell = idle ? { ...td, color: "#A1A1AA" } : td;
+              const cell = idle ? { ...td, color: "var(--ui-faint)" } : td;
               const href = `/dashboard/${s.site_id}`;
               return (
                 <tr
                   key={s.site_id}
                   onClick={() => router.push(href)}
-                  className="cursor-pointer hover:bg-zinc-50"
-                  style={{ borderBottom: "1px solid #F4F4F5" }}
+                  className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-[var(--ui-subtle)]"
+                  style={{ borderBottom: "1px solid var(--ui-subtle)" }}
                 >
                   <td style={{ ...cell, textAlign: "left" }}>
                     <span aria-hidden style={{
@@ -129,7 +129,7 @@ export function SiteSummaryTable() {
                       {s.name}
                     </Link>
                   </td>
-                  <td style={{ ...cell, fontWeight: 600, color: s.revenue < 0 ? "#B91C1C" : cell.color }}>
+                  <td style={{ ...cell, fontWeight: 600, color: s.revenue < 0 ? "var(--tone-red-strong)" : cell.color }}>
                     {formatCurrency(s.revenue, cur)}
                     <Change value={s.trend} label={label} />
                   </td>

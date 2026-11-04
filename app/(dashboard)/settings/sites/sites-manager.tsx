@@ -659,7 +659,7 @@ export default function SitesManager() {
 
           <div className="flex flex-col gap-4 py-2">
             {/* Warning */}
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-[var(--tone-amber-1)] dark:text-amber-200">
               <AlertTriangleIcon className="size-4 shrink-0 mt-0.5" />
               <span>
                 Ovo će obrisati postojeće porudžbine za ovaj sajt u izabranom periodu i ponovo ih učitati.

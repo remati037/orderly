@@ -37,11 +37,11 @@ interface CohortRow {
 // ── Cohort cell ───────────────────────────────────────────────────────────────
 
 function cohortCellStyle(pct: number | null): React.CSSProperties {
-  if (pct === null || pct === 0) return { background: "#F9FAFB", color: "#A1A1AA" };
+  if (pct === null || pct === 0) return { background: "var(--ui-canvas)", color: "var(--ui-faint)" };
   if (pct >= 60) return { background: "#15803D", color: "#fff" };
   if (pct >= 40) return { background: "#22C55E", color: "#fff" };
-  if (pct >= 20) return { background: "#BBF7D0", color: "#166534" };
-  return { background: "#DCFCE7", color: "#166534" };
+  if (pct >= 20) return { background: "var(--tone-green-3)", color: "var(--tone-green-deep)" };
+  return { background: "var(--tone-green-2)", color: "var(--tone-green-deep)" };
 }
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
@@ -54,10 +54,10 @@ function CustomTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E4E4E7", borderRadius: 8,
+      background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 8,
       padding: "10px 14px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
-      <p style={{ margin: "0 0 6px", fontWeight: 600, color: "#18181B" }}>{label}</p>
+      <p style={{ margin: "0 0 6px", fontWeight: 600, color: "var(--ui-text)" }}>{label}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ margin: "2px 0", color: p.color }}>
           <span style={{ fontWeight: 600 }}>{p.name}:</span> {formatRSD(p.value)}
@@ -139,7 +139,7 @@ export function ForecastingSection() {
   const labelInterval = Math.floor(chartData.length / 8);
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12, overflow: "hidden" }}>
 
       {/* Header / toggle */}
       <button
@@ -152,7 +152,7 @@ export function ForecastingSection() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
             Prognoza prihoda
           </span>
           {/* Beta badge */}
@@ -160,7 +160,7 @@ export function ForecastingSection() {
             display: "inline-flex", alignItems: "center", gap: 4,
             fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
             padding: "2px 7px", borderRadius: 99,
-            background: "#F3E8FF", color: "#7C3AED",
+            background: "var(--tone-violet-1)", color: "var(--tone-violet)",
             textTransform: "uppercase",
           }}>
             <FlaskConicalIcon style={{ width: 10, height: 10 }} />
@@ -168,17 +168,17 @@ export function ForecastingSection() {
           </span>
         </div>
         {open ? (
-          <ChevronUpIcon style={{ width: 16, height: 16, color: "#A1A1AA" }} />
+          <ChevronUpIcon style={{ width: 16, height: 16, color: "var(--ui-faint)" }} />
         ) : (
-          <ChevronDownIcon style={{ width: 16, height: 16, color: "#A1A1AA" }} />
+          <ChevronDownIcon style={{ width: 16, height: 16, color: "var(--ui-faint)" }} />
         )}
       </button>
 
       {open && (
-        <div style={{ borderTop: "1px solid #F4F4F5", padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ borderTop: "1px solid var(--ui-subtle)", padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {loading ? (
-            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#A1A1AA", fontSize: 13 }}>
+            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ui-faint)", fontSize: 13 }}>
               Računam prognozu…
             </div>
           ) : (
@@ -187,18 +187,18 @@ export function ForecastingSection() {
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
                 {forecast && (
                   <div style={{
-                    background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10,
+                    background: "var(--tone-green-1)", border: "1px solid var(--tone-green-3)", borderRadius: 10,
                     padding: "14px 18px", flexShrink: 0,
                   }}>
-                    <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "#166534", margin: 0 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--tone-green-deep)", margin: 0 }}>
                       Projektovani prihod ovog meseca
                     </p>
-                    <p style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: "#15803D", margin: "4px 0 0", lineHeight: 1.2 }}>
+                    <p style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--tone-green-strong)", margin: "4px 0 0", lineHeight: 1.2 }}>
                       {formatRSD(forecast.projected_month_revenue)}
                     </p>
                   </div>
                 )}
-                <p style={{ fontSize: 12, color: "#A1A1AA", margin: 0, maxWidth: 420, lineHeight: 1.6, paddingTop: 4 }}>
+                <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: 0, maxWidth: 420, lineHeight: 1.6, paddingTop: 4 }}>
                   ⚠️ Prognoza je okvirna i bazirana na istorijskim trendovima (Holt exponential smoothing, α=0.3, β=0.1).
                   Ne uzima u obzir sezonalnost niti spoljne faktore.
                 </p>
@@ -206,21 +206,21 @@ export function ForecastingSection() {
 
               {/* Forecast chart */}
               <div>
-                <p style={{ fontSize: 12, color: "#71717A", margin: "0 0 12px" }}>
+                <p style={{ fontSize: 12, color: "var(--ui-muted)", margin: "0 0 12px" }}>
                   Poslednih 60 dana (puna linija) + prognoza za sledećih 30 dana (isprekidana linija)
                 </p>
                 <ResponsiveContainer width="100%" height={260}>
                   <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="#F4F4F5" />
+                    <CartesianGrid vertical={false} stroke="var(--ui-subtle)" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: "#A1A1AA" }}
+                      tick={{ fontSize: 10, fill: "var(--ui-faint)" }}
                       axisLine={false}
                       tickLine={false}
                       interval={labelInterval}
                     />
                     <YAxis
-                      tick={{ fontSize: 10, fill: "#A1A1AA" }}
+                      tick={{ fontSize: 10, fill: "var(--ui-faint)" }}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(v) => `${Math.round(v / 1000)}k`}
@@ -232,7 +232,7 @@ export function ForecastingSection() {
                       type="monotone"
                       dataKey="actual"
                       name="Stvarni prihod"
-                      stroke="#16A34A"
+                      stroke="var(--tone-green)"
                       strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 3 }}
@@ -242,7 +242,7 @@ export function ForecastingSection() {
                       type="monotone"
                       dataKey="forecast"
                       name="Prognoza"
-                      stroke="#16A34A"
+                      stroke="var(--tone-green)"
                       strokeWidth={2}
                       strokeDasharray="6 4"
                       strokeOpacity={0.55}
@@ -257,7 +257,7 @@ export function ForecastingSection() {
               {/* Cohort retention table */}
               {cohort.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#18181B", margin: "0 0 10px" }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)", margin: "0 0 10px" }}>
                     Cohort retencija kupaca
                   </p>
                   <div style={{ overflowX: "auto" }}>
@@ -268,7 +268,7 @@ export function ForecastingSection() {
                             <th key={h} style={{
                               padding: "8px 14px", textAlign: h === "Veličina" || h.startsWith("Mesec") ? "center" : "left",
                               fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase",
-                              color: "#A1A1AA", borderBottom: "1px solid #F4F4F5", whiteSpace: "nowrap",
+                              color: "var(--ui-faint)", borderBottom: "1px solid var(--ui-subtle)", whiteSpace: "nowrap",
                             }}>
                               {h}
                             </th>
@@ -277,11 +277,11 @@ export function ForecastingSection() {
                       </thead>
                       <tbody>
                         {cohort.map((row) => (
-                          <tr key={row.cohort_month} style={{ borderBottom: "1px solid #F4F4F5" }}>
-                            <td style={{ padding: "8px 14px", fontWeight: 500, color: "#18181B" }}>
+                          <tr key={row.cohort_month} style={{ borderBottom: "1px solid var(--ui-subtle)" }}>
+                            <td style={{ padding: "8px 14px", fontWeight: 500, color: "var(--ui-text)" }}>
                               {row.month}
                             </td>
-                            <td style={{ padding: "8px 14px", textAlign: "center", color: "#52525B" }}>
+                            <td style={{ padding: "8px 14px", textAlign: "center", color: "var(--ui-text-3)" }}>
                               {row.size}
                             </td>
                             {([row.m1, row.m2, row.m3] as (number | null)[]).map((pct, i) => (
@@ -303,7 +303,7 @@ export function ForecastingSection() {
                       </tbody>
                     </table>
                   </div>
-                  <p style={{ fontSize: 11, color: "#A1A1AA", margin: "8px 0 0" }}>
+                  <p style={{ fontSize: 11, color: "var(--ui-faint)", margin: "8px 0 0" }}>
                     % kupaca iz kohorte koji su naručili u narednim mesecima · Tamnije = viša retencija
                   </p>
                 </div>

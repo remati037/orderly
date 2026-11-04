@@ -71,12 +71,12 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
   if ((isLoading && !kpiData) || goalLoading) {
     return (
       <div style={{
-        background: "#fff", border: "1px solid #E4E4E7", borderRadius: 10,
+        background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 10,
         padding: "12px 16px", display: "flex", alignItems: "center", gap: 16,
       }}>
-        <div className="animate-pulse h-3 w-28 rounded-md bg-zinc-100" />
-        <div className="animate-pulse h-2 flex-1 rounded-full bg-zinc-100" />
-        <div className="animate-pulse h-3 w-16 rounded-md bg-zinc-100" />
+        <div className="animate-pulse h-3 w-28 rounded-md bg-[var(--ui-subtle)]" />
+        <div className="animate-pulse h-2 flex-1 rounded-full bg-[var(--ui-subtle)]" />
+        <div className="animate-pulse h-3 w-16 rounded-md bg-[var(--ui-subtle)]" />
       </div>
     );
   }
@@ -84,15 +84,15 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
   if (goal === null) {
     return (
       <div style={{
-        background: "#fff", border: "1px solid #E4E4E7", borderRadius: 10,
+        background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 10,
         padding: "12px 16px", display: "flex", alignItems: "center", gap: 10,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#71717A", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-muted)", flexShrink: 0 }}>
           Dnevni cilj
         </span>
-        <span style={{ fontSize: 12, color: "#A1A1AA" }}>
+        <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>
           Podesi cilj u{" "}
-          <Link href="/settings/sites" style={{ color: "#16A34A", textDecoration: "underline" }}>
+          <Link href="/settings/sites" style={{ color: "var(--tone-green)", textDecoration: "underline" }}>
             Podešavanjima
           </Link>
         </span>
@@ -104,8 +104,8 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
     <>
       <style>{STYLES}</style>
       <div style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 10,
         padding: "12px 16px",
         display: "flex",
@@ -113,12 +113,12 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
         gap: 16,
       }}>
         {/* label */}
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#71717A", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
           Dnevni cilj
         </span>
 
         {/* bar */}
-        <div style={{ flex: 1, height: 6, borderRadius: 99, background: "#F4F4F5", overflow: "hidden", minWidth: 60 }}>
+        <div style={{ flex: 1, height: 6, borderRadius: 99, background: "var(--ui-subtle)", overflow: "hidden", minWidth: 60 }}>
           <div
             style={{
               height: "100%",
@@ -132,18 +132,18 @@ export function DailyGoalTracker({ siteId }: DailyGoalTrackerProps) {
         </div>
 
         {/* values */}
-        <span style={{ fontSize: 12, color: "#52525B", whiteSpace: "nowrap", flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, color: reached ? "#16A34A" : "#18181B" }}>
+        <span style={{ fontSize: 12, color: "var(--ui-text-3)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span style={{ fontWeight: 700, color: reached ? "var(--tone-green)" : "var(--ui-text)" }}>
             {formatRSD(current)}
           </span>
-          <span style={{ color: "#A1A1AA" }}> / {formatRSD(goal)}</span>
+          <span style={{ color: "var(--ui-faint)" }}> / {formatRSD(goal)}</span>
         </span>
 
         {/* status text */}
         <span style={{
           fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, flexShrink: 0,
-          background: reached ? "#F0FDF4" : "#DCFCE7",
-          color: reached ? "#16A34A" : "#16A34A",
+          background: reached ? "var(--tone-green-1)" : "var(--tone-green-2)",
+          color: reached ? "var(--tone-green)" : "var(--tone-green)",
           whiteSpace: "nowrap",
         }}>
           {reached

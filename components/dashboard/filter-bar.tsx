@@ -29,8 +29,8 @@ const ALL = "__all";
 
 const ACTIVE_STYLE: React.CSSProperties = {
   borderColor: "#16A34A",
-  color: "#16A34A",
-  background: "#DCFCE7",
+  color: "var(--tone-green)",
+  background: "var(--tone-green-2)",
 };
 
 const DATE_PRESETS = [
@@ -152,7 +152,7 @@ function SearchInput({ value, onChange }: { value: string; onChange: (v: string)
     <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 300 }}>
       <SearchIcon
         className="size-3.5"
-        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#A1A1AA" }}
+        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--ui-faint)" }}
         aria-hidden
       />
       <input
@@ -413,8 +413,8 @@ export function FilterBar() {
     >
       <div
         style={{
-          background: "rgba(255,255,255,0.95)",
-          border: "1px solid #E4E4E7",
+          background: "var(--ui-surface-glass)",
+          border: "1px solid var(--ui-border)",
           borderRadius: 10,
           padding: "10px 14px",
           display: "flex",
@@ -460,7 +460,7 @@ export function FilterBar() {
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           {f.hasActive && (
-            <Button variant="ghost" onClick={f.reset} style={{ fontSize: 13, color: "#71717A" }}>
+            <Button variant="ghost" onClick={f.reset} style={{ fontSize: 13, color: "var(--ui-muted)" }}>
               <XIcon className="size-3.5" />
               Resetuj filtere
             </Button>

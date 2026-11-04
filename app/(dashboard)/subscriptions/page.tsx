@@ -62,10 +62,10 @@ function fullDate(iso: string): string {
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
-  active:    { bg: "#F0FDF4", color: "#16A34A", label: "Aktivan" },
-  cancelled: { bg: "#F4F4F5", color: "#71717A", label: "Otkazan" },
-  paused:    { bg: "#FFFBEB", color: "#D97706", label: "Pauziran" },
-  churned:   { bg: "#FFF1F2", color: "#E11D48", label: "Churned" },
+  active:    { bg: "var(--tone-green-1)", color: "var(--tone-green)", label: "Aktivan" },
+  cancelled: { bg: "var(--ui-subtle)", color: "var(--ui-muted)", label: "Otkazan" },
+  paused:    { bg: "var(--tone-amber-1)", color: "var(--tone-amber)", label: "Pauziran" },
+  churned:   { bg: "var(--tone-rose-1)", color: "var(--tone-rose)", label: "Churned" },
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -77,18 +77,18 @@ function KpiCard({
 }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12,
+      background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12,
       padding: "18px 20px", flex: 1, minWidth: 0,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "#71717A" }}>
+        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ui-muted)" }}>
           {label}
         </span>
-        <Icon style={{ width: 15, height: 15, color: "#A1A1AA", flexShrink: 0 }} />
+        <Icon style={{ width: 15, height: 15, color: "var(--ui-faint)", flexShrink: 0 }} />
       </div>
       <span style={{
         display: "block", fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em",
-        color: positive === false ? "#DC2626" : "#18181B",
+        color: positive === false ? "var(--tone-red)" : "var(--ui-text)",
         marginTop: 6, lineHeight: 1.2,
       }}>
         {value}
@@ -104,9 +104,9 @@ function CustomTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.[0]) return null;
   return (
-    <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 8, padding: "10px 14px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-      <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#18181B" }}>{label}</p>
-      <p style={{ margin: 0, color: "#16A34A" }}>
+    <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 8, padding: "10px 14px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+      <p style={{ margin: "0 0 4px", fontWeight: 600, color: "var(--ui-text)" }}>{label}</p>
+      <p style={{ margin: 0, color: "var(--tone-green)" }}>
         <span style={{ fontWeight: 600 }}>MRR: </span>{formatRSD(payload[0].value)}
       </p>
     </div>
@@ -194,10 +194,10 @@ export default function SubscriptionsPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0 }}>
             Pretplate
           </h1>
-          <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+          <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
             MRR, pretplatnici i churn
           </p>
         </div>
@@ -214,20 +214,20 @@ export default function SubscriptionsPage() {
             {importing ? "Uvoz u toku…" : "Uvezi iz Stripe-a"}
           </button>
           {importMsg && (
-            <span style={{ fontSize: 12, color: "#71717A" }}>{importMsg}</span>
+            <span style={{ fontSize: 12, color: "var(--ui-muted)" }}>{importMsg}</span>
           )}
         </div>
       </div>
 
       {noSubscriptionSites ? (
         <div style={{
-          background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12,
+          background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12,
           padding: "64px 20px", textAlign: "center",
         }}>
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#18181B", margin: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ui-text)", margin: 0 }}>
             Nema sajtova sa pretplatama
           </p>
-          <p style={{ fontSize: 13, color: "#A1A1AA", margin: "8px 0 0" }}>
+          <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "8px 0 0" }}>
             Podesi tip projekta na „Pretplata” u podešavanjima sajta da bi video statistike ovde
           </p>
         </div>
@@ -265,12 +265,12 @@ export default function SubscriptionsPage() {
           </div>
 
           {/* MRR chart */}
-          <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, padding: "18px 20px" }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#18181B", margin: "0 0 16px" }}>
+          <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12, padding: "18px 20px" }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)", margin: "0 0 16px" }}>
               MRR trend — poslednjih 6 meseci
             </p>
             {loading ? (
-              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#A1A1AA", fontSize: 13 }}>
+              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ui-faint)", fontSize: 13 }}>
                 Učitavanje…
               </div>
             ) : (
@@ -278,18 +278,18 @@ export default function SubscriptionsPage() {
                 <AreaChart data={mrrChart} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="mrrGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#16A34A" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#16A34A" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--tone-green)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--tone-green)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid vertical={false} stroke="#F4F4F5" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={36} />
+                  <CartesianGrid vertical={false} stroke="var(--ui-subtle)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--ui-faint)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--ui-faint)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={36} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="mrr"
-                    stroke="#16A34A"
+                    stroke="var(--tone-green)"
                     strokeWidth={2}
                     fill="url(#mrrGrad)"
                     dot={false}
@@ -301,9 +301,9 @@ export default function SubscriptionsPage() {
           </div>
 
           {/* Subscribers table */}
-          <div style={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "14px 20px", borderBottom: "1px solid #F4F4F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B" }}>
+          <div style={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--ui-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)" }}>
                 Pretplatnici
               </span>
 
@@ -316,8 +316,8 @@ export default function SubscriptionsPage() {
                       fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 99,
                       border: "1px solid", cursor: "pointer",
                       background: filterSite === "all" ? "#16A34A" : "transparent",
-                      borderColor: filterSite === "all" ? "#16A34A" : "#E4E4E7",
-                      color: filterSite === "all" ? "#fff" : "#71717A",
+                      borderColor: filterSite === "all" ? "#16A34A" : "var(--ui-border)",
+                      color: filterSite === "all" ? "#fff" : "var(--ui-muted)",
                     }}
                   >
                     Svi
@@ -330,11 +330,11 @@ export default function SubscriptionsPage() {
                         fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 99,
                         border: "1px solid", cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
                         background: filterSite === site.id ? "#16A34A" : "transparent",
-                        borderColor: filterSite === site.id ? "#16A34A" : "#E4E4E7",
-                        color: filterSite === site.id ? "#fff" : "#71717A",
+                        borderColor: filterSite === site.id ? "#16A34A" : "var(--ui-border)",
+                        color: filterSite === site.id ? "#fff" : "var(--ui-muted)",
                       }}
                     >
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: filterSite === site.id ? "#fff" : site.color_hex }} />
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: filterSite === site.id ? "var(--ui-surface)" : site.color_hex }} />
                       {site.name}
                     </button>
                   ))}
@@ -343,20 +343,20 @@ export default function SubscriptionsPage() {
             </div>
 
             {loading ? (
-              <div style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+              <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
                 Učitavanje...
               </div>
             ) : filteredSubs.length === 0 ? (
-              <div style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+              <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
                 Nema pretplatnika
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ borderBottom: "1px solid #F4F4F5" }}>
+                    <tr style={{ borderBottom: "1px solid var(--ui-subtle)" }}>
                       {["Kupac", "Proizvod", "Sajt", "MRR", "Status", "Počeo", "Naredna naplata"].map((h) => (
-                        <th key={h} style={{ padding: "8px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#A1A1AA", textAlign: "left" }}>
+                        <th key={h} style={{ padding: "8px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ui-faint)", textAlign: "left" }}>
                           {h}
                         </th>
                       ))}
@@ -366,27 +366,27 @@ export default function SubscriptionsPage() {
                     {filteredSubs.map((sub) => {
                       const st = STATUS_CONFIG[sub.status] ?? STATUS_CONFIG.active;
                       return (
-                        <tr key={sub.id} style={{ borderBottom: "1px solid #F4F4F5" }}>
+                        <tr key={sub.id} style={{ borderBottom: "1px solid var(--ui-subtle)" }}>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle" }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: "#18181B", margin: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)", margin: 0 }}>
                               {sub.customers?.name || "—"}
                             </p>
-                            <p style={{ fontSize: 11, color: "#A1A1AA", margin: 0 }}>
+                            <p style={{ fontSize: 11, color: "var(--ui-faint)", margin: 0 }}>
                               {sub.customers?.email}
                             </p>
                           </td>
-                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "#52525B", maxWidth: 200 }}>
+                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "var(--ui-text-3)", maxWidth: 200 }}>
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
                               {sub.product_name || "—"}
                             </span>
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: sub.sites?.color_hex ?? "#D4D4D8", flexShrink: 0, display: "inline-block" }} />
-                              <span style={{ fontSize: 12, color: "#52525B" }}>{sub.sites?.name ?? "—"}</span>
+                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: sub.sites?.color_hex ?? "var(--ui-border-strong)", flexShrink: 0, display: "inline-block" }} />
+                              <span style={{ fontSize: 12, color: "var(--ui-text-3)" }}>{sub.sites?.name ?? "—"}</span>
                             </div>
                           </td>
-                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "#18181B", whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontWeight: 700, fontSize: 13, color: "var(--ui-text)", whiteSpace: "nowrap" }}>
                             {formatRSD(sub.mrr_base ?? sub.mrr ?? 0)}
                           </td>
                           <td style={{ padding: "10px 16px", verticalAlign: "middle" }}>
@@ -395,12 +395,12 @@ export default function SubscriptionsPage() {
                               {st.label}
                             </span>
                           </td>
-                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "#A1A1AA", whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "var(--ui-faint)", whiteSpace: "nowrap" }}>
                             <span title={sub.started_at ? fullDate(sub.started_at) : ""}>
                               {relativeTime(sub.started_at)}
                             </span>
                           </td>
-                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "#A1A1AA" }}>
+                          <td style={{ padding: "10px 16px", verticalAlign: "middle", fontSize: 12, color: "var(--ui-faint)" }}>
                             —
                           </td>
                         </tr>

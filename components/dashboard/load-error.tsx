@@ -9,15 +9,15 @@ export function LoadError({ onRetry, compact = false }: { onRetry: () => void; c
     <div
       role="alert"
       style={{
-        background: "#FEF2F2",
-        border: "1px solid #FECACA",
+        background: "var(--tone-red-1)",
+        border: "1px solid var(--tone-red-3)",
         borderRadius: 10,
         padding: compact ? "10px 14px" : "14px 16px",
         display: "flex",
         alignItems: "center",
         gap: 10,
         fontSize: 13,
-        color: "#991B1B",
+        color: "var(--tone-red-deep)",
       }}
     >
       <AlertTriangleIcon className="size-4 shrink-0" aria-hidden />
@@ -29,13 +29,13 @@ export function LoadError({ onRetry, compact = false }: { onRetry: () => void; c
           display: "inline-flex",
           alignItems: "center",
           gap: 6,
-          background: "#fff",
-          border: "1px solid #FECACA",
+          background: "var(--ui-surface)",
+          border: "1px solid var(--tone-red-3)",
           borderRadius: 6,
           padding: "4px 10px",
           fontSize: 12,
           fontWeight: 500,
-          color: "#991B1B",
+          color: "var(--tone-red-deep)",
           cursor: "pointer",
         }}
       >

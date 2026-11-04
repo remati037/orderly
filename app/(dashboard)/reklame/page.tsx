@@ -38,23 +38,23 @@ const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
   { value: "30d", label: "30 dana" },
 ];
 
-const RED = "#DC2626";
-const SPEND_LINE = "#2563EB";
-const REVENUE_LINE = "#EA580C";
+const RED = "var(--tone-red)";
+const SPEND_LINE = "var(--tone-blue)";
+const REVENUE_LINE = "var(--tone-orange)";
 
 const TONE: Record<Tone, { color: string; bg: string; bar: string }> = {
-  good: { color: "#15803D", bg: "#DCFCE7", bar: "#22C55E" },
-  watch: { color: "#92400E", bg: "#FEF3C7", bar: "#F59E0B" },
-  bad: { color: "#B91C1C", bg: "#FEE2E2", bar: "#EF4444" },
-  neutral: { color: INK.secondary, bg: INK.grid, bar: "#A1A1AA" },
+  good: { color: "var(--tone-green-strong)", bg: "var(--tone-green-2)", bar: "#22C55E" },
+  watch: { color: "var(--tone-amber-deep)", bg: "var(--tone-amber-2)", bar: "#F59E0B" },
+  bad: { color: "var(--tone-red-strong)", bg: "var(--tone-red-2)", bar: "#EF4444" },
+  neutral: { color: INK.secondary, bg: INK.grid, bar: "var(--ui-faint)" },
 };
 
 const VERDICT: Record<VerdictLevel, { label: string; color: string; bg: string }> = {
-  good: { label: "Dobro", color: "#15803D", bg: "#DCFCE7" },
-  watch: { label: "Pazi", color: "#92400E", bg: "#FEF3C7" },
-  bad: { label: "Loše", color: "#B91C1C", bg: "#FEE2E2" },
+  good: { label: "Dobro", color: "var(--tone-green-strong)", bg: "var(--tone-green-2)" },
+  watch: { label: "Pazi", color: "var(--tone-amber-deep)", bg: "var(--tone-amber-2)" },
+  bad: { label: "Loše", color: "var(--tone-red-strong)", bg: "var(--tone-red-2)" },
   low_data: { label: "Rano za ocenu", color: INK.secondary, bg: INK.grid },
-  lead: { label: "Leadovi", color: "#1D4ED8", bg: "#DBEAFE" },
+  lead: { label: "Leadovi", color: "var(--tone-blue-strong)", bg: "var(--tone-blue-2)" },
   idle: { label: "Bez potrošnje", color: INK.secondary, bg: INK.grid },
 };
 
@@ -90,7 +90,7 @@ function Delta({ now, before, goodWhenUp }: { now: number | null; before: number
   const neutral = goodWhenUp === undefined || Math.abs(change) < 0.005;
   const good = goodWhenUp ? change > 0 : change < 0;
   return (
-    <span style={{ fontSize: 12, color: neutral ? INK.secondary : good ? "#15803D" : "#B91C1C" }}>
+    <span style={{ fontSize: 12, color: neutral ? INK.secondary : good ? "var(--tone-green-strong)" : "var(--tone-red-strong)" }}>
       {change > 0 ? "+" : ""}{pct(change, 0)}
     </span>
   );
@@ -98,7 +98,7 @@ function Delta({ now, before, goodWhenUp }: { now: number | null; before: number
 
 function Stat({ label, value, delta, hint }: { label: string; value: string; delta?: React.ReactNode; hint?: string }) {
   return (
-    <div style={{ background: "#FAFAFA", borderRadius: 10, padding: "12px 14px", minWidth: 0 }}>
+    <div style={{ background: "var(--ui-sidebar)", borderRadius: 10, padding: "12px 14px", minWidth: 0 }}>
       <p style={{ fontSize: 12, color: INK.secondary, margin: 0 }}>{label}</p>
       <p style={{ fontSize: 20, fontWeight: 700, color: INK.primary, margin: "4px 0 0", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</p>
       {delta && <p style={{ margin: "2px 0 0", lineHeight: 1.3 }}>{delta}</p>}
@@ -131,9 +131,9 @@ function AccountCardTile({ account: a }: { account: Account }) {
   const { yesterday: y, week: w, trend, link, top_campaigns: top } = a.card;
   const cur = a.currency;
   const small: React.CSSProperties = { fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.muted, margin: 0 };
-  const big = y.roas !== null && y.roas < 1 ? "#B91C1C" : "#15803D";
+  const big = y.roas !== null && y.roas < 1 ? "var(--tone-red-strong)" : "var(--tone-green-strong)";
   return (
-    <a href={`#nalog-${a.id}`} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#fff", border: `1px solid ${INK.border}`, borderTop: `4px solid ${TONE[trend.tone].bar}`, borderRadius: 12, padding: "16px 18px", color: "inherit", textDecoration: "none", minWidth: 0 }}>
+    <a href={`#nalog-${a.id}`} style={{ display: "flex", flexDirection: "column", gap: 12, background: "var(--ui-surface)", border: `1px solid ${INK.border}`, borderTop: `4px solid ${TONE[trend.tone].bar}`, borderRadius: 12, padding: "16px 18px", color: "inherit", textDecoration: "none", minWidth: 0 }}>
       <div>
         <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: INK.primary, overflowWrap: "anywhere" }}>{a.name}</span>
@@ -240,7 +240,7 @@ function AdsetRows({ adset, cur }: { adset: AdsetReport; cur: string }) {
   const sub: React.CSSProperties = { ...td, padding: "7px 10px", fontSize: 12.5 };
   return (
     <>
-      <tr style={{ background: "#FAFAFA", borderBottom: `1px solid ${INK.grid}` }}>
+      <tr style={{ background: "var(--ui-sidebar)", borderBottom: `1px solid ${INK.grid}` }}>
         <td style={{ ...sub, textAlign: "left", whiteSpace: "normal", paddingLeft: 30, fontWeight: 600 }}>{adset.name}</td>
         <td style={sub}>{money(adset.metrics.spend, cur)}</td>
         <td style={sub}>{count(adset.metrics.purchases)}</td>
@@ -252,7 +252,7 @@ function AdsetRows({ adset, cur }: { adset: AdsetReport; cur: string }) {
         <td style={{ ...sub, textAlign: "left" }}><VerdictBadge verdict={adset.verdict} /></td>
       </tr>
       {adset.ads.map((ad) => (
-        <tr key={ad.id} style={{ background: "#FAFAFA", borderBottom: `1px solid ${INK.grid}` }}>
+        <tr key={ad.id} style={{ background: "var(--ui-sidebar)", borderBottom: `1px solid ${INK.grid}` }}>
           <td style={{ ...sub, textAlign: "left", whiteSpace: "normal", paddingLeft: 46, color: INK.secondary }}>
             {ad.name}
             {ad.status && ad.status !== "ACTIVE" && <span style={{ marginLeft: 6, fontSize: 11, color: INK.muted }}>({ad.status === "DISAPPROVED" ? "odbijen" : "pauziran"})</span>}
@@ -276,7 +276,7 @@ function CampaignRow({ campaign: c, cur }: { campaign: CampaignReport; cur: stri
   const change = c.previous && c.previous.spend > 0 ? c.metrics.spend / c.previous.spend - 1 : null;
   return (
     <Fragment>
-      <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => setOpen((o) => !o)} className="hover:bg-zinc-50">
+      <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => setOpen((o) => !o)} className="hover:bg-zinc-50 dark:hover:bg-[var(--ui-subtle)]">
         <td style={{ ...td, textAlign: "left", whiteSpace: "normal", minWidth: 260 }}>
           <button
             type="button"
@@ -333,7 +333,7 @@ function AdList({ title, empty, items, cur }: { title: string; empty: string; it
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p style={{ fontSize: 13, fontWeight: 500, color: INK.primary, margin: 0, overflowWrap: "anywhere" }}>
                   {c.name}
-                  {c.fatigued && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "#92400E", background: "#FEF3C7", borderRadius: 4, padding: "1px 6px" }}>zamor</span>}
+                  {c.fatigued && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "var(--tone-amber-deep)", background: "var(--tone-amber-2)", borderRadius: 4, padding: "1px 6px" }}>zamor</span>}
                 </p>
                 <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>
                   {money(c.spend, cur)} · {c.purchases} prod. · cena prodaje {c.cpa === null ? "—" : money(c.cpa, cur)} · frekv. {c.frequency.toFixed(2).replace(".", ",")} · CTR {c.ctr.toFixed(2).replace(".", ",")}%
@@ -363,7 +363,7 @@ function AccountSection({ account: a }: { account: Account }) {
       <ChartCard title={a.name} subtitle={subtitle}>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {a.error && (
-            <p style={{ fontSize: 12, color: RED, background: "#FEF2F2", borderRadius: 8, padding: "8px 12px", margin: 0 }}>
+            <p style={{ fontSize: 12, color: RED, background: "var(--tone-red-1)", borderRadius: 8, padding: "8px 12px", margin: 0 }}>
               Poslednje osvežavanje nije uspelo, brojke mogu da kasne: {a.error}
             </p>
           )}
@@ -434,9 +434,9 @@ function AccountSection({ account: a }: { account: Account }) {
 }
 
 const TYPE_LABEL: Record<string, { label: string; color: string; bg: string }> = {
-  skaliraj: { label: "Skaliraj", color: "#15803D", bg: "#DCFCE7" },
-  ugasi: { label: "Ugasi", color: RED, bg: "#FEE2E2" },
-  osvezi_kreativu: { label: "Osveži kreativu", color: "#92400E", bg: "#FEF3C7" },
+  skaliraj: { label: "Skaliraj", color: "var(--tone-green-strong)", bg: "var(--tone-green-2)" },
+  ugasi: { label: "Ugasi", color: RED, bg: "var(--tone-red-2)" },
+  osvezi_kreativu: { label: "Osveži kreativu", color: "var(--tone-amber-deep)", bg: "var(--tone-amber-2)" },
   proveri: { label: "Proveri", color: INK.secondary, bg: INK.grid },
 };
 
@@ -479,7 +479,7 @@ function Recommendations({ items, onDone }: { items: Recommendation[]; onDone: (
                   type="button"
                   disabled={saving === r.id}
                   onClick={() => done(r.id)}
-                  style={{ flexShrink: 0, fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8, border: `1px solid ${INK.border}`, background: "#fff", color: INK.primary, cursor: "pointer", opacity: saving === r.id ? 0.5 : 1 }}
+                  style={{ flexShrink: 0, fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8, border: `1px solid ${INK.border}`, background: "var(--ui-surface)", color: INK.primary, cursor: "pointer", opacity: saving === r.id ? 0.5 : 1 }}
                 >
                   Urađeno
                 </button>
@@ -519,7 +519,7 @@ export default function ReklamePage() {
           <Recommendations items={data.recommendations} onDone={() => mutate()} />
 
           {data.unmapped_spending > 0 && (
-            <p style={{ fontSize: 13, color: "#92400E", background: "#FEF3C7", borderRadius: 8, padding: "10px 14px", margin: 0 }}>
+            <p style={{ fontSize: 13, color: "var(--tone-amber-deep)", background: "var(--tone-amber-2)", borderRadius: 8, padding: "10px 14px", margin: 0 }}>
               Kampanja sa potrošnjom koje nisu povezane sa sajtom: {data.unmapped_spending}. Za njih nema stvarnog ROAS-a i ne ulaze u profit. Povezuje se u Podešavanja → Facebook Ads.
             </p>
           )}

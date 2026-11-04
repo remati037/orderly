@@ -30,7 +30,7 @@ type Months = 3 | 6 | 12;
 // Recharts tooltip props, narrowed to what we read.
 interface TipProps { active?: boolean; label?: string | number; payload?: { dataKey?: string | number; value?: number; payload?: Record<string, unknown> }[] }
 
-const BAR = { maxBarSize: 24, stroke: "#fff", strokeWidth: 2 } as const; // 2px surface gap between stacked segments
+const BAR = { maxBarSize: 24, stroke: "var(--ui-surface)", strokeWidth: 2 } as const; // 2px surface gap between stacked segments
 
 // ── section ──────────────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ function MonthlyBySite({ data, sites }: { data: Overview; sites: ChartSite[] }) 
             tick={AXIS_TICK} axisLine={false} tickLine={false} width={56}
             tickFormatter={(v) => (metric === "revenue" ? compactMoney(v, cur) : String(v))}
           />
-          <Tooltip content={(p) => renderTip(p as unknown as TipProps)} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+          <Tooltip content={(p) => renderTip(p as unknown as TipProps)} cursor={{ fill: "var(--ui-chart-cursor)" }} />
           {sites.map((s, i) => (
             <Bar
               key={s.site_id}
@@ -184,7 +184,7 @@ function AovBySite({ data, sites }: { data: Overview; sites: ChartSite[] }) {
               stroke={s.chart}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 4, stroke: "var(--ui-surface)", strokeWidth: 2 }}
               connectNulls
             />
           ))}
@@ -230,7 +230,7 @@ function NewVsReturning({ data }: { data: Overview }) {
           <CartesianGrid vertical={false} stroke={INK.grid} />
           <XAxis dataKey="month" tickFormatter={(m) => monthLabel(m)} tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
           <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={56} tickFormatter={(v) => compactMoney(v, cur)} />
-          <Tooltip content={(p) => renderTip(p as unknown as TipProps)} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+          <Tooltip content={(p) => renderTip(p as unknown as TipProps)} cursor={{ fill: "var(--ui-chart-cursor)" }} />
           <Bar dataKey="novi" name="Prva kupovina" stackId="c" fill={SERIES.blue} {...BAR} />
           <Bar dataKey="povratni" name="Povratni kupci" stackId="c" fill={SERIES.orange} {...BAR} radius={[4, 4, 0, 0]} />
         </BarChart>
@@ -276,7 +276,7 @@ function PaymentSuccess({ data }: { data: Overview }) {
           <XAxis dataKey="week" tickFormatter={weekLabel} tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={24} />
           <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={AXIS_TICK} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${v}%`} />
           <Tooltip content={(p) => renderTip(p as unknown as TipProps)} cursor={{ stroke: INK.border, strokeWidth: 1 }} />
-          <Line type="monotone" dataKey="pctRate" stroke={SERIES.blue} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }} connectNulls />
+          <Line type="monotone" dataKey="pctRate" stroke={SERIES.blue} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "var(--ui-surface)", strokeWidth: 2 }} connectNulls />
         </LineChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -328,7 +328,7 @@ function PurchaseHeatmap({ data }: { data: Overview }) {
   const grid = data.heatmap[metric];
   const max = Math.max(...grid.flat(), 0);
   // Quantize into the sequential blue ramp; empty cells stay on the surface.
-  const color = (v: number) => (v <= 0 || max === 0 ? "#F8F8F8" : BLUE_RAMP[Math.min(BLUE_RAMP.length - 1, Math.floor((v / max) * BLUE_RAMP.length))]);
+  const color = (v: number) => (v <= 0 || max === 0 ? "var(--ui-canvas)" : BLUE_RAMP[Math.min(BLUE_RAMP.length - 1, Math.floor((v / max) * BLUE_RAMP.length))]);
   const fmt = (v: number) => (metric === "revenue" ? money(v, cur) : `${v} porudžb.`);
 
   let peak = { d: 0, h: 0, v: -1 };

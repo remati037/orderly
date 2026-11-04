@@ -35,7 +35,7 @@ interface BonusData {
   days: Day[];
 }
 
-const GREEN = "#16A34A";
+const GREEN = "var(--tone-green)";
 
 // Whole euros: bonus figures are discussed in round numbers.
 const eur = (v: number, cur: string) =>
@@ -54,7 +54,7 @@ const td: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: INK
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div style={{ background: "#fff", border: `1px solid ${INK.border}`, borderRadius: 12, padding: "16px 18px", minWidth: 0 }}>
+    <div style={{ background: "var(--ui-surface)", border: `1px solid ${INK.border}`, borderRadius: 12, padding: "16px 18px", minWidth: 0 }}>
       <p style={{ fontSize: 12, color: INK.muted, margin: 0 }}>{label}</p>
       <p style={{ fontSize: 24, fontWeight: 700, color: INK.primary, margin: "6px 0 0", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</p>
       {hint && <p style={{ fontSize: 12, color: INK.secondary, margin: "4px 0 0" }}>{hint}</p>}
@@ -84,7 +84,7 @@ function Progress({ data }: { data: BonusData }) {
         </div>
         {milestones.map((t) => (
           <div key={t.from} style={{ position: "absolute", left: `${(t.from / max) * 100}%`, top: 0, transform: "translateX(-50%)", textAlign: "center" }}>
-            <div style={{ width: 2, height: 22, background: data.counted >= t.from ? "#15803D" : "#D4D4D8", margin: "0 auto" }} />
+            <div style={{ width: 2, height: 22, background: data.counted >= t.from ? "#15803D" : "var(--ui-border-strong)", margin: "0 auto" }} />
             <div style={{ fontSize: 11, color: INK.secondary, whiteSpace: "nowrap" }}>{compactMoney(t.from, cur)}</div>
           </div>
         ))}
@@ -107,7 +107,7 @@ function CumulativeChart({ data }: { data: BonusData }) {
           <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fontSize: 11, fill: INK.muted }} axisLine={false} tickLine={false} interval={Math.floor((data.days.length - 1) / 6)} />
           <YAxis domain={[0, top]} tick={{ fontSize: 11, fill: INK.muted }} axisLine={false} tickLine={false} tickFormatter={(v) => compactMoney(v, cur)} width={52} />
           {milestones.map((t, i) => (
-            <ReferenceLine key={t.from} y={t.from} stroke="#D4D4D8" strokeDasharray="4 4"
+            <ReferenceLine key={t.from} y={t.from} stroke="var(--ui-border-strong)" strokeDasharray="4 4"
               label={{ value: `${compactMoney(t.from, cur)} · ${eur(t.amount, cur)}`, position: i === 0 ? "insideTopRight" : "insideBottomRight", fontSize: 11, fill: INK.secondary }} />
           ))}
           <Tooltip
@@ -166,7 +166,7 @@ function GoalInput({ siteId, product, goal, cur, onSaved }: {
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
         style={{
           width: 72, fontSize: 13, textAlign: "right", padding: "4px 8px", borderRadius: 6, fontVariantNumeric: "tabular-nums",
-          border: `1px solid ${state === "error" ? "#DC2626" : INK.border}`, background: state === "saving" ? INK.grid : "#fff",
+          border: `1px solid ${state === "error" ? "#DC2626" : INK.border}`, background: state === "saving" ? INK.grid : "var(--ui-surface)",
         }}
       />
       <span style={{ fontSize: 12, color: INK.muted }}>{cur === "EUR" ? "€" : cur}</span>
@@ -182,7 +182,7 @@ function GoalProgress({ value, goal }: { value: number; goal: number | null }) {
       <span style={{ width: 48, height: 6, background: INK.grid, borderRadius: 3, overflow: "hidden" }}>
         <span style={{ display: "block", height: "100%", width: `${Math.min(1, ratio) * 100}%`, background: ratio >= 1 ? "#15803D" : GREEN }} />
       </span>
-      <span style={{ width: 40, textAlign: "right", fontWeight: ratio >= 1 ? 600 : 400, color: ratio >= 1 ? "#15803D" : INK.secondary }}>{pct(ratio, 0)}</span>
+      <span style={{ width: 40, textAlign: "right", fontWeight: ratio >= 1 ? 600 : 400, color: ratio >= 1 ? "var(--tone-green-strong)" : INK.secondary }}>{pct(ratio, 0)}</span>
     </span>
   );
 }
@@ -192,7 +192,7 @@ function SiteProducts({ site, cur, canEdit, onSaved }: { site: SiteRow; cur: str
   const subTh: React.CSSProperties = { ...th, padding: "8px 8px" };
   return (
     <tr>
-      <td colSpan={6} style={{ padding: "0 4px 10px 28px", background: "#FAFAFA", borderBottom: `1px solid ${INK.grid}` }}>
+      <td colSpan={6} style={{ padding: "0 4px 10px 28px", background: "var(--ui-sidebar)", borderBottom: `1px solid ${INK.grid}` }}>
         {site.products.length === 0 ? (
           <p style={{ fontSize: 12, color: INK.muted, margin: 0, padding: "12px" }}>Nema prodatih proizvoda u ovom periodu.</p>
         ) : (
@@ -259,7 +259,7 @@ function SitesTable({ data, onSaved }: { data: BonusData; onSaved: () => void })
               const goal = s.products.reduce((n, p) => n + (p.goal ?? 0), 0);
               return (
                 <Fragment key={s.site_id}>
-                  <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => toggle(s.site_id)} className="hover:bg-zinc-50">
+                  <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => toggle(s.site_id)} className="hover:bg-zinc-50 dark:hover:bg-[var(--ui-subtle)]">
                     <td style={{ ...td, textAlign: "left" }}>
                       <button
                         type="button"
@@ -270,7 +270,7 @@ function SitesTable({ data, onSaved }: { data: BonusData; onSaved: () => void })
                         <ChevronRightIcon className="size-4" style={{ color: INK.muted, transform: expanded ? "rotate(90deg)" : undefined, transition: "transform 120ms" }} aria-hidden />
                         <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: chartColor(s.color), flexShrink: 0 }} />
                         <span style={{ fontWeight: 500 }}>{s.name}</span>
-                        {s.share < 1 && <span style={{ fontSize: 11, color: "#92400E", background: "#FEF3C7", borderRadius: 4, padding: "1px 6px" }}>partner</span>}
+                        {s.share < 1 && <span style={{ fontSize: 11, color: "var(--tone-amber-deep)", background: "var(--tone-amber-2)", borderRadius: 4, padding: "1px 6px" }}>partner</span>}
                       </button>
                     </td>
                     <td style={td}>{s.orders.toLocaleString("sr-RS")}</td>
@@ -313,7 +313,7 @@ function TiersTable({ data }: { data: BonusData }) {
             </tr>
           </thead>
           <tbody>
-            <tr style={{ borderBottom: `1px solid ${INK.grid}`, background: data.bonus.tierIndex < 0 ? "#DCFCE7" : undefined }}>
+            <tr style={{ borderBottom: `1px solid ${INK.grid}`, background: data.bonus.tierIndex < 0 ? "var(--tone-green-2)" : undefined }}>
               <td style={{ ...td, textAlign: "left" }}>Ispod {eur(data.tiers[0]?.from ?? 0, cur)}</td>
               <td style={td}>0%</td>
               <td style={td}>{eur(0, cur)}</td>
@@ -323,10 +323,10 @@ function TiersTable({ data }: { data: BonusData }) {
               const reached = i === data.bonus.tierIndex;
               const big = isHeadline(t, i);
               return (
-                <tr key={t.from} style={{ borderBottom: `1px solid ${INK.grid}`, background: reached ? "#DCFCE7" : undefined }}>
+                <tr key={t.from} style={{ borderBottom: `1px solid ${INK.grid}`, background: reached ? "var(--tone-green-2)" : undefined }}>
                   <td style={{ ...td, textAlign: "left", fontWeight: big ? 700 : 400 }}>
                     {i === data.tiers.length - 1 ? `${eur(t.from, cur)}+` : eur(t.from, cur)}
-                    {reached && <span style={{ marginLeft: 8, fontSize: 11, color: "#15803D", fontWeight: 600 }}>← sada</span>}
+                    {reached && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--tone-green-strong)", fontWeight: 600 }}>← sada</span>}
                   </td>
                   <td style={{ ...td, fontWeight: big ? 700 : 400 }}>{pct(t.rate, 2)}</td>
                   <td style={{ ...td, fontWeight: big ? 700 : 400 }}>{eur(t.amount, cur)}</td>

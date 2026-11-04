@@ -13,8 +13,8 @@ interface TeamMember {
 }
 
 const CARD: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #E4E4E7",
+  background: "var(--ui-surface)",
+  border: "1px solid var(--ui-border)",
   borderRadius: 12,
   padding: "20px 22px",
   marginBottom: 16,
@@ -24,7 +24,7 @@ const INPUT: React.CSSProperties = {
   width: "100%",
   fontSize: 13,
   padding: "8px 10px",
-  border: "1px solid #E4E4E7",
+  border: "1px solid var(--ui-border)",
   borderRadius: 7,
   outline: "none",
 };
@@ -32,7 +32,7 @@ const INPUT: React.CSSProperties = {
 const LABEL: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
-  color: "#71717A",
+  color: "var(--ui-muted)",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   display: "block",
@@ -47,9 +47,9 @@ function btn(primary = false): React.CSSProperties {
     borderRadius: 7,
     border: "1px solid",
     cursor: "pointer",
-    background: primary ? "#16A34A" : "#fff",
-    borderColor: primary ? "#16A34A" : "#E4E4E7",
-    color: primary ? "#fff" : "#52525B",
+    background: primary ? "#16A34A" : "var(--ui-surface)",
+    borderColor: primary ? "#16A34A" : "var(--ui-border)",
+    color: primary ? "#fff" : "var(--ui-text-3)",
   };
 }
 
@@ -107,23 +107,23 @@ export default function TeamManager() {
 
   return (
     <div style={{ maxWidth: 820 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 700, color: "#18181B", marginBottom: 4 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--ui-text)", marginBottom: 4 }}>
         Tim
       </h1>
-      <p style={{ fontSize: 13, color: "#71717A", marginBottom: 20 }}>
+      <p style={{ fontSize: 13, color: "var(--ui-muted)", marginBottom: 20 }}>
         Vlasnik vidi sve. Agent vidi samo stranicu Naplata — bez prihoda, profita i podešavanja.
         Nalog za login se pravi u Supabase → Authentication → Users, a ovde mu dodeljuješ rolu.
       </p>
 
       {msg && (
-        <div style={{ ...CARD, padding: "12px 16px", fontSize: 13, color: "#18181B", background: "#F4F4F5" }}>
+        <div style={{ ...CARD, padding: "12px 16px", fontSize: 13, color: "var(--ui-text)", background: "var(--ui-subtle)" }}>
           {msg}
         </div>
       )}
 
       {/* Invite */}
       <div style={CARD}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 14 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 14 }}>
           Dodaj člana
         </span>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 1fr auto", gap: 12, alignItems: "end" }}>
@@ -151,24 +151,24 @@ export default function TeamManager() {
 
       {/* Members */}
       <div style={CARD}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 6 }}>
           Članovi ({members.length})
         </span>
         {members.map((m) => (
           <div key={m.id} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            gap: 12, padding: "12px 0", borderTop: "1px solid #F4F4F5",
+            gap: 12, padding: "12px 0", borderTop: "1px solid var(--ui-subtle)",
           }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
                 {m.name || m.email}
                 {!m.is_active && (
-                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: "#DC2626" }}>
+                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: "var(--tone-red)" }}>
                     deaktiviran
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: "#A1A1AA" }}>
+              <div style={{ fontSize: 12, color: "var(--ui-faint)" }}>
                 {m.email}
                 {" · "}
                 {m.auth_user_id ? "aktivan nalog" : "čeka prvi login"}

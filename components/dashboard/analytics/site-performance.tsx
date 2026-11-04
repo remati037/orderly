@@ -38,7 +38,7 @@ function Trend({ value }: { value: number | null }) {
   const Icon = up ? ArrowUpRightIcon : ArrowDownRightIcon;
   const text = Math.abs(value) > 9.99 ? ">999%" : pct(Math.abs(value));
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontWeight: 600, color: up ? "#15803D" : "#B91C1C" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontWeight: 600, color: up ? "var(--tone-green-strong)" : "var(--tone-red-strong)" }}>
       <Icon className="size-3.5" aria-hidden />
       <span className="sr-only">{up ? "rast" : "pad"}</span>
       {text}

@@ -56,16 +56,16 @@ interface Note {
 // ── constants ──────────────────────────────────────────────────────────────────
 
 const COLUMNS: { stage: Stage; label: string; accent: string }[] = [
-  { stage: "novo",        label: "Novo",        accent: "#A1A1AA" },
-  { stage: "kontaktiran", label: "Kontaktiran", accent: "#D97706" },
+  { stage: "novo",        label: "Novo",        accent: "var(--ui-faint)" },
+  { stage: "kontaktiran", label: "Kontaktiran", accent: "var(--tone-amber)" },
   { stage: "ceka_uplatu", label: "Čeka uplatu", accent: "#1B6EF3" },
-  { stage: "naplaceno",   label: "Naplaćeno",   accent: "#16A34A" },
-  { stage: "otkazano",    label: "Otkazano",    accent: "#DC2626" },
+  { stage: "naplaceno",   label: "Naplaćeno",   accent: "var(--tone-green)" },
+  { stage: "otkazano",    label: "Otkazano",    accent: "var(--tone-red)" },
 ];
 
 const CARD: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #E4E4E7",
+  background: "var(--ui-surface)",
+  border: "1px solid var(--ui-border)",
   borderRadius: 10,
   padding: "11px 12px",
   marginBottom: 8,
@@ -74,9 +74,9 @@ const CARD: React.CSSProperties = {
 
 // A card older than a week without contact is the thing worth chasing.
 function ageColor(days: number): string {
-  if (days >= 7) return "#DC2626";
-  if (days >= 3) return "#D97706";
-  return "#A1A1AA";
+  if (days >= 7) return "var(--tone-red)";
+  if (days >= 3) return "var(--tone-amber)";
+  return "var(--ui-faint)";
 }
 
 // Order statuses that open a recovery card (mirrors the DB trigger in
@@ -95,11 +95,11 @@ function formatWait(ms: number): string {
 // Still ticking (no contact yet): escalates with urgency. Frozen (already
 // contacted): neutral blue — it's a record, not something to act on.
 function waitColor(ms: number, frozen: boolean): string {
-  if (frozen) return "#2563EB";
+  if (frozen) return "var(--tone-blue)";
   const hours = ms / 3_600_000;
-  if (hours >= 4) return "#DC2626";
-  if (hours >= 1) return "#D97706";
-  return "#A1A1AA";
+  if (hours >= 4) return "var(--tone-red)";
+  if (hours >= 1) return "var(--tone-amber)";
+  return "var(--ui-faint)";
 }
 
 // Buckets tasks by the Belgrade calendar day the underlying order appeared,
@@ -133,35 +133,35 @@ function DailyContactChart({ data }: { data: DayStat[] }) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke="#F4F4F5" />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} />
-        <YAxis yAxisId="count" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11, fill: "#A1A1AA" }} axisLine={false} tickLine={false}
+        <CartesianGrid vertical={false} stroke="var(--ui-subtle)" />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ui-faint)" }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="count" tick={{ fontSize: 11, fill: "var(--ui-faint)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11, fill: "var(--ui-faint)" }} axisLine={false} tickLine={false}
           domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
         <Tooltip
-          contentStyle={{ background: "#fff", border: "1px solid #E4E4E7", borderRadius: 8, fontSize: 12 }}
+          contentStyle={{ background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 8, fontSize: 12 }}
           formatter={(value, name) => {
             if (name === "% kontaktirano") return [`${value}%`, name];
             return [value, name];
           }}
         />
-        <Bar yAxisId="count" dataKey="total" name="Ukupno" fill="#E4E4E7" radius={[3, 3, 0, 0]} barSize={14} />
-        <Bar yAxisId="count" dataKey="contacted" name="Kontaktirano" fill="#16A34A" radius={[3, 3, 0, 0]} barSize={14} />
-        <Line yAxisId="pct" dataKey="pct" name="% kontaktirano" stroke="#2563EB" strokeWidth={2} dot={{ r: 2 }} />
+        <Bar yAxisId="count" dataKey="total" name="Ukupno" fill="var(--ui-border)" radius={[3, 3, 0, 0]} barSize={14} />
+        <Bar yAxisId="count" dataKey="contacted" name="Kontaktirano" fill="var(--tone-green)" radius={[3, 3, 0, 0]} barSize={14} />
+        <Line yAxisId="pct" dataKey="pct" name="% kontaktirano" stroke="var(--tone-blue)" strokeWidth={2} dot={{ r: 2 }} />
       </ComposedChart>
     </ResponsiveContainer>
   );
 }
 
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  failed:           { label: "Failed",   bg: "#FEF2F2", color: "#DC2626" },
-  "on-hold":        { label: "On hold",  bg: "#FFF7ED", color: "#C2410C" },
-  pending:          { label: "Pending",  bg: "#EEF2FF", color: "#4338CA" },
-  "checkout-draft": { label: "Napušteno", bg: "#F4F4F5", color: "#52525B" },
+  failed:           { label: "Failed",   bg: "var(--tone-red-1)", color: "var(--tone-red)" },
+  "on-hold":        { label: "On hold",  bg: "var(--tone-orange-1)", color: "var(--tone-orange-strong)" },
+  pending:          { label: "Pending",  bg: "var(--tone-indigo-1)", color: "var(--tone-indigo-strong)" },
+  "checkout-draft": { label: "Napušteno", bg: "var(--ui-subtle)", color: "var(--ui-text-3)" },
 };
 
 function StatusPill({ status }: { status: string }) {
-  const m = STATUS_META[status] ?? { label: status, bg: "#F4F4F5", color: "#52525B" };
+  const m = STATUS_META[status] ?? { label: status, bg: "var(--ui-subtle)", color: "var(--ui-text-3)" };
   return (
     <span style={{
       fontSize: 10.5, fontWeight: 600, padding: "1px 7px", borderRadius: 99,
@@ -281,21 +281,21 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, fontWeight: 700, color: "#18181B", marginBottom: 4 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--ui-text)", marginBottom: 4 }}>
         Naplata
       </h1>
-      <p style={{ fontSize: 13, color: "#71717A", marginBottom: 18 }}>
+      <p style={{ fontSize: 13, color: "var(--ui-muted)", marginBottom: 18 }}>
         Porudžbine koje nisu plaćene. Kontaktiraj kupca i pomeri karticu kroz faze.
         {openTotal > 0 && (
           <>
-            {" "}Otvoreno: <strong style={{ color: "#18181B" }}>
+            {" "}Otvoreno: <strong style={{ color: "var(--ui-text)" }}>
               {formatCurrency(openTotal, tasks[0]?.currency ?? "EUR")}
             </strong>
           </>
         )}
       </p>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid #F4F4F5" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--ui-subtle)" }}>
         {([
           { key: "naplata", label: "Naplata" },
           { key: "pozivi", label: "Pozivi" },
@@ -308,7 +308,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
               fontSize: 13, fontWeight: 600, padding: "8px 4px", marginBottom: -1,
               border: "none", borderBottom: tab === t.key ? "2px solid #16A34A" : "2px solid transparent",
               background: "transparent", cursor: "pointer",
-              color: tab === t.key ? "#16A34A" : "#71717A",
+              color: tab === t.key ? "var(--tone-green)" : "var(--ui-muted)",
             }}
           >
             {t.label}
@@ -328,25 +328,25 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
       {tasks.length > 0 && (
         <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
           <div style={{ ...CARD, cursor: "default", flex: "0 0 200px", padding: "14px 16px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: "#71717A", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: "var(--ui-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
               <TimerIcon style={{ width: 13, height: 13 }} /> Prosek do kontakta
             </span>
-            <span style={{ fontSize: 22, fontWeight: 700, color: "#18181B" }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)" }}>
               {avgContactMs !== null ? formatWait(avgContactMs) : "—"}
             </span>
-            <div style={{ fontSize: 11.5, color: "#A1A1AA", marginTop: 2 }}>
+            <div style={{ fontSize: 11.5, color: "var(--ui-faint)", marginTop: 2 }}>
               na osnovu {contactedTasks.length} kontaktiranih kartica
             </div>
           </div>
 
           <div style={{ ...CARD, cursor: "default", flex: "1 1 380px", padding: "14px 16px 6px" }}>
-            <span style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#71717A", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+            <span style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--ui-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
               Kontaktirano po danu (poslednjih 14 dana)
             </span>
             {dailyStats.length > 0 ? (
               <DailyContactChart data={dailyStats} />
             ) : (
-              <p style={{ fontSize: 12.5, color: "#A1A1AA", padding: "16px 0" }}>Nema podataka.</p>
+              <p style={{ fontSize: 12.5, color: "var(--ui-faint)", padding: "16px 0" }}>Nema podataka.</p>
             )}
           </div>
         </div>
@@ -357,7 +357,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
           ...CARD, cursor: "default", display: "flex", alignItems: "center",
           justifyContent: "space-between", gap: 12, padding: "10px 14px",
         }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#3F3F46" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "var(--ui-text-2)" }}>
             <BellIcon style={{ width: 14, height: 14 }} /> Uključi obaveštenja za nove kartice naplate
           </span>
           <button
@@ -376,7 +376,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
         <div style={{ position: "relative", marginBottom: 14, maxWidth: 320 }}>
           <SearchIcon style={{
             position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-            width: 14, height: 14, color: "#A1A1AA", pointerEvents: "none",
+            width: 14, height: 14, color: "var(--ui-faint)", pointerEvents: "none",
           }} />
           <input
             value={search}
@@ -384,20 +384,20 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
             placeholder="Pretraži po imenu, mejlu, telefonu, proizvodu…"
             style={{
               width: "100%", fontSize: 13, padding: "8px 10px 8px 32px",
-              border: "1px solid #E4E4E7", borderRadius: 8, outline: "none",
+              border: "1px solid var(--ui-border)", borderRadius: 8, outline: "none",
             }}
           />
         </div>
       )}
 
       {loading ? (
-        <p style={{ fontSize: 13, color: "#A1A1AA" }}>Učitavanje…</p>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>Učitavanje…</p>
       ) : tasks.length === 0 ? (
-        <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "#71717A" }}>
+        <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "var(--ui-muted)" }}>
           Nema neplaćenih porudžbina. 🎉
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "#71717A" }}>
+        <div style={{ ...CARD, cursor: "default", textAlign: "center", padding: 28, color: "var(--ui-muted)" }}>
           Nema kartica koje odgovaraju pretrazi.
         </div>
       ) : (
@@ -408,24 +408,24 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
               <div key={col.stage} style={{ flex: "1 0 240px", minWidth: 240 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, padding: "0 2px" }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: col.accent }} />
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "#18181B" }}>{col.label}</span>
-                  <span style={{ fontSize: 11.5, color: "#A1A1AA" }}>{items.length}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ui-text)" }}>{col.label}</span>
+                  <span style={{ fontSize: 11.5, color: "var(--ui-faint)" }}>{items.length}</span>
                 </div>
 
                 {items.map((t) => (
                   <div key={t.id} style={CARD} onClick={() => setOpen(t)}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
                         {t.customer_name || "Nepoznat kupac"}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#18181B", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ui-text)", whiteSpace: "nowrap" }}>
                         {formatCurrency(t.total, t.currency)}
                       </span>
                     </div>
 
                     {t.product_name && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, minWidth: 0 }}>
-                        <span style={{ fontSize: 11.5, color: "#71717A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 11.5, color: "var(--ui-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {t.product_name}
                         </span>
                         {t.subscription_seq && <SubscriptionDots seq={t.subscription_seq} />}
@@ -440,7 +440,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
                           title={`Stripe je ${t.retry_count}× pokušao naplatu — kartice spojene, ovo je najnoviji pokušaj`}
                           style={{
                             fontSize: 10.5, fontWeight: 600, padding: "1px 6px", borderRadius: 99,
-                            background: "#F4F4F5", color: "#71717A",
+                            background: "var(--ui-subtle)", color: "var(--ui-muted)",
                           }}
                         >
                           ×{t.retry_count} pokušaja
@@ -448,7 +448,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
                       )}
                     </div>
                     {t.reason && (
-                      <div style={{ marginTop: 4, fontSize: 11, color: "#71717A", lineHeight: 1.35 }}>
+                      <div style={{ marginTop: 4, fontSize: 11, color: "var(--ui-muted)", lineHeight: 1.35 }}>
                         {t.reason}
                       </div>
                     )}
@@ -457,7 +457,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
                       <div style={{
                         marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4,
                         fontSize: 10.5, fontWeight: 700, padding: "3px 7px", borderRadius: 6,
-                        background: "#DCFCE7", color: "#15803D",
+                        background: "var(--tone-green-2)", color: "var(--tone-green-strong)",
                       }}>
                         <CheckCircle2Icon style={{ width: 11, height: 11 }} /> Prošla druga porudžbina — ne zvati
                       </div>
@@ -465,7 +465,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                       {t.site_name && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#71717A" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--ui-muted)" }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: t.site_color }} />
                           {t.site_name}
                         </span>
@@ -484,7 +484,7 @@ export default function RecoveryBoard({ currentMemberId, isOwner = false }: { cu
                         {formatWait(t.wait_ms)}{t.wait_frozen ? " (pozvan)" : ""}
                       </span>
                       {t.attempts > 0 && (
-                        <span style={{ fontSize: 11, color: "#A1A1AA" }}>{t.attempts}× kontakt</span>
+                        <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>{t.attempts}× kontakt</span>
                       )}
                     </div>
                   </div>
@@ -581,20 +581,20 @@ function TaskDrawer({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 420, maxWidth: "100%", background: "#fff", height: "100%",
+          width: 420, maxWidth: "100%", background: "var(--ui-surface)", height: "100%",
           overflowY: "auto", padding: "20px 22px",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#18181B" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--ui-text)" }}>
             {task.customer_name || "Nepoznat kupac"}
           </h2>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A1A1AA" }}>
+          <button onClick={onClose} style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--ui-faint)" }}>
             <XIcon style={{ width: 18, height: 18 }} />
           </button>
         </div>
 
-        <div style={{ fontSize: 13, color: "#71717A", marginBottom: 12, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ fontSize: 13, color: "var(--ui-muted)", marginBottom: 12, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <span>
             {formatCurrency(task.total, task.currency)}
             {task.product_name && ` · ${task.product_name}`}
@@ -606,8 +606,8 @@ function TaskDrawer({
 
         {task.retry_count > 1 && (
           <div style={{
-            background: "#F4F4F5", borderRadius: 8, padding: "8px 12px", marginBottom: 12,
-            fontSize: 12.5, color: "#52525B",
+            background: "var(--ui-subtle)", borderRadius: 8, padding: "8px 12px", marginBottom: 12,
+            fontSize: 12.5, color: "var(--ui-text-3)",
           }}>
             Stripe je pokušao naplatu <strong>{task.retry_count}×</strong> — ova kartica objedinjuje sve pokušaje, ispod su beleške iz svih poziva.
           </div>
@@ -615,12 +615,12 @@ function TaskDrawer({
 
         {task.resolved_elsewhere && (
           <div style={{
-            background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8,
+            background: "var(--tone-green-1)", border: "1px solid var(--tone-green-3)", borderRadius: 8,
             padding: "10px 12px", marginBottom: 12,
             display: "flex", alignItems: "flex-start", gap: 8,
           }}>
-            <CheckCircle2Icon style={{ width: 15, height: 15, color: "#16A34A", flexShrink: 0, marginTop: 1 }} />
-            <span style={{ fontSize: 12.5, color: "#15803D", lineHeight: 1.4, fontWeight: 600 }}>
+            <CheckCircle2Icon style={{ width: 15, height: 15, color: "var(--tone-green)", flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 12.5, color: "var(--tone-green-strong)", lineHeight: 1.4, fontWeight: 600 }}>
               Kupac je platio drugu porudžbinu istog dana — ne treba zvati.
             </span>
           </div>
@@ -628,12 +628,12 @@ function TaskDrawer({
 
         {/* why it's stuck */}
         <div style={{
-          background: "#FAFAFA", border: "1px solid #F4F4F5", borderRadius: 8,
+          background: "var(--ui-sidebar)", border: "1px solid var(--ui-subtle)", borderRadius: 8,
           padding: "10px 12px", marginBottom: 16,
           display: "flex", alignItems: "flex-start", gap: 8,
         }}>
           <StatusPill status={task.order_status} />
-          <span style={{ fontSize: 12.5, color: "#3F3F46", lineHeight: 1.4 }}>
+          <span style={{ fontSize: 12.5, color: "var(--ui-text-2)", lineHeight: 1.4 }}>
             {task.reason || "Bez dodatnog objašnjenja."}
           </span>
         </div>
@@ -641,11 +641,11 @@ function TaskDrawer({
         {/* contact */}
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {task.customer_phone ? (
-            <a href={`tel:${task.customer_phone}`} style={contactBtn("#16A34A")}>
+            <a href={`tel:${task.customer_phone}`} style={contactBtn("var(--tone-green)")}>
               <PhoneIcon style={{ width: 14, height: 14 }} /> {task.customer_phone}
             </a>
           ) : (
-            <span style={{ ...contactBtn("#E4E4E7"), color: "#A1A1AA", cursor: "default" }}>
+            <span style={{ ...contactBtn("var(--ui-border)"), color: "var(--ui-faint)", cursor: "default" }}>
               <PhoneIcon style={{ width: 14, height: 14 }} /> Nema telefona
             </span>
           )}
@@ -653,7 +653,7 @@ function TaskDrawer({
             <>
               <a
                 href={`mailto:${task.customer_email}?subject=${mailSubject}&body=${mailBody}`}
-                style={{ ...contactBtn("#52525B"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+                style={{ ...contactBtn("var(--ui-text-3)"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
                 title={task.customer_email}
               >
                 <MailIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> {task.customer_email}
@@ -662,9 +662,9 @@ function TaskDrawer({
                 onClick={copyEmail}
                 title="Kopiraj email"
                 style={{
-                  ...contactBtn(emailCopied ? "#16A34A" : "#52525B"),
+                  ...contactBtn(emailCopied ? "var(--tone-green)" : "var(--ui-text-3)"),
                   flexShrink: 0,
-                  background: "#fff",
+                  background: "var(--ui-surface)",
                   cursor: "pointer",
                   padding: "8px 10px",
                 }}
@@ -685,7 +685,7 @@ function TaskDrawer({
                 if (confirm(`Označiti kao uplaćeno: ${task.customer_name || "kupac"}, ${formatCurrency(task.total, task.currency)}? Narudžbina ulazi u prihod.`))
                   onPatch(task, { order_status: "completed" });
               }}
-              style={{ ...contactBtn("#16A34A"), flex: 1, justifyContent: "center", background: "#16A34A", color: "#fff", cursor: "pointer" }}
+              style={{ ...contactBtn("var(--tone-green)"), flex: 1, justifyContent: "center", background: "#16A34A", color: "#fff", cursor: "pointer" }}
             >
               <CheckCircle2Icon style={{ width: 14, height: 14 }} /> Uplaćeno
             </button>
@@ -693,7 +693,7 @@ function TaskDrawer({
               onClick={() => {
                 if (confirm("Otkazati narudžbinu?")) onPatch(task, { order_status: "cancelled" });
               }}
-              style={{ ...contactBtn("#B91C1C"), background: "#fff", cursor: "pointer" }}
+              style={{ ...contactBtn("var(--tone-red-strong)"), background: "var(--ui-surface)", cursor: "pointer" }}
             >
               Otkaži
             </button>
@@ -730,9 +730,9 @@ function TaskDrawer({
             <button key={c} onClick={() => setChannel(c)} style={{
               fontSize: 11.5, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
               border: "1px solid", cursor: "pointer",
-              background: channel === c ? "#DCFCE7" : "#fff",
-              borderColor: channel === c ? "#16A34A" : "#E4E4E7",
-              color: channel === c ? "#15803D" : "#71717A",
+              background: channel === c ? "var(--tone-green-2)" : "var(--ui-surface)",
+              borderColor: channel === c ? "#16A34A" : "var(--ui-border)",
+              color: channel === c ? "var(--tone-green-strong)" : "var(--ui-muted)",
             }}>
               {c === "telefon" ? "Telefon" : c === "email" ? "Email" : "Napomena"}
             </button>
@@ -763,17 +763,17 @@ function TaskDrawer({
         />
 
         {/* history */}
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 8 }}>
           Istorija ({notes.length})
         </span>
-        {notes.length === 0 && <p style={{ fontSize: 12.5, color: "#A1A1AA" }}>Još nema beleški.</p>}
+        {notes.length === 0 && <p style={{ fontSize: 12.5, color: "var(--ui-faint)" }}>Još nema beleški.</p>}
         {notes.map((n) => (
-          <div key={n.id} style={{ borderTop: "1px solid #F4F4F5", padding: "9px 0" }}>
-            <div style={{ fontSize: 11, color: "#A1A1AA", marginBottom: 2 }}>
+          <div key={n.id} style={{ borderTop: "1px solid var(--ui-subtle)", padding: "9px 0" }}>
+            <div style={{ fontSize: 11, color: "var(--ui-faint)", marginBottom: 2 }}>
               {n.channel} · {new Date(n.created_at).toLocaleString("sr-RS")}
               {n.author && ` · ${n.author.name || n.author.email}`}
             </div>
-            <div style={{ fontSize: 12.5, color: "#3F3F46", whiteSpace: "pre-wrap" }}>{n.body}</div>
+            <div style={{ fontSize: 12.5, color: "var(--ui-text-2)", whiteSpace: "pre-wrap" }}>{n.body}</div>
           </div>
         ))}
       </div>
@@ -792,12 +792,12 @@ function contactBtn(color: string): React.CSSProperties {
 }
 
 const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: "#71717A",
+  fontSize: 11, fontWeight: 600, color: "var(--ui-muted)",
   textTransform: "uppercase", letterSpacing: "0.04em",
   display: "block", marginBottom: 4,
 };
 
 const INPUT: React.CSSProperties = {
   width: "100%", fontSize: 13, padding: "8px 10px",
-  border: "1px solid #E4E4E7", borderRadius: 7, outline: "none",
+  border: "1px solid var(--ui-border)", borderRadius: 7, outline: "none",
 };

@@ -15,16 +15,16 @@ import {
 // ── status config ──────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  processing: { label: "Processing",  color: "#D97706" },
-  completed:  { label: "Completed",   color: "#16A34A" },
-  pending:    { label: "Pending",     color: "#6366F1" },
-  cancelled:  { label: "Cancelled",   color: "#71717A" },
-  refunded:   { label: "Refunded",    color: "#E11D48" },
-  "on-hold":  { label: "On hold",     color: "#C2410C" },
-  failed:     { label: "Failed",      color: "#DC2626" },
+  processing: { label: "Processing",  color: "var(--tone-amber)" },
+  completed:  { label: "Completed",   color: "var(--tone-green)" },
+  pending:    { label: "Pending",     color: "var(--tone-indigo)" },
+  cancelled:  { label: "Cancelled",   color: "var(--ui-muted)" },
+  refunded:   { label: "Refunded",    color: "var(--tone-rose)" },
+  "on-hold":  { label: "On hold",     color: "var(--tone-orange-strong)" },
+  failed:     { label: "Failed",      color: "var(--tone-red)" },
 };
 
-const FALLBACK_COLORS = ["#16A34A", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#6B7280"];
+const FALLBACK_COLORS = ["var(--tone-green)", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "var(--ui-muted)"];
 
 interface BreakdownItem {
   status: string;
@@ -49,7 +49,7 @@ function CustomLabel(props: any) {
   const x = cx + (outerRadius + 20) * Math.cos(-midAngle * RAD);
   const y = cy + (outerRadius + 20) * Math.sin(-midAngle * RAD);
   return (
-    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "#52525B" }}>
+    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "var(--ui-text-3)" }}>
       <tspan fontWeight={700}>{count}</tspan>
       {" "}
       <tspan>({pct}%)</tspan>
@@ -80,17 +80,17 @@ export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
 
   return (
     <div style={{
-      background: "#fff",
-      border: "1px solid #E4E4E7",
+      background: "var(--ui-surface)",
+      border: "1px solid var(--ui-border)",
       borderRadius: 12,
       padding: "18px 20px",
     }}>
       <div style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
           Status porudžbina
         </span>
         {data && (
-          <span style={{ fontSize: 12, color: "#A1A1AA", marginLeft: 8 }}>
+          <span style={{ fontSize: 12, color: "var(--ui-faint)", marginLeft: 8 }}>
             {data.total.toLocaleString("sr-RS")} ukupno
           </span>
         )}
@@ -104,7 +104,7 @@ export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#A1A1AA",
+          color: "var(--ui-faint)",
           fontSize: 13,
         }}>
           Učitavanje…
@@ -115,7 +115,7 @@ export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#A1A1AA",
+          color: "var(--ui-faint)",
           fontSize: 13,
         }}>
           Nema podataka
@@ -142,15 +142,15 @@ export function StatusBreakdownChart({ siteId }: StatusBreakdownChartProps) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               formatter={(value: any, name: any) => [`${value} porudžbina`, name]}
               contentStyle={{
-                background: "#fff",
-                border: "1px solid #E4E4E7",
+                background: "var(--ui-surface)",
+                border: "1px solid var(--ui-border)",
                 borderRadius: 8,
                 fontSize: 12,
               }}
             />
             <Legend
               wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-              formatter={(value) => <span style={{ color: "#52525B" }}>{value}</span>}
+              formatter={(value) => <span style={{ color: "var(--ui-text-3)" }}>{value}</span>}
             />
           </PieChart>
         </ResponsiveContainer>

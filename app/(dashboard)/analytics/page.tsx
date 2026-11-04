@@ -17,10 +17,10 @@ export default function AnalyticsPage() {
 
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#18181B", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-text)", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
           Analitika
         </h1>
-        <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
           Prihod po sajtovima, trendovi, kupci i naplata
         </p>
       </div>

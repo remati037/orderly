@@ -20,7 +20,7 @@ interface ProcessingOrder {
 }
 
 const CARD: React.CSSProperties = {
-  background: "#fff", border: "1px solid #E4E4E7", borderRadius: 10,
+  background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 10,
   padding: "11px 12px", marginBottom: 8,
 };
 
@@ -35,8 +35,8 @@ function relativeTime(iso: string): string {
 function contactBtn(color: string): React.CSSProperties {
   return {
     display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600,
-    padding: "8px 10px", borderRadius: 7, border: "1px solid #E4E4E7", color,
-    textDecoration: "none", background: "#fff",
+    padding: "8px 10px", borderRadius: 7, border: "1px solid var(--ui-border)", color,
+    textDecoration: "none", background: "var(--ui-surface)",
   };
 }
 
@@ -68,11 +68,11 @@ export default function ProcessingCallsList() {
     }
   }
 
-  if (loading) return <p style={{ fontSize: 13, color: "#A1A1AA" }}>Učitavanje…</p>;
+  if (loading) return <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>Učitavanje…</p>;
 
   if (orders.length === 0) {
     return (
-      <div style={{ ...CARD, textAlign: "center", padding: 28, color: "#71717A" }}>
+      <div style={{ ...CARD, textAlign: "center", padding: 28, color: "var(--ui-muted)" }}>
         Nema processing porudžbina u poslednjih 7 dana.
       </div>
     );
@@ -83,10 +83,10 @@ export default function ProcessingCallsList() {
 
   return (
     <div>
-      <p style={{ fontSize: 12.5, color: "#71717A", marginBottom: 12 }}>
+      <p style={{ fontSize: 12.5, color: "var(--ui-muted)", marginBottom: 12 }}>
         Uspešno naplaćene porudžbine iz poslednjih 7 dana — za pozivanje, ne za naplatu.
-        {" "}<strong style={{ color: "#18181B" }}>{toCall.length}</strong> za pozvati
-        {called.length > 0 && <>, <strong style={{ color: "#18181B" }}>{called.length}</strong> pozvano</>}.
+        {" "}<strong style={{ color: "var(--ui-text)" }}>{toCall.length}</strong> za pozvati
+        {called.length > 0 && <>, <strong style={{ color: "var(--ui-text)" }}>{called.length}</strong> pozvano</>}.
       </p>
 
       {[...toCall, ...called].map((o) => (
@@ -96,9 +96,9 @@ export default function ProcessingCallsList() {
             title={o.called_at ? "Označi kao nepozvano" : "Označi kao pozvano"}
             style={{
               flexShrink: 0, width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
-              border: o.called_at ? "1px solid #16A34A" : "1px solid #E4E4E7",
-              background: o.called_at ? "#16A34A" : "#fff",
-              color: o.called_at ? "#fff" : "#D4D4D8",
+              border: o.called_at ? "1px solid #16A34A" : "1px solid var(--ui-border)",
+              background: o.called_at ? "#16A34A" : "var(--ui-surface)",
+              color: o.called_at ? "#fff" : "var(--ui-border-strong)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
@@ -107,18 +107,18 @@ export default function ProcessingCallsList() {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
                 {o.customer_name || "Nepoznat kupac"}
               </span>
               {o.site_name && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#71717A" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--ui-muted)" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: o.site_color }} />
                   {o.site_name}
                 </span>
               )}
-              <span style={{ fontSize: 11, color: "#A1A1AA" }}>pre {relativeTime(o.created_at)}</span>
+              <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>pre {relativeTime(o.created_at)}</span>
             </div>
-            <div style={{ fontSize: 12, color: "#71717A", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-muted)", marginTop: 2 }}>
               {formatCurrency(o.total, o.currency)}
               {o.product_name && ` · ${o.product_name}`}
               {o.order_number && ` · #${o.order_number}`}
@@ -127,16 +127,16 @@ export default function ProcessingCallsList() {
 
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
             {o.customer_phone ? (
-              <a href={`tel:${o.customer_phone}`} style={contactBtn("#16A34A")}>
+              <a href={`tel:${o.customer_phone}`} style={contactBtn("var(--tone-green)")}>
                 <PhoneIcon style={{ width: 13, height: 13 }} /> {o.customer_phone}
               </a>
             ) : (
-              <span style={{ ...contactBtn("#D4D4D8"), cursor: "default" }}>
+              <span style={{ ...contactBtn("var(--ui-border-strong)"), cursor: "default" }}>
                 <PhoneIcon style={{ width: 13, height: 13 }} /> Nema telefona
               </span>
             )}
             {o.customer_email && (
-              <a href={`mailto:${o.customer_email}`} style={contactBtn("#52525B")} title={o.customer_email}>
+              <a href={`mailto:${o.customer_email}`} style={contactBtn("var(--ui-text-3)")} title={o.customer_email}>
                 <MailIcon style={{ width: 13, height: 13 }} />
               </a>
             )}

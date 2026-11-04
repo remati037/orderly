@@ -49,19 +49,19 @@ export interface OrderRow {
 // ── lookups ────────────────────────────────────────────────────────────────────
 
 const STATUS: Record<string, { bg: string; color: string; label: string }> = {
-  processing: { bg: "#FFFBEB", color: "#D97706", label: "Processing" },
-  completed:  { bg: "#F0FDF4", color: "#16A34A", label: "Completed" },
-  pending:    { bg: "#EEF2FF", color: "#6366F1", label: "Pending" },
-  cancelled:  { bg: "#F4F4F5", color: "#71717A", label: "Cancelled" },
-  refunded:   { bg: "#FFF1F2", color: "#E11D48", label: "Refunded" },
-  "on-hold":  { bg: "#FFF7ED", color: "#C2410C", label: "On hold" },
-  failed:     { bg: "#FEF2F2", color: "#DC2626", label: "Failed" },
+  processing: { bg: "var(--tone-amber-1)", color: "var(--tone-amber)", label: "Processing" },
+  completed:  { bg: "var(--tone-green-1)", color: "var(--tone-green)", label: "Completed" },
+  pending:    { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo)", label: "Pending" },
+  cancelled:  { bg: "var(--ui-subtle)", color: "var(--ui-muted)", label: "Cancelled" },
+  refunded:   { bg: "var(--tone-rose-1)", color: "var(--tone-rose)", label: "Refunded" },
+  "on-hold":  { bg: "var(--tone-orange-1)", color: "var(--tone-orange-strong)", label: "On hold" },
+  failed:     { bg: "var(--tone-red-1)", color: "var(--tone-red)", label: "Failed" },
 };
 
 const PRODUCT_TYPE: Record<string, { bg: string; color: string }> = {
-  digital:      { bg: "#EEF2FF", color: "#4338CA" },
-  physical:     { bg: "#F4F4F5", color: "#52525B" },
-  subscription: { bg: "#F0FDF4", color: "#166534" },
+  digital:      { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo-strong)" },
+  physical:     { bg: "var(--ui-subtle)", color: "var(--ui-text-3)" },
+  subscription: { bg: "var(--tone-green-1)", color: "var(--tone-green-deep)" },
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -104,7 +104,7 @@ function fullDate(dateStr: string): string {
 // ── badges (shared with live-feed style) ──────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS[status] ?? { bg: "#F4F4F5", color: "#71717A", label: status };
+  const s = STATUS[status] ?? { bg: "var(--ui-subtle)", color: "var(--ui-muted)", label: status };
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
@@ -118,7 +118,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ProductTypeTag({ type }: { type: string }) {
-  const t = PRODUCT_TYPE[type] ?? { bg: "#F4F4F5", color: "#52525B" };
+  const t = PRODUCT_TYPE[type] ?? { bg: "var(--ui-subtle)", color: "var(--ui-text-3)" };
   return (
     <span style={{
       display: "inline-block", fontSize: 11, fontWeight: 500,
@@ -147,17 +147,17 @@ function OrderDetail({
     <div style={{ flex: 1, overflowY: "auto" }}>
       {/* Customer */}
       <section style={{ padding: "20px 20px 0" }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A1A1AA", marginBottom: 10 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ui-faint)", marginBottom: 10 }}>
           Kupac
         </p>
-        <p style={{ fontSize: 14, fontWeight: 600, color: "#18181B", marginBottom: 2 }}>
+        <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", marginBottom: 2 }}>
           {order.customer_name || "—"}
         </p>
         {order.customer_email && (
-          <p style={{ fontSize: 12, color: "#71717A", marginBottom: 2 }}>{order.customer_email}</p>
+          <p style={{ fontSize: 12, color: "var(--ui-muted)", marginBottom: 2 }}>{order.customer_email}</p>
         )}
         {order.customer_city && (
-          <p style={{ fontSize: 12, color: "#A1A1AA" }}>{order.customer_city}</p>
+          <p style={{ fontSize: 12, color: "var(--ui-faint)" }}>{order.customer_city}</p>
         )}
       </section>
 
@@ -165,19 +165,19 @@ function OrderDetail({
 
       {/* Site + platform */}
       <section style={{ padding: "0 20px" }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A1A1AA", marginBottom: 10 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ui-faint)", marginBottom: 10 }}>
           Sajt
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {order.sites && (
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, color: "#18181B" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, color: "var(--ui-text)" }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: order.sites.color_hex, flexShrink: 0 }} />
               {order.sites.name}
             </span>
           )}
           <span style={{
             fontSize: 11, fontWeight: 500, padding: "2px 7px", borderRadius: 6,
-            background: "#F4F4F5", color: "#52525B",
+            background: "var(--ui-subtle)", color: "var(--ui-text-3)",
           }}>
             {PLATFORM_LABEL[order.source] ?? order.source}
           </span>
@@ -189,23 +189,23 @@ function OrderDetail({
 
       {/* Items */}
       <section style={{ padding: "0 20px" }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A1A1AA", marginBottom: 10 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ui-faint)", marginBottom: 10 }}>
           Stavke
         </p>
         {order.order_items.length === 0 ? (
-          <p style={{ fontSize: 13, color: "#A1A1AA" }}>Nema stavki</p>
+          <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>Nema stavki</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {order.order_items.map((item, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "#18181B", overflow: "hidden" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "var(--ui-text)", overflow: "hidden" }}>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product_name}</span>
                     {i === 0 && subscriptionSeq && <SubscriptionDots seq={subscriptionSeq} />}
                   </span>
-                  <span style={{ fontSize: 11, color: "#A1A1AA" }}>{item.quantity}× po {formatAmount(item.price / item.quantity, order.currency)}</span>
+                  <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>{item.quantity}× po {formatAmount(item.price / item.quantity, order.currency)}</span>
                 </div>
-                <span style={{ fontWeight: 600, color: "#18181B", flexShrink: 0 }}>
+                <span style={{ fontWeight: 600, color: "var(--ui-text)", flexShrink: 0 }}>
                   {formatAmount(item.price, order.currency)}
                 </span>
               </div>
@@ -219,13 +219,13 @@ function OrderDetail({
       {/* Totals */}
       <section style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-          <span style={{ color: "#71717A" }}>Ukupno</span>
+          <span style={{ color: "var(--ui-muted)" }}>Ukupno</span>
           <div style={{ textAlign: "right" }}>
-            <span style={{ fontWeight: 700, color: "#18181B", display: "block" }}>
+            <span style={{ fontWeight: 700, color: "var(--ui-text)", display: "block" }}>
               {formatCurrency(toBase(order.total, order.currency, exchangeRates), baseCurrency)}
             </span>
             {order.currency !== baseCurrency && (
-              <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+              <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>
                 {formatAmount(order.total, order.currency)}
               </span>
             )}
@@ -233,21 +233,21 @@ function OrderDetail({
         </div>
         {/stripe/i.test(order.payment_method ?? "") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: "#71717A" }}>Stripe naknada (5%)</span>
-            <span style={{ color: "#E11D48" }}>
+            <span style={{ color: "var(--ui-muted)" }}>Stripe naknada (5%)</span>
+            <span style={{ color: "var(--tone-rose)" }}>
               −{formatCurrency(toBase(order.total * 0.05, order.currency, exchangeRates), baseCurrency)}
             </span>
           </div>
         )}
         {order.net_profit != null && order.net_profit > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-            <span style={{ color: "#71717A" }}>Neto zarada</span>
+            <span style={{ color: "var(--ui-muted)" }}>Neto zarada</span>
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontWeight: 700, color: "#16A34A", display: "block" }}>
+              <span style={{ fontWeight: 700, color: "var(--tone-green)", display: "block" }}>
                 {formatCurrency(toBase(order.net_profit, order.currency, exchangeRates), baseCurrency)}
               </span>
               {order.currency !== baseCurrency && (
-                <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+                <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>
                   {formatAmount(order.net_profit, order.currency)}
                 </span>
               )}
@@ -256,8 +256,8 @@ function OrderDetail({
         )}
         {order.payment_method && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 8 }}>
-            <span style={{ color: "#A1A1AA" }}>Način plaćanja</span>
-            <span style={{ color: "#71717A", fontWeight: 500 }}>
+            <span style={{ color: "var(--ui-faint)" }}>Način plaćanja</span>
+            <span style={{ color: "var(--ui-muted)", fontWeight: 500 }}>
               {/stripe/i.test(order.payment_method)
                 ? "Stripe (kreditna kartica)"
                 : order.payment_method === "bacs"
@@ -272,17 +272,17 @@ function OrderDetail({
 
       {/* Timestamps */}
       <section style={{ padding: "0 20px 24px" }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A1A1AA", marginBottom: 10 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ui-faint)", marginBottom: 10 }}>
           Datumi
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-            <span style={{ color: "#A1A1AA" }}>Kreirano</span>
-            <span style={{ color: "#71717A" }}>{fullDate(order.created_at)}</span>
+            <span style={{ color: "var(--ui-faint)" }}>Kreirano</span>
+            <span style={{ color: "var(--ui-muted)" }}>{fullDate(order.created_at)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-            <span style={{ color: "#A1A1AA" }}>Ažurirano</span>
-            <span style={{ color: "#71717A" }}>{fullDate(order.updated_at)}</span>
+            <span style={{ color: "var(--ui-faint)" }}>Ažurirano</span>
+            <span style={{ color: "var(--ui-muted)" }}>{fullDate(order.updated_at)}</span>
           </div>
         </div>
       </section>
@@ -311,13 +311,13 @@ function TableRow({
   return (
     <tr
       onClick={onClick}
-      style={{ cursor: "pointer", transition: "background 100ms", borderBottom: "1px solid #F4F4F5" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#FAFAFA")}
+      style={{ cursor: "pointer", transition: "background 100ms", borderBottom: "1px solid var(--ui-subtle)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ui-sidebar)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
       {/* # */}
       <td style={{ padding: "10px 16px 10px 20px", width: 80, verticalAlign: "middle" }}>
-        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "#71717A" }}>
+        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "var(--ui-muted)" }}>
           {order.woo_order_id ?? "—"}
         </span>
       </td>
@@ -327,11 +327,11 @@ function TableRow({
         <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
           <span style={{
             width: 8, height: 8, borderRadius: "50%",
-            background: order.sites?.color_hex ?? "#D4D4D8",
+            background: order.sites?.color_hex ?? "var(--ui-border-strong)",
             flexShrink: 0,
           }} />
           <span style={{
-            fontSize: 12, color: "#52525B", overflow: "hidden",
+            fontSize: 12, color: "var(--ui-text-3)", overflow: "hidden",
             textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
             {order.sites?.name ?? "—"}
@@ -343,14 +343,14 @@ function TableRow({
       <td style={{ padding: "10px 16px", verticalAlign: "middle", minWidth: 140 }}>
         <div style={{ minWidth: 0 }}>
           <p style={{
-            fontSize: 13, fontWeight: 600, color: "#18181B",
+            fontSize: 13, fontWeight: 600, color: "var(--ui-text)",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0,
           }}>
             {order.customer_name || "—"}
           </p>
           {order.customer_email && (
             <p style={{
-              fontSize: 11, color: "#A1A1AA",
+              fontSize: 11, color: "var(--ui-faint)",
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0,
             }}>
               {order.customer_email}
@@ -365,7 +365,7 @@ function TableRow({
           <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
               <span style={{
-                fontSize: 12, color: "#52525B",
+                fontSize: 12, color: "var(--ui-text-3)",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>
                 {firstItem.product_name}
@@ -373,11 +373,11 @@ function TableRow({
               {subscriptionSeq && <SubscriptionDots seq={subscriptionSeq} />}
             </div>
             {extraItems > 0 && (
-              <span style={{ fontSize: 11, color: "#A1A1AA" }}>+{extraItems} još</span>
+              <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>+{extraItems} još</span>
             )}
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: "#A1A1AA" }}>—</span>
+          <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>—</span>
         )}
       </td>
 
@@ -393,11 +393,11 @@ function TableRow({
 
       {/* Iznos */}
       <td style={{ padding: "10px 20px 10px 16px", verticalAlign: "middle", textAlign: "right", minWidth: 100 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#18181B", display: "block" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ui-text)", display: "block" }}>
           {formatCurrency(toBase(order.total, order.currency, exchangeRates), baseCurrency)}
         </span>
         {order.currency !== baseCurrency && (
-          <span style={{ fontSize: 11, color: "#A1A1AA" }}>
+          <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>
             {formatAmount(order.total, order.currency)}
           </span>
         )}
@@ -407,7 +407,7 @@ function TableRow({
       <td style={{ padding: "10px 20px 10px 16px", verticalAlign: "middle", width: 110 }}>
         <Tooltip>
           <TooltipTrigger style={{ cursor: "pointer" }}>
-            <span style={{ fontSize: 12, color: "#A1A1AA", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 12, color: "var(--ui-faint)", whiteSpace: "nowrap" }}>
               {relativeTime(order.created_at)}
             </span>
           </TooltipTrigger>
@@ -447,7 +447,7 @@ export function OrdersTableClient({
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid #F4F4F5" }}>
+            <tr style={{ borderBottom: "1px solid var(--ui-subtle)" }}>
               {["#", "Sajt", "Kupac", "Proizvod", "Tip", "Status", "Iznos", "Datum"].map((h, i) => (
                 <th
                   key={h}
@@ -458,7 +458,7 @@ export function OrdersTableClient({
                     fontWeight: 600,
                     letterSpacing: "0.05em",
                     textTransform: "uppercase",
-                    color: "#A1A1AA",
+                    color: "var(--ui-faint)",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -470,7 +470,7 @@ export function OrdersTableClient({
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+                <td colSpan={8} style={{ padding: "48px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
                   Nema porudžbina koje odgovaraju filterima
                 </td>
               </tr>

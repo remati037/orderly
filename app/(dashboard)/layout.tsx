@@ -26,7 +26,7 @@ export default async function DashboardLayout({
 
             <main
               className="px-4 py-4 md:px-7 md:py-6"
-              style={{ flex: 1, overflowY: "auto", background: "#F9F9F9" }}
+              style={{ flex: 1, overflowY: "auto", background: "var(--ui-canvas)" }}
             >
               {children}
             </main>

@@ -19,8 +19,8 @@ export function DashboardHeader({ role, email }: { role: Role; email: string }) 
     <header
       style={{
         height: 44,
-        borderBottom: "1px solid #E4E4E7",
-        background: "#fff",
+        borderBottom: "1px solid var(--ui-border)",
+        background: "var(--ui-surface)",
         display: "flex",
         alignItems: "center",
         padding: "0 16px",
@@ -32,10 +32,10 @@ export function DashboardHeader({ role, email }: { role: Role; email: string }) 
 
       {/* Whether live updates are flowing — numbers may be stale when offline. */}
       <span
-        style={{ marginLeft: "auto", marginRight: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: isConnected ? "#16A34A" : "#A1A1AA" }}
+        style={{ marginLeft: "auto", marginRight: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: isConnected ? "var(--tone-green)" : "var(--ui-faint)" }}
         title={isConnected ? "Podaci se osvežavaju uživo" : "Veza za osvežavanje uživo je prekinuta"}
       >
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: isConnected ? "#22C55E" : "#D4D4D8" }} />
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: isConnected ? "#22C55E" : "var(--ui-border-strong)" }} />
         {isConnected ? "Uživo" : "Van mreže"}
       </span>
 
@@ -53,8 +53,8 @@ export function DashboardHeader({ role, email }: { role: Role; email: string }) 
                 height: 32,
                 borderRadius: 6,
                 border: "none",
-                background: isMuted ? "transparent" : "#DCFCE7",
-                color: isMuted ? "#A1A1AA" : "#16A34A",
+                background: isMuted ? "transparent" : "var(--tone-green-2)",
+                color: isMuted ? "var(--ui-faint)" : "var(--tone-green)",
                 cursor: "pointer",
                 transition: "background 120ms, color 120ms",
               }}

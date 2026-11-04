@@ -8,7 +8,7 @@ import { Sparkline } from "./sparkline";
 
 function Skeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("animate-pulse rounded-md bg-zinc-100", className)} />
+    <div className={cn("animate-pulse rounded-md bg-[var(--ui-subtle)]", className)} />
   );
 }
 
@@ -18,10 +18,10 @@ function TrendText({ value, compareLabel }: { value: number; compareLabel: strin
   const positive = value >= 0;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12 }}>
-      <span style={{ fontWeight: 600, color: positive ? "#16A34A" : "#DC2626" }}>
+      <span style={{ fontWeight: 600, color: positive ? "var(--tone-green)" : "var(--tone-red)" }}>
         {positive ? "↑" : "↓"} {Math.abs(value) > 999 ? ">999" : Math.abs(value).toFixed(1)}%
       </span>
-      <span style={{ color: "#A1A1AA" }}>vs {compareLabel}</span>
+      <span style={{ color: "var(--ui-faint)" }}>vs {compareLabel}</span>
     </span>
   );
 }
@@ -47,13 +47,13 @@ export function KPICard({
   sparkline,
   compareLabel = "juče",
 }: KPICardProps) {
-  const sparkColor = trend == null || trend >= 0 ? "#16A34A" : "#DC2626";
+  const sparkColor = trend == null || trend >= 0 ? "var(--tone-green)" : "var(--tone-red)";
   return (
     <div
       className="group"
       style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 14,
         padding: "18px 20px",
         boxShadow: "var(--shadow-sm)",
@@ -64,13 +64,13 @@ export function KPICard({
         const el = e.currentTarget;
         el.style.boxShadow = "var(--shadow-md)";
         el.style.transform = "translateY(-1px)";
-        el.style.borderColor = "#D1D1D6";
+        el.style.borderColor = "var(--ui-border-strong)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget;
         el.style.boxShadow = "var(--shadow-sm)";
         el.style.transform = "translateY(0)";
-        el.style.borderColor = "#E4E4E7";
+        el.style.borderColor = "var(--ui-border)";
       }}
     >
       {/* Top row: icon chip + label */}
@@ -83,11 +83,11 @@ export function KPICard({
             width: 32,
             height: 32,
             borderRadius: 9,
-            background: "#DCFCE7",
+            background: "var(--tone-green-2)",
             flexShrink: 0,
           }}
         >
-          <Icon style={{ width: 16, height: 16, color: "#16A34A" }} />
+          <Icon style={{ width: 16, height: 16, color: "var(--tone-green)" }} />
         </span>
         {isLoading ? (
           <Skeleton className="h-3 w-24" />
@@ -96,7 +96,7 @@ export function KPICard({
             style={{
               fontSize: 12,
               fontWeight: 500,
-              color: "#71717A",
+              color: "var(--ui-muted)",
             }}
           >
             {label}
@@ -117,7 +117,7 @@ export function KPICard({
                 fontSize: 28,
                 fontWeight: 700,
                 letterSpacing: "-0.03em",
-                color: "#18181B",
+                color: "var(--ui-text)",
                 lineHeight: 1.1,
               }}
             >

@@ -55,7 +55,7 @@ export function SiteRevenueBar() {
   if (error && !data) return <LoadError onRetry={() => mutate()} compact />;
 
   if (loading) {
-    return <div style={{ height: 64, background: "#F4F4F5", borderRadius: 12, animation: "pulse 2s infinite" }} />;
+    return <div style={{ height: 64, background: "var(--ui-subtle)", borderRadius: 12, animation: "pulse 2s infinite" }} />;
   }
 
   const breakdown = data?.breakdown ?? [];
@@ -67,17 +67,17 @@ export function SiteRevenueBar() {
 
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E4E4E7", borderRadius: 12,
+      background: "var(--ui-surface)", border: "1px solid var(--ui-border)", borderRadius: 12,
       padding: "16px 18px",
     }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 12 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 12 }}>
         Prihod po sajtu
       </span>
 
       {/* 2px gaps separate sites; shades inside a group separate the buckets. */}
       <div style={{
         display: "flex", gap: 2, height: 10, borderRadius: 999, overflow: "hidden",
-        background: "#F4F4F5", marginBottom: 12,
+        background: "var(--ui-subtle)", marginBottom: 12,
       }}>
         {breakdown.map((b) => (
           <div key={b.site_id} style={{ display: "flex", flex: `${b.revenue} 1 0` }}>
@@ -104,8 +104,8 @@ export function SiteRevenueBar() {
                   <span key={s.kind} style={{ flex: `${s.revenue} 1 0`, background: s.color }} />
                 ))}
               </span>
-              <span style={{ color: "#3F3F46", fontWeight: 600 }}>{b.name}</span>
-              <span style={{ color: "#A1A1AA" }}>
+              <span style={{ color: "var(--ui-text-2)", fontWeight: 600 }}>{b.name}</span>
+              <span style={{ color: "var(--ui-faint)" }}>
                 {b.pct}% · {formatCurrency(b.revenue, currency)}
               </span>
             </div>
@@ -115,7 +115,7 @@ export function SiteRevenueBar() {
                 {b.segments.map((s) => (
                   <span key={s.kind} style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    fontSize: 11.5, color: "#A1A1AA",
+                    fontSize: 11.5, color: "var(--ui-faint)",
                   }}>
                     <span style={{
                       width: 6, height: 6, borderRadius: "50%",

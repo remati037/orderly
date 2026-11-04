@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 // number formatting. Text always uses neutral ink — series colour only ever
 // appears on marks and swatches.
 
-export const INK = { primary: "#18181B", secondary: "#52525B", muted: "#A1A1AA", grid: "#F4F4F5", border: "#E4E4E7" };
+export const INK = { primary: "var(--ui-text)", secondary: "var(--ui-text-3)", muted: "var(--ui-faint)", grid: "var(--ui-subtle)", border: "var(--ui-border)" };
 
 export function ChartCard({
   title,
@@ -22,7 +22,7 @@ export function ChartCard({
 }) {
   return (
     <section
-      style={{ background: "#fff", border: `1px solid ${INK.border}`, borderRadius: 12, padding: "18px 20px", minWidth: 0 }}
+      style={{ background: "var(--ui-surface)", border: `1px solid ${INK.border}`, borderRadius: 12, padding: "18px 20px", minWidth: 0 }}
     >
       <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
         <div>
@@ -72,7 +72,7 @@ export function Segmented<T extends string | number>({
             onClick={() => onChange(o.value)}
             style={{
               fontSize: 12, fontWeight: active ? 600 : 500, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer",
-              background: active ? "#DCFCE7" : "transparent", color: active ? "#15803D" : "#71717A",
+              background: active ? "var(--tone-green-2)" : "transparent", color: active ? "var(--tone-green-strong)" : "var(--ui-muted)",
             }}
           >
             {o.label}
@@ -87,7 +87,7 @@ export interface TooltipRow { key: string; label: string; value: string; color?:
 
 export function TooltipBox({ title, rows, footer }: { title: string; rows: TooltipRow[]; footer?: string }) {
   return (
-    <div style={{ background: "#fff", border: `1px solid ${INK.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", minWidth: 160 }}>
+    <div style={{ background: "var(--ui-surface)", border: `1px solid ${INK.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", minWidth: 160 }}>
       <p style={{ margin: "0 0 6px", fontWeight: 600, color: INK.primary }}>{title}</p>
       {rows.map((r) => (
         <p key={r.key} style={{ margin: "3px 0", display: "flex", alignItems: "center", gap: 6, color: INK.secondary }}>

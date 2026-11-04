@@ -124,8 +124,8 @@ function StatCard({
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 12,
         padding: "18px 20px",
         flex: 1,
@@ -145,12 +145,12 @@ function StatCard({
             fontWeight: 500,
             letterSpacing: "0.04em",
             textTransform: "uppercase",
-            color: "#71717A",
+            color: "var(--ui-muted)",
           }}
         >
           {label}
         </span>
-        <Icon style={{ width: 15, height: 15, color: "#A1A1AA", flexShrink: 0 }} />
+        <Icon style={{ width: 15, height: 15, color: "var(--ui-faint)", flexShrink: 0 }} />
       </div>
       <span
         style={{
@@ -158,7 +158,7 @@ function StatCard({
           fontSize: 24,
           fontWeight: 700,
           letterSpacing: "-0.02em",
-          color: "#18181B",
+          color: "var(--ui-text)",
           marginTop: 6,
           lineHeight: 1.2,
           overflow: "hidden",
@@ -170,7 +170,7 @@ function StatCard({
       </span>
       {sub && (
         <span
-          style={{ fontSize: 11, color: "#A1A1AA", marginTop: 3, display: "block" }}
+          style={{ fontSize: 11, color: "var(--ui-faint)", marginTop: 3, display: "block" }}
         >
           {sub}
         </span>
@@ -191,8 +191,8 @@ function SectionBox({
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 12,
         overflow: "hidden",
       }}
@@ -200,16 +200,16 @@ function SectionBox({
       <div
         style={{
           padding: "14px 20px",
-          borderBottom: "1px solid #F4F4F5",
+          borderBottom: "1px solid var(--ui-subtle)",
         }}
       >
         <h2
-          style={{ fontSize: 14, fontWeight: 600, color: "#18181B", margin: 0 }}
+          style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text)", margin: 0 }}
         >
           {title}
         </h2>
         {description && (
-          <p style={{ fontSize: 12, color: "#A1A1AA", margin: "2px 0 0" }}>
+          <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "2px 0 0" }}>
             {description}
           </p>
         )}
@@ -563,7 +563,7 @@ export default function ProfitPage() {
             style={{
               fontSize: 22,
               fontWeight: 700,
-              color: "#18181B",
+              color: "var(--ui-text)",
               letterSpacing: "-0.02em",
               margin: 0,
               lineHeight: 1.2,
@@ -571,7 +571,7 @@ export default function ProfitPage() {
           >
             Profit & Troškovi
           </h1>
-          <p style={{ fontSize: 13, color: "#A1A1AA", margin: "4px 0 0" }}>
+          <p style={{ fontSize: 13, color: "var(--ui-faint)", margin: "4px 0 0" }}>
             Podesi marže po sajtu i troškove po proizvodu
           </p>
         </div>
@@ -607,11 +607,11 @@ export default function ProfitPage() {
           description={`Mapirana Facebook Ads potrošnja i prihod koji je doneo, ovaj mesec · ukupno ${formatRSD(adPerfTotal)}`}
         >
           {loading ? (
-            <div style={{ padding: 32, textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+            <div style={{ padding: 32, textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
               Učitavanje...
             </div>
           ) : adPerf.length === 0 ? (
-            <div style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+            <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
               Nema mapirane potrošnje — poveži nalog i mapiraj kampanje u Podešavanja → Facebook Ads
             </div>
           ) : (
@@ -636,22 +636,22 @@ export default function ProfitPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span style={{ fontSize: 13, color: row.product_name ? "#18181B" : "#A1A1AA" }}>
+                        <span style={{ fontSize: 13, color: row.product_name ? "var(--ui-text)" : "var(--ui-faint)" }}>
                           {row.product_name ?? "Ceo sajt"}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: "#DC2626" }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--tone-red)" }}>
                           {formatRSD(row.spend)}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: "#16A34A" }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--tone-green)" }}>
                           {formatRSD(row.revenue)}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
                           {row.roas !== null ? `${row.roas}×` : "—"}
                         </span>
                       </TableCell>
@@ -673,7 +673,7 @@ export default function ProfitPage() {
               style={{
                 padding: 32,
                 textAlign: "center",
-                color: "#A1A1AA",
+                color: "var(--ui-faint)",
                 fontSize: 13,
               }}
             >
@@ -757,7 +757,7 @@ export default function ProfitPage() {
                           placeholder="—"
                         />
                         <span
-                          style={{ fontSize: 13, color: "#71717A" }}
+                          style={{ fontSize: 13, color: "var(--ui-muted)" }}
                         >
                           %
                         </span>
@@ -793,7 +793,7 @@ export default function ProfitPage() {
               style={{
                 padding: 32,
                 textAlign: "center",
-                color: "#A1A1AA",
+                color: "var(--ui-faint)",
                 fontSize: 13,
               }}
             >
@@ -804,7 +804,7 @@ export default function ProfitPage() {
               style={{
                 padding: "48px 20px",
                 textAlign: "center",
-                color: "#A1A1AA",
+                color: "var(--ui-faint)",
                 fontSize: 13,
               }}
             >
@@ -891,16 +891,16 @@ export default function ProfitPage() {
                               border: "1px solid",
                               borderColor:
                                 edit.mode === "percent"
-                                  ? "#BFDBFE"
-                                  : "#BBF7D0",
+                                  ? "var(--tone-blue-3)"
+                                  : "var(--tone-green-3)",
                               background:
                                 edit.mode === "percent"
-                                  ? "#EFF6FF"
-                                  : "#F0FDF4",
+                                  ? "var(--tone-blue-1)"
+                                  : "var(--tone-green-1)",
                               color:
                                 edit.mode === "percent"
-                                  ? "#1D4ED8"
-                                  : "#16A34A",
+                                  ? "var(--tone-blue-strong)"
+                                  : "var(--tone-green)",
                               cursor: "pointer",
                               userSelect: "none",
                             }}
@@ -932,7 +932,7 @@ export default function ProfitPage() {
                               }
                             />
                             <span
-                              style={{ fontSize: 12, color: "#71717A" }}
+                              style={{ fontSize: 12, color: "var(--ui-muted)" }}
                             >
                               {edit.mode === "percent" ? "%" : "€"}
                             </span>
@@ -944,7 +944,7 @@ export default function ProfitPage() {
                             style={{
                               fontSize: 13,
                               fontWeight: 500,
-                              color: "#18181B",
+                              color: "var(--ui-text)",
                             }}
                           >
                             {calcEffectiveMargin(edit.mode, edit.value)}
@@ -956,7 +956,7 @@ export default function ProfitPage() {
                             style={{
                               fontSize: 13,
                               fontWeight: 500,
-                              color: "#16A34A",
+                              color: "var(--tone-green)",
                             }}
                           >
                             {calcPreviewNet(edit.mode, edit.value)}
@@ -986,8 +986,8 @@ export default function ProfitPage() {
         {/* Recalculate */}
         <div
           style={{
-            background: "#fff",
-            border: "1px solid #E4E4E7",
+            background: "var(--ui-surface)",
+            border: "1px solid var(--ui-border)",
             borderRadius: 12,
             padding: "18px 20px",
             display: "flex",
@@ -1001,20 +1001,20 @@ export default function ProfitPage() {
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: "#18181B",
+                color: "var(--ui-text)",
                 margin: 0,
               }}
             >
               Rekalkuliši sve porudžbine
             </p>
             <p
-              style={{ fontSize: 12, color: "#A1A1AA", margin: "2px 0 0" }}
+              style={{ fontSize: 12, color: "var(--ui-faint)", margin: "2px 0 0" }}
             >
               Ažurira{" "}
               <code
                 style={{
                   fontSize: 11,
-                  background: "#F4F4F5",
+                  background: "var(--ui-subtle)",
                   padding: "1px 5px",
                   borderRadius: 4,
                 }}
@@ -1030,7 +1030,7 @@ export default function ProfitPage() {
                   style={{
                     height: 4,
                     borderRadius: 99,
-                    background: "#F4F4F5",
+                    background: "var(--ui-subtle)",
                     overflow: "hidden",
                     width: 300,
                     maxWidth: "100%",
@@ -1054,7 +1054,7 @@ export default function ProfitPage() {
                 <p
                   style={{
                     fontSize: 12,
-                    color: "#71717A",
+                    color: "var(--ui-muted)",
                     margin: "4px 0 0",
                   }}
                 >

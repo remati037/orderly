@@ -48,7 +48,7 @@ export function KPISection({ siteId }: KPISectionProps) {
       {!siteId && <KpiFilters />}
 
       {stats?.prev_start && (
-        <p style={{ fontSize: 12, color: "#A1A1AA", margin: "0 0 10px" }}>
+        <p style={{ fontSize: 12, color: "var(--ui-faint)", margin: "0 0 10px" }}>
           Poređeno sa: {formatRange(stats.prev_start, stats.prev_end)}
         </p>
       )}

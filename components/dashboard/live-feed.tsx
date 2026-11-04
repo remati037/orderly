@@ -27,7 +27,7 @@ async function feedFetcher(url: string): Promise<{ orders: RealtimeOrder[] }> {
 
 const STYLES = `
 @keyframes lf-row-enter {
-  from { background-color: #DCFCE7; opacity: 0; }
+  from { background-color: var(--tone-green-2); opacity: 0; }
   to   { background-color: transparent; opacity: 1; }
 }
 @keyframes lf-dot-pulse {
@@ -39,25 +39,25 @@ const STYLES = `
 // ── lookups ────────────────────────────────────────────────────────────────────
 
 const STATUS: Record<string, { bg: string; color: string; label: string }> = {
-  processing: { bg: "#FFFBEB", color: "#D97706", label: "Processing" },
-  completed:  { bg: "#F0FDF4", color: "#16A34A", label: "Completed" },
-  pending:    { bg: "#EEF2FF", color: "#6366F1", label: "Pending" },
-  cancelled:  { bg: "#F4F4F5", color: "#71717A", label: "Cancelled" },
-  refunded:   { bg: "#FFF1F2", color: "#E11D48", label: "Refunded" },
-  "on-hold":  { bg: "#FFF7ED", color: "#C2410C", label: "On hold" },
-  failed:     { bg: "#FEF2F2", color: "#DC2626", label: "Failed" },
+  processing: { bg: "var(--tone-amber-1)", color: "var(--tone-amber)", label: "Processing" },
+  completed:  { bg: "var(--tone-green-1)", color: "var(--tone-green)", label: "Completed" },
+  pending:    { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo)", label: "Pending" },
+  cancelled:  { bg: "var(--ui-subtle)", color: "var(--ui-muted)", label: "Cancelled" },
+  refunded:   { bg: "var(--tone-rose-1)", color: "var(--tone-rose)", label: "Refunded" },
+  "on-hold":  { bg: "var(--tone-orange-1)", color: "var(--tone-orange-strong)", label: "On hold" },
+  failed:     { bg: "var(--tone-red-1)", color: "var(--tone-red)", label: "Failed" },
 };
 
 const PRODUCT_TYPE: Record<string, { bg: string; color: string }> = {
-  digital:      { bg: "#EEF2FF", color: "#4338CA" },
-  physical:     { bg: "#F4F4F5", color: "#52525B" },
-  subscription: { bg: "#F0FDF4", color: "#166534" },
+  digital:      { bg: "var(--tone-indigo-1)", color: "var(--tone-indigo-strong)" },
+  physical:     { bg: "var(--ui-subtle)", color: "var(--ui-text-3)" },
+  subscription: { bg: "var(--tone-green-1)", color: "var(--tone-green-deep)" },
 };
 
 // ── sub-components ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS[status] ?? { bg: "#F4F4F5", color: "#71717A", label: status };
+  const s = STATUS[status] ?? { bg: "var(--ui-subtle)", color: "var(--ui-muted)", label: status };
   return (
     <span
       style={{
@@ -89,7 +89,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ProductTypeTag({ type }: { type: string }) {
-  const t = PRODUCT_TYPE[type] ?? { bg: "#F4F4F5", color: "#52525B" };
+  const t = PRODUCT_TYPE[type] ?? { bg: "var(--ui-subtle)", color: "var(--ui-text-3)" };
   return (
     <span
       style={{
@@ -134,14 +134,14 @@ function OrderRow({
         alignItems: "center",
         gap: 10,
         padding: "10px 16px",
-        borderBottom: "1px solid #F4F4F5",
+        borderBottom: "1px solid var(--ui-subtle)",
         animation: isFresh
           ? "lf-row-enter 600ms cubic-bezier(0.4,0,0.2,1) forwards"
           : undefined,
         transition: "background-color 120ms",
       }}
       onMouseEnter={(e) =>
-        !isFresh && (e.currentTarget.style.backgroundColor = "#FAFAFA")
+        !isFresh && (e.currentTarget.style.backgroundColor = "var(--ui-sidebar)")
       }
       onMouseLeave={(e) =>
         (e.currentTarget.style.backgroundColor = "transparent")
@@ -165,7 +165,7 @@ function OrderRow({
           minWidth: 0,
           fontSize: 13,
           fontWeight: 600,
-          color: "#18181B",
+          color: "var(--ui-text)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -188,7 +188,7 @@ function OrderRow({
           style={{
             minWidth: 0,
             fontSize: 12,
-            color: "#71717A",
+            color: "var(--ui-muted)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -210,8 +210,8 @@ function OrderRow({
           fontWeight: 600,
           padding: "1px 6px",
           borderRadius: 6,
-          background: "#FFF7ED",
-          color: "#C2410C",
+          background: "var(--tone-orange-1)",
+          color: "var(--tone-orange-strong)",
           whiteSpace: "nowrap",
           flexShrink: 0,
           letterSpacing: "0.02em",
@@ -228,7 +228,7 @@ function OrderRow({
         style={{
           fontSize: 13,
           fontWeight: 700,
-          color: "#18181B",
+          color: "var(--ui-text)",
           textAlign: "right",
           minWidth: 90,
           flexShrink: 0,
@@ -339,8 +339,8 @@ export function LiveFeed() {
 
       <div
         style={{
-          background: "#fff",
-          border: "1px solid #E4E4E7",
+          background: "var(--ui-surface)",
+          border: "1px solid var(--ui-border)",
           borderRadius: 12,
           overflow: "hidden",
         }}
@@ -352,7 +352,7 @@ export function LiveFeed() {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "14px 16px",
-            borderBottom: "1px solid #F4F4F5",
+            borderBottom: "1px solid var(--ui-subtle)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -360,7 +360,7 @@ export function LiveFeed() {
               style={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: "#18181B",
+                color: "var(--ui-text)",
               }}
             >
               {isLive ? "Uživo" : `Porudžbine — ${PRESET_LABELS[preset] ?? ""}`}
@@ -411,7 +411,7 @@ export function LiveFeed() {
               alignItems: "center",
               justifyContent: "center",
               padding: "48px 16px",
-              color: "#A1A1AA",
+              color: "var(--ui-faint)",
               gap: 10,
             }}
           >

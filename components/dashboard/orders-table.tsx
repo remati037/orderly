@@ -82,31 +82,31 @@ export async function OrdersTable({ searchParams }: Props) {
 
   return (
     <div style={{
-      background: "#fff",
-      border: "1px solid #E4E4E7",
+      background: "var(--ui-surface)",
+      border: "1px solid var(--ui-border)",
       borderRadius: 12,
       overflow: "hidden",
     }}>
       {/* header */}
       <div style={{
         padding: "14px 20px",
-        borderBottom: "1px solid #F4F4F5",
+        borderBottom: "1px solid var(--ui-subtle)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
       }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
           Porudžbine
         </span>
         {!error && (
-          <span style={{ fontSize: 12, color: "#A1A1AA" }}>
+          <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>
             {serbianCount(total)}
           </span>
         )}
       </div>
 
       {error ? (
-        <div style={{ padding: "48px 20px", textAlign: "center", color: "#A1A1AA", fontSize: 13 }}>
+        <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ui-faint)", fontSize: 13 }}>
           Greška pri učitavanju porudžbina
         </div>
       ) : (
@@ -122,13 +122,13 @@ export async function OrdersTable({ searchParams }: Props) {
           {total > PAGE_SIZE && (
             <div style={{
               padding: "12px 20px",
-              borderTop: "1px solid #F4F4F5",
+              borderTop: "1px solid var(--ui-subtle)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 12,
             }}>
-              <span style={{ fontSize: 12, color: "#71717A" }}>
+              <span style={{ fontSize: 12, color: "var(--ui-muted)" }}>
                 Prikazano {from}–{to} od {total.toLocaleString("sr-RS")} porudžbina
               </span>
               <div style={{ display: "flex", gap: 6 }}>
@@ -138,8 +138,8 @@ export async function OrdersTable({ searchParams }: Props) {
                     style={{
                       display: "inline-flex", alignItems: "center",
                       padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                      border: "1px solid #E4E4E7", color: "#52525B",
-                      textDecoration: "none", background: "#fff",
+                      border: "1px solid var(--ui-border)", color: "var(--ui-text-3)",
+                      textDecoration: "none", background: "var(--ui-surface)",
                     }}
                   >
                     ← Nazad
@@ -148,8 +148,8 @@ export async function OrdersTable({ searchParams }: Props) {
                   <span style={{
                     display: "inline-flex", alignItems: "center",
                     padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                    border: "1px solid #F4F4F5", color: "#D4D4D8",
-                    background: "#FAFAFA", cursor: "not-allowed",
+                    border: "1px solid var(--ui-subtle)", color: "var(--ui-border-strong)",
+                    background: "var(--ui-sidebar)", cursor: "not-allowed",
                   }}>
                     ← Nazad
                   </span>
@@ -161,8 +161,8 @@ export async function OrdersTable({ searchParams }: Props) {
                     style={{
                       display: "inline-flex", alignItems: "center",
                       padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                      border: "1px solid #E4E4E7", color: "#52525B",
-                      textDecoration: "none", background: "#fff",
+                      border: "1px solid var(--ui-border)", color: "var(--ui-text-3)",
+                      textDecoration: "none", background: "var(--ui-surface)",
                     }}
                   >
                     Napred →
@@ -171,8 +171,8 @@ export async function OrdersTable({ searchParams }: Props) {
                   <span style={{
                     display: "inline-flex", alignItems: "center",
                     padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                    border: "1px solid #F4F4F5", color: "#D4D4D8",
-                    background: "#FAFAFA", cursor: "not-allowed",
+                    border: "1px solid var(--ui-subtle)", color: "var(--ui-border-strong)",
+                    background: "var(--ui-sidebar)", cursor: "not-allowed",
                   }}>
                     Napred →
                   </span>

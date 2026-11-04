@@ -36,14 +36,14 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
   if (isLoading || !data) {
     return (
       <div style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 12,
         padding: "18px 20px",
       }}>
-        <div className="animate-pulse h-4 w-40 rounded-md bg-zinc-100 mb-4" />
-        <div className="animate-pulse h-8 w-48 rounded-md bg-zinc-100 mb-2" />
-        <div className="animate-pulse h-4 w-32 rounded-md bg-zinc-100" />
+        <div className="animate-pulse h-4 w-40 rounded-md bg-[var(--ui-subtle)] mb-4" />
+        <div className="animate-pulse h-8 w-48 rounded-md bg-[var(--ui-subtle)] mb-2" />
+        <div className="animate-pulse h-4 w-32 rounded-md bg-[var(--ui-subtle)]" />
       </div>
     );
   }
@@ -64,19 +64,19 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
 
   return (
     <div style={{
-      background: "#fff",
-      border: "1px solid #E4E4E7",
+      background: "var(--ui-surface)",
+      border: "1px solid var(--ui-border)",
       borderRadius: 12,
       padding: "18px 20px",
     }}>
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "#71717A" }}>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ui-muted)" }}>
         Mesečno poređenje
       </span>
 
       <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* this month */}
         <div>
-          <p style={{ fontSize: 11, color: "#A1A1AA", margin: "0 0 4px", textTransform: "capitalize" }}>
+          <p style={{ fontSize: 11, color: "var(--ui-faint)", margin: "0 0 4px", textTransform: "capitalize" }}>
             {monthName(0)}
           </p>
           <p
@@ -84,7 +84,7 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
               ? `${monthName(-1)} do istog dana: ${formatRSD(samePeriod ?? 0)}`
               : undefined}
             style={{
-              fontSize: 22, fontWeight: 700, color: "#18181B", margin: 0, letterSpacing: "-0.02em",
+              fontSize: 22, fontWeight: 700, color: "var(--ui-text)", margin: 0, letterSpacing: "-0.02em",
               cursor: samePeriod !== null ? "help" : "default",
             }}
           >
@@ -94,10 +94,10 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
 
         {/* last month */}
         <div>
-          <p style={{ fontSize: 11, color: "#A1A1AA", margin: "0 0 4px", textTransform: "capitalize" }}>
+          <p style={{ fontSize: 11, color: "var(--ui-faint)", margin: "0 0 4px", textTransform: "capitalize" }}>
             {monthName(-1)}
           </p>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#71717A", margin: 0, letterSpacing: "-0.02em" }}>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--ui-muted)", margin: 0, letterSpacing: "-0.02em" }}>
             {formatRSD(previous)}
           </p>
         </div>
@@ -113,15 +113,15 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
           fontWeight: 700,
           padding: "3px 10px",
           borderRadius: 99,
-          background: positive ? "#F0FDF4" : "#FEF2F2",
-          color: positive ? "#16A34A" : "#DC2626",
+          background: positive ? "var(--tone-green-1)" : "var(--tone-red-1)",
+          color: positive ? "var(--tone-green)" : "var(--tone-red)",
         }}>
           {positive
             ? <TrendingUpIcon style={{ width: 14, height: 14 }} />
             : <TrendingDownIcon style={{ width: 14, height: 14 }} />}
           {positive ? "+" : "-"}{absPct.toFixed(1)}%
         </span>
-        <span style={{ fontSize: 12, color: "#A1A1AA" }}>
+        <span style={{ fontSize: 12, color: "var(--ui-faint)" }}>
           {samePeriod !== null ? "vs. prošlog meseca do sada" : "vs. prošlog meseca"}
         </span>
       </div>
@@ -129,7 +129,7 @@ export function MonthlyComparisonCard({ siteId }: MonthlyComparisonCardProps) {
       {/* mini progress vs last month, same elapsed period */}
       {previousFair > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ height: 4, borderRadius: 99, background: "#F4F4F5", overflow: "hidden" }}>
+          <div style={{ height: 4, borderRadius: 99, background: "var(--ui-subtle)", overflow: "hidden" }}>
             <div style={{
               height: "100%",
               width: `${Math.min(100, (current / previousFair) * 100)}%`,

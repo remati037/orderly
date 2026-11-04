@@ -40,8 +40,8 @@ export default function SignInForm() {
     <form
       onSubmit={submit}
       style={{
-        background: "#fff",
-        border: "1px solid #E4E4E7",
+        background: "var(--ui-surface)",
+        border: "1px solid var(--ui-border)",
         borderRadius: 14,
         padding: "30px 28px",
         width: "100%",
@@ -65,7 +65,7 @@ export default function SignInForm() {
         >
           O
         </span>
-        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#18181B" }}>
+        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ui-text)" }}>
           Orderly
         </span>
       </div>
@@ -91,7 +91,7 @@ export default function SignInForm() {
       />
 
       {error && (
-        <p style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 14 }}>{error}</p>
+        <p style={{ fontSize: 12.5, color: "var(--tone-red)", marginBottom: 14 }}>{error}</p>
       )}
 
       <button
@@ -118,7 +118,7 @@ export default function SignInForm() {
 const LABEL: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
-  color: "#71717A",
+  color: "var(--ui-muted)",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   display: "block",
@@ -129,7 +129,7 @@ const INPUT: React.CSSProperties = {
   width: "100%",
   fontSize: 13,
   padding: "9px 11px",
-  border: "1px solid #E4E4E7",
+  border: "1px solid var(--ui-border)",
   borderRadius: 8,
   outline: "none",
 };

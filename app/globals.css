@@ -107,15 +107,137 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* App palette. Screens read these instead of fixed colors, so night mode
+     only has to redefine them under .dark. */
+  --ui-canvas: #F9F9F9;
+  --ui-sidebar: #FAFAFA;
+  --ui-surface: #FFFFFF;
+  --ui-surface-glass: rgba(255, 255, 255, 0.95);
+  --ui-subtle: #F4F4F5;
+  --ui-border: #E4E4E7;
+  --ui-border-strong: #D4D4D8;
+  --ui-text: #18181B;
+  --ui-text-2: #3F3F46;
+  --ui-text-3: #52525B;
+  --ui-muted: #71717A;
+  --ui-faint: #A1A1AA;
+  --ui-fill: #18181B; /* dark buttons and chips that carry white text */
+  --ui-chart-cursor: rgba(0, 0, 0, 0.03);
+
+  --tone-green-1: #F0FDF4;
+  --tone-green-2: #DCFCE7;
+  --tone-green-3: #BBF7D0;
+  --tone-green: #16A34A;
+  --tone-green-strong: #15803D;
+  --tone-green-deep: #166534;
+  --tone-emerald: #059669;
+  --tone-red-1: #FEF2F2;
+  --tone-red-2: #FEE2E2;
+  --tone-red-3: #FECACA;
+  --tone-red: #DC2626;
+  --tone-red-strong: #B91C1C;
+  --tone-red-deep: #991B1B;
+  --tone-rose-1: #FFF1F2;
+  --tone-rose: #E11D48;
+  --tone-amber-1: #FFFBEB;
+  --tone-amber-2: #FEF3C7;
+  --tone-amber: #D97706;
+  --tone-amber-strong: #B45309;
+  --tone-amber-deep: #92400E;
+  --tone-orange-1: #FFF7ED;
+  --tone-orange: #EA580C;
+  --tone-orange-strong: #C2410C;
+  --tone-indigo-1: #EEF2FF;
+  --tone-indigo: #6366F1;
+  --tone-indigo-strong: #4338CA;
+  --tone-blue-1: #EFF6FF;
+  --tone-blue-2: #DBEAFE;
+  --tone-blue-3: #BFDBFE;
+  --tone-blue: #2563EB;
+  --tone-blue-strong: #1D4ED8;
+  --tone-violet-1: #F3E8FF;
+  --tone-violet-2: #EDE9FE;
+  --tone-violet: #7C3AED;
+  --tone-pink: #DB2777;
+  --tone-cyan: #0891B2;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  color-scheme: dark;
+
+  /* Soft near-black and off-white rather than pure black and white, which
+     glare at night. */
+  --ui-canvas: #121214;
+  --ui-sidebar: #161618;
+  --ui-surface: #1B1B1E;
+  --ui-surface-glass: rgba(27, 27, 30, 0.95);
+  --ui-subtle: #27272B;
+  --ui-border: #2E2E33;
+  --ui-border-strong: #45454C;
+  --ui-text: #ECECEE;
+  --ui-text-2: #D4D4D8;
+  --ui-text-3: #BCBCC3;
+  --ui-muted: #A1A1AA;
+  --ui-faint: #8E8E96;
+  --ui-fill: #45454C;
+  --ui-chart-cursor: rgba(255, 255, 255, 0.05);
+
+  --tone-green-1: #11261A;
+  --tone-green-2: #14331F;
+  --tone-green-3: #1D4A2E;
+  --tone-green: #4ADE80;
+  --tone-green-strong: #4ADE80;
+  --tone-green-deep: #86EFAC;
+  --tone-emerald: #34D399;
+  --tone-red-1: #2A1517;
+  --tone-red-2: #3A1A1D;
+  --tone-red-3: #5B2428;
+  --tone-red: #F87171;
+  --tone-red-strong: #FCA5A5;
+  --tone-red-deep: #FCA5A5;
+  --tone-rose-1: #2C151A;
+  --tone-rose: #FB7185;
+  --tone-amber-1: #2A2110;
+  --tone-amber-2: #3A2C0F;
+  --tone-amber: #FBBF24;
+  --tone-amber-strong: #FBBF24;
+  --tone-amber-deep: #FCD34D;
+  --tone-orange-1: #2C1C0E;
+  --tone-orange: #FB923C;
+  --tone-orange-strong: #FB923C;
+  --tone-indigo-1: #1D1F3A;
+  --tone-indigo: #818CF8;
+  --tone-indigo-strong: #A5B4FC;
+  --tone-blue-1: #14233B;
+  --tone-blue-2: #172A4A;
+  --tone-blue-3: #1E3A66;
+  --tone-blue: #60A5FA;
+  --tone-blue-strong: #93C5FD;
+  --tone-violet-1: #2C1B3F;
+  --tone-violet-2: #251D42;
+  --tone-violet: #A78BFA;
+  --tone-pink: #F472B6;
+  --tone-cyan: #22D3EE;
+
+  --brand-accent: #4ADE80;
+  --brand-accent-hover: #86EFAC;
+  --brand-accent-bg: #14331F;
+  --brand-success: #4ADE80;
+  --brand-success-bg: #11261A;
+  --brand-warning: #FBBF24;
+  --brand-warning-bg: #2A2110;
+  --brand-danger: #F87171;
+  --brand-danger-bg: #2A1517;
+  --brand-neutral: #818CF8;
+  --brand-neutral-bg: #1D1F3A;
+
+  --background: #121214;
+  --foreground: #ECECEE;
+  --card: #1B1B1E;
+  --card-foreground: #ECECEE;
+  --popover: #1B1B1E;
+  --popover-foreground: #ECECEE;
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);

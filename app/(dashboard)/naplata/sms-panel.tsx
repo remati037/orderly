@@ -30,12 +30,12 @@ export interface SmsMessage {
 }
 
 const STATUS_LABEL: Record<SmsStatus, { text: string; color: string; bg: string }> = {
-  pending_approval: { text: "Čeka odobrenje", color: "#B45309", bg: "#FEF3C7" },
-  approved:         { text: "Odobreno",       color: "#1D4ED8", bg: "#DBEAFE" },
-  sending:          { text: "Šalje se…",      color: "#1D4ED8", bg: "#DBEAFE" },
-  sent:             { text: "Poslato",        color: "#15803D", bg: "#DCFCE7" },
-  failed:           { text: "Greška",         color: "#B91C1C", bg: "#FEE2E2" },
-  cancelled:        { text: "Otkazano",       color: "#71717A", bg: "#F4F4F5" },
+  pending_approval: { text: "Čeka odobrenje", color: "var(--tone-amber-strong)", bg: "var(--tone-amber-2)" },
+  approved:         { text: "Odobreno",       color: "var(--tone-blue-strong)", bg: "var(--tone-blue-2)" },
+  sending:          { text: "Šalje se…",      color: "var(--tone-blue-strong)", bg: "var(--tone-blue-2)" },
+  sent:             { text: "Poslato",        color: "var(--tone-green-strong)", bg: "var(--tone-green-2)" },
+  failed:           { text: "Greška",         color: "var(--tone-red-strong)", bg: "var(--tone-red-2)" },
+  cancelled:        { text: "Otkazano",       color: "var(--ui-muted)", bg: "var(--ui-subtle)" },
 };
 
 function dueLabel(iso: string): string {
@@ -68,7 +68,7 @@ async function call(method: string, payload: Record<string, unknown>) {
 
 const BTN: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, padding: "6px 11px", borderRadius: 7,
-  border: "1px solid #E4E4E7", background: "#fff", color: "#3F3F46", cursor: "pointer",
+  border: "1px solid var(--ui-border)", background: "var(--ui-surface)", color: "var(--ui-text-2)", cursor: "pointer",
 };
 
 // ── one reminder ───────────────────────────────────────────────────────────────
@@ -91,20 +91,20 @@ export function SmsRow({ m, onChanged }: { m: SmsMessage; onChanged: () => void 
   }
 
   return (
-    <div style={{ border: "1px solid #E4E4E7", borderRadius: 9, padding: "10px 12px", marginBottom: 8, background: "#fff" }}>
+    <div style={{ border: "1px solid var(--ui-border)", borderRadius: 9, padding: "10px 12px", marginBottom: 8, background: "var(--ui-surface)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#52525B" }}>Podsetnik {m.step}/3</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ui-text-3)" }}>Podsetnik {m.step}/3</span>
         <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>
           {st.text}
         </span>
         {(m.status === "pending_approval" || m.status === "approved") && (
-          <span style={{ fontSize: 11, color: "#A1A1AA" }}>šalje se {dueLabel(m.due_at)} · samo 08–21h</span>
+          <span style={{ fontSize: 11, color: "var(--ui-faint)" }}>šalje se {dueLabel(m.due_at)} · samo 08–21h</span>
         )}
-        <span style={{ fontSize: 11, color: "#A1A1AA", marginLeft: "auto" }}>{m.to_number}</span>
+        <span style={{ fontSize: 11, color: "var(--ui-faint)", marginLeft: "auto" }}>{m.to_number}</span>
       </div>
 
       {order && (
-        <div style={{ fontSize: 12, color: "#71717A", marginBottom: 6 }}>
+        <div style={{ fontSize: 12, color: "var(--ui-muted)", marginBottom: 6 }}>
           {order.customer_name || "—"} · #{order.woo_order_id} · {formatCurrency(order.total, order.currency)}
           {order.sites?.name && ` · ${order.sites.name}`}
         </div>
@@ -115,21 +115,21 @@ export function SmsRow({ m, onChanged }: { m: SmsMessage; onChanged: () => void 
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            style={{ width: "100%", minHeight: 70, fontSize: 13, padding: "8px 10px", border: "1px solid #E4E4E7", borderRadius: 7, resize: "vertical" }}
+            style={{ width: "100%", minHeight: 70, fontSize: 13, padding: "8px 10px", border: "1px solid var(--ui-border)", borderRadius: 7, resize: "vertical" }}
           />
-          <div style={{ fontSize: 11, color: text.length > 480 ? "#DC2626" : "#A1A1AA", margin: "3px 0 6px" }}>
+          <div style={{ fontSize: 11, color: text.length > 480 ? "var(--tone-red)" : "var(--ui-faint)", margin: "3px 0 6px" }}>
             {text.length}/480 znakova · {segments(text)} SMS
           </div>
         </>
       ) : (
-        <div style={{ fontSize: 13, color: "#18181B", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.body}</div>
+        <div style={{ fontSize: 13, color: "var(--ui-text)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.body}</div>
       )}
 
       {m.status === "failed" && m.error && (
-        <div style={{ fontSize: 11.5, color: "#B91C1C", marginTop: 6 }}>{m.error}</div>
+        <div style={{ fontSize: 11.5, color: "var(--tone-red-strong)", marginTop: 6 }}>{m.error}</div>
       )}
       {m.status === "sending" && (
-        <div style={{ fontSize: 11.5, color: "#71717A", marginTop: 6 }}>
+        <div style={{ fontSize: 11.5, color: "var(--ui-muted)", marginTop: 6 }}>
           Preuzeto od gateway-a. Ako ovo stoji duže od par minuta, proveri da li gateway radi.
         </div>
       )}
@@ -151,7 +151,7 @@ export function SmsRow({ m, onChanged }: { m: SmsMessage; onChanged: () => void 
             m.status === "pending_approval" && <button disabled={busy} onClick={() => setEditing(true)} style={BTN}>Izmeni</button>
           )}
           {!editing && (
-            <button disabled={busy} onClick={() => act("cancel")} style={{ ...BTN, color: "#B91C1C" }}>Otkaži</button>
+            <button disabled={busy} onClick={() => act("cancel")} style={{ ...BTN, color: "var(--tone-red-strong)" }}>Otkaži</button>
           )}
         </div>
       )}
@@ -175,7 +175,7 @@ export function TaskSms({ taskIds, onChanged }: { taskIds: string[]; onChanged: 
   if (messages.length === 0) return null;
   return (
     <div style={{ marginBottom: 20 }}>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "#18181B", display: "block", marginBottom: 8 }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text)", display: "block", marginBottom: 8 }}>
         SMS podsetnici
       </span>
       {messages.map((m) => (
@@ -201,7 +201,7 @@ export function SmsQueue({ onChanged }: { onChanged?: () => void }) {
     return () => clearInterval(t);
   }, [load]);
 
-  if (!messages) return <p style={{ fontSize: 13, color: "#A1A1AA" }}>Učitavam…</p>;
+  if (!messages) return <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>Učitavam…</p>;
 
   const due = messages.filter((m) => m.status === "pending_approval" && new Date(m.due_at) <= new Date());
   const rest = messages.filter((m) => !due.includes(m));
@@ -209,7 +209,7 @@ export function SmsQueue({ onChanged }: { onChanged?: () => void }) {
   const section = (title: string, rows: SmsMessage[]) =>
     rows.length > 0 && (
       <div style={{ marginBottom: 22 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#18181B", display: "block", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ui-text)", display: "block", marginBottom: 8 }}>
           {title} ({rows.length})
         </span>
         {rows.map((m) => (
@@ -221,7 +221,7 @@ export function SmsQueue({ onChanged }: { onChanged?: () => void }) {
   return (
     <div style={{ maxWidth: 720 }}>
       {messages.length === 0 && (
-        <p style={{ fontSize: 13, color: "#A1A1AA" }}>
+        <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>
           Nema SMS poruka u redu. Pojavljuju se čim se otvori novi zadatak za naplatu.
         </p>
       )}
@@ -277,11 +277,11 @@ export function SmsSettings() {
   }
 
   if (!cfg) {
-    return <p style={{ fontSize: 13, color: "#A1A1AA" }}>SMS podešavanja nisu dostupna (migracija 020 još nije primenjena?).</p>;
+    return <p style={{ fontSize: 13, color: "var(--ui-faint)" }}>SMS podešavanja nisu dostupna (migracija 020 još nije primenjena?).</p>;
   }
 
   return (
-    <div style={{ maxWidth: 720, borderTop: "1px solid #F4F4F5", paddingTop: 18, marginTop: 8 }}>
+    <div style={{ maxWidth: 720, borderTop: "1px solid var(--ui-subtle)", paddingTop: 18, marginTop: 8 }}>
       <span style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 10 }}>Podešavanja (vlasnik)</span>
 
       <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 4 }}>
@@ -289,7 +289,7 @@ export function SmsSettings() {
           onChange={(e) => save({ enabled: e.target.checked })} />
         <strong>Pravi SMS podsetnike za nove zadatke naplate</strong>
       </label>
-      <p style={{ fontSize: 11.5, color: "#A1A1AA", margin: "0 0 14px 24px" }}>
+      <p style={{ fontSize: 11.5, color: "var(--ui-faint)", margin: "0 0 14px 24px" }}>
         {cfg.enabled && cfg.enabled_from
           ? `Aktivno od ${new Date(cfg.enabled_from).toLocaleString("sr-RS")}. Stari zadaci ne dobijaju SMS. `
           : "Isključeno. Kad uključiš, važi samo za zadatke koji se otvore posle toga. "}
@@ -304,12 +304,12 @@ export function SmsSettings() {
               const next = e.target.checked ? [...cfg.statuses, o.value] : cfg.statuses.filter((s) => s !== o.value);
               if (next.length) save({ statuses: next });
             }} />
-          <span>{o.label}<br /><span style={{ fontSize: 11.5, color: "#A1A1AA" }}>{o.hint}</span></span>
+          <span>{o.label}<br /><span style={{ fontSize: 11.5, color: "var(--ui-faint)" }}>{o.hint}</span></span>
         </label>
       ))}
 
       <span style={{ fontSize: 12, fontWeight: 600, display: "block", margin: "14px 0 6px" }}>Tekstovi</span>
-      <p style={{ fontSize: 11.5, color: "#A1A1AA", margin: "0 0 8px" }}>
+      <p style={{ fontSize: 11.5, color: "var(--ui-faint)", margin: "0 0 8px" }}>
         Mogu se koristiti: {"{ime} {broj} {iznos} {link} {sajt}"}. Slova č, ć, š, ž, đ se pri slanju zamene sa c, c, s, z, d
         da poruka ostane kratka (160 znakova po SMS-u).
       </p>
@@ -318,7 +318,7 @@ export function SmsSettings() {
           value={cfg.templates[k] ?? ""} disabled={saving}
           onSave={(v) => save({ templates: { ...cfg.templates, [k]: v } })} />
       ))}
-      {msg && <p style={{ fontSize: 12, color: msg === "Sačuvano" ? "#15803D" : "#B91C1C" }}>{msg}</p>}
+      {msg && <p style={{ fontSize: 12, color: msg === "Sačuvano" ? "var(--tone-green-strong)" : "var(--tone-red-strong)" }}>{msg}</p>}
     </div>
   );
 }
@@ -329,9 +329,9 @@ function TemplateField({ label, value, disabled, onSave }: {
   const [v, setV] = useState(value);
   return (
     <div style={{ marginBottom: 10 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: "#71717A", textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ui-muted)", textTransform: "uppercase" }}>{label}</span>
       <textarea value={v} onChange={(e) => setV(e.target.value)}
-        style={{ width: "100%", minHeight: 58, fontSize: 13, padding: "8px 10px", border: "1px solid #E4E4E7", borderRadius: 7, resize: "vertical" }} />
+        style={{ width: "100%", minHeight: 58, fontSize: 13, padding: "8px 10px", border: "1px solid var(--ui-border)", borderRadius: 7, resize: "vertical" }} />
       {v !== value && (
         <button disabled={disabled || !v.trim()} onClick={() => onSave(v)} style={{ ...BTN, marginTop: 4 }}>Sačuvaj</button>
       )}

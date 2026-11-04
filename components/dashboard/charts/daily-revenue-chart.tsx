@@ -54,7 +54,7 @@ function CustomTooltip({ active, payload, label }: {
 }
 
 // Legend text stays in neutral ink; the swatch carries the series colour.
-const legendText = (value: string) => <span style={{ color: "#52525B" }}>{value}</span>;
+const legendText = (value: string) => <span style={{ color: "var(--ui-text-3)" }}>{value}</span>;
 
 // ── component ──────────────────────────────────────────────────────────────────
 
@@ -112,8 +112,8 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
 
   return (
     <div style={{
-      background: "#fff",
-      border: "1px solid #E4E4E7",
+      background: "var(--ui-surface)",
+      border: "1px solid var(--ui-border)",
       borderRadius: 12,
       padding: "18px 20px",
     }}>
@@ -126,7 +126,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
         gap: 8,
         marginBottom: 16,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#18181B" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text)" }}>
           Dnevni prihod
         </span>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -144,8 +144,8 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                   fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
                   border: "1px solid", cursor: "pointer",
                   background: chartType === o.type ? "#16A34A" : "transparent",
-                  borderColor: chartType === o.type ? "#16A34A" : "#E4E4E7",
-                  color: chartType === o.type ? "#fff" : "#71717A",
+                  borderColor: chartType === o.type ? "#16A34A" : "var(--ui-border)",
+                  color: chartType === o.type ? "#fff" : "var(--ui-muted)",
                   transition: "all 120ms",
                 }}
               >
@@ -166,8 +166,8 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 border: "1px solid",
                 cursor: "pointer",
                 background: days === p.value ? "#16A34A" : "transparent",
-                borderColor: days === p.value ? "#16A34A" : "#E4E4E7",
-                color: days === p.value ? "#fff" : "#71717A",
+                borderColor: days === p.value ? "#16A34A" : "var(--ui-border)",
+                color: days === p.value ? "#fff" : "var(--ui-muted)",
                 transition: "all 120ms",
               }}
             >
@@ -187,7 +187,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#A1A1AA",
+          color: "var(--ui-faint)",
           fontSize: 13,
         }}>
           Učitavanje…
@@ -195,22 +195,22 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
       ) : chartType === "bar" ? (
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="#F4F4F5" />
+            <CartesianGrid vertical={false} stroke="var(--ui-subtle)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              tick={{ fontSize: 11, fill: "var(--ui-faint)" }}
               axisLine={false}
               tickLine={false}
               interval={Math.floor((chartData.length - 1) / 6)}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              tick={{ fontSize: 11, fill: "var(--ui-faint)" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => compactMoney(v, data?.base_currency ?? "EUR")}
               width={48}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--ui-chart-cursor)" }} />
             <Legend
               onClick={handleLegendClick}
               wrapperStyle={{ fontSize: 12, cursor: "pointer", paddingTop: 8 }}
@@ -225,7 +225,7 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 hide={hiddenSites.has(s.name)}
                 radius={0}
                 maxBarSize={24}
-                stroke="#fff"
+                stroke="var(--ui-surface)"
                 strokeWidth={2}
               />
             ))}
@@ -234,22 +234,22 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
       ) : (
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="#F4F4F5" />
+            <CartesianGrid vertical={false} stroke="var(--ui-subtle)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              tick={{ fontSize: 11, fill: "var(--ui-faint)" }}
               axisLine={false}
               tickLine={false}
               interval={Math.floor((chartData.length - 1) / 6)}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "#A1A1AA" }}
+              tick={{ fontSize: 11, fill: "var(--ui-faint)" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => compactMoney(v, data?.base_currency ?? "EUR")}
               width={48}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#E4E4E7", strokeWidth: 1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--ui-border)", strokeWidth: 1 }} />
             <Legend
               onClick={handleLegendClick}
               wrapperStyle={{ fontSize: 12, cursor: "pointer", paddingTop: 8 }}
@@ -264,18 +264,18 @@ export function DailyRevenueChart({ siteId }: DailyRevenueChartProps) {
                 strokeWidth={2}
                 dot={false}
                 hide={hiddenSites.has(s.name)}
-                activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
+                activeDot={{ r: 4, stroke: "var(--ui-surface)", strokeWidth: 2 }}
               />
             ))}
             {!siteId && (
               <Line
                 type="monotone"
                 dataKey="Ukupno"
-                stroke="#18181B"
+                stroke="var(--ui-text)"
                 strokeWidth={2}
                 dot={false}
                 hide={hiddenSites.has("Ukupno")}
-                activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
+                activeDot={{ r: 4, stroke: "var(--ui-surface)", strokeWidth: 2 }}
               />
             )}
           </LineChart>

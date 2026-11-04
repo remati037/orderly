@@ -48,18 +48,18 @@ export function SyncButton({ siteId, platform }: SyncButtonProps) {
           fontWeight: 600,
           padding: "8px 16px",
           borderRadius: 8,
-          border: "1px solid #E4E4E7",
-          background: syncing ? "#F4F4F5" : "#fff",
-          color: syncing ? "#A1A1AA" : "#18181B",
+          border: "1px solid var(--ui-border)",
+          background: syncing ? "var(--ui-subtle)" : "var(--ui-surface)",
+          color: syncing ? "var(--ui-faint)" : "var(--ui-text)",
           cursor: syncing ? "not-allowed" : "pointer",
           transition: "all 120ms",
           whiteSpace: "nowrap",
         }}
         onMouseEnter={(e) => {
-          if (!syncing) e.currentTarget.style.background = "#F4F4F5";
+          if (!syncing) e.currentTarget.style.background = "var(--ui-subtle)";
         }}
         onMouseLeave={(e) => {
-          if (!syncing) e.currentTarget.style.background = "#fff";
+          if (!syncing) e.currentTarget.style.background = "var(--ui-surface)";
         }}
       >
         <RefreshCwIcon
@@ -72,7 +72,7 @@ export function SyncButton({ siteId, platform }: SyncButtonProps) {
         {syncing ? "Sinhronizacija…" : "Sinhronizuj"}
       </button>
       {result && (
-        <span style={{ fontSize: 11, color: result.startsWith("Grešk") ? "#DC2626" : "#16A34A" }}>
+        <span style={{ fontSize: 11, color: result.startsWith("Grešk") ? "var(--tone-red)" : "var(--tone-green)" }}>
           {result}
         </span>
       )}

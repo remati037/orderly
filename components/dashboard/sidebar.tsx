@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboardIcon, SettingsIcon, MonitorIcon, BarChart2Icon, CircleDollarSignIcon, UsersIcon, CreditCardIcon, SlidersHorizontalIcon, BellIcon, MegaphoneIcon, PhoneCallIcon, UserCogIcon, ShoppingBagIcon, MenuIcon, GiftIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Role } from "@/lib/auth/roles";
 
@@ -54,8 +55,8 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
       style={{
         width: 220,
         flexShrink: 0,
-        borderRight: "1px solid #E4E4E7",
-        background: "#FAFAFA",
+        borderRight: "1px solid var(--ui-border)",
+        background: "var(--ui-sidebar)",
         flexDirection: "column",
         height: "100vh",
         position: "sticky",
@@ -72,12 +73,12 @@ export function MobileNav({ role, email }: { role: Role; email: string }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
-        className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100"
+        className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-[var(--ui-text-3)] hover:bg-[var(--ui-subtle)]"
         aria-label="Otvori meni"
       >
         <MenuIcon className="size-5" />
       </SheetTrigger>
-      <SheetContent side="left" className="max-w-[260px] bg-[#FAFAFA]">
+      <SheetContent side="left" className="max-w-[260px] bg-[var(--ui-sidebar)]">
         <SheetTitle className="sr-only">Navigacija</SheetTitle>
         <SidebarContent role={role} email={email} onNavigate={() => setOpen(false)} />
       </SheetContent>
@@ -99,7 +100,7 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
       <div
         style={{
           padding: "16px 18px 14px",
-          borderBottom: "1px solid #E4E4E7",
+          borderBottom: "1px solid var(--ui-border)",
           display: "flex",
           alignItems: "center",
           gap: 9,
@@ -127,7 +128,7 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
             fontSize: 17,
             fontWeight: 700,
             letterSpacing: "-0.02em",
-            color: "#18181B",
+            color: "var(--ui-text)",
           }}
         >
           Orderly
@@ -144,7 +145,7 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
                 fontWeight: 600,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: "#A1A1AA",
+                color: "var(--ui-faint)",
                 padding: "0 10px 6px",
               }}
             >
@@ -166,13 +167,13 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
                     borderRadius: 8,
                     fontSize: 13,
                     fontWeight: active ? 600 : 400,
-                    color: active ? "#15803D" : "#71717A",
-                    background: active ? "#DCFCE7" : "transparent",
+                    color: active ? "var(--tone-green-strong)" : "var(--ui-muted)",
+                    background: active ? "var(--tone-green-2)" : "transparent",
                     textDecoration: "none",
                     marginBottom: 2,
                     transition: "background 120ms, color 120ms",
                   }}
-                  className={cn(!active && "hover:bg-zinc-100 hover:text-zinc-800")}
+                  className={cn(!active && "hover:bg-[var(--ui-subtle)] hover:text-zinc-800 dark:hover:text-zinc-100")}
                 >
                   <Icon style={{ width: 15, height: 15, flexShrink: 0 }} />
                   {label}
@@ -187,13 +188,13 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
       <div
         style={{
           padding: "12px 16px",
-          borderTop: "1px solid #E4E4E7",
+          borderTop: "1px solid var(--ui-border)",
         }}
       >
         <div
           style={{
             fontSize: 12,
-            color: "#52525B",
+            color: "var(--ui-text-3)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -202,9 +203,10 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
         >
           {email}
         </div>
-        <div style={{ fontSize: 11, color: "#A1A1AA", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: "var(--ui-faint)", marginBottom: 10 }}>
           {role === "owner" ? "Vlasnik" : "Agent"}
         </div>
+        <ThemeToggle />
         <SignOutButton />
       </div>
     </>
