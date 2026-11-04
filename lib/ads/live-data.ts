@@ -17,6 +17,7 @@ export interface LiveAccount {
   meta_account_status: number | null;
   live_synced_at: string | null;
   live_sync_error: string | null;
+  site_id: string | null;
 }
 
 /** Active accounts, with rows of the last `days` days in base currency. */
@@ -25,7 +26,7 @@ export async function loadLiveInsights(supabase: SupabaseClient, days: number) {
   const [accountsRes, cfgRes, rowsRes] = await Promise.all([
     supabase
       .from("ad_accounts")
-      .select("id, name, currency, fb_account_id, meta_account_status, live_synced_at, live_sync_error")
+      .select("id, name, currency, fb_account_id, meta_account_status, live_synced_at, live_sync_error, site_id")
       .eq("is_active", true)
       .order("name"),
     supabase.from("settings").select("value").eq("key", "meta_live").maybeSingle(),
@@ -110,22 +111,37 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
       .order("created_at", { ascending: false }),
   ]);
 
-  const { start, end } = customBounds(range.from, range.to);
+  // Net revenue reaches back far enough for the chosen period and the account cards.
+  const yesterday = belgradeDate(dayBounds(-1).start);
+  const weekFrom = belgradeDate(dayBounds(-7).start);
+  const earliest = range.from < weekFrom ? range.from : weekFrom;
+  const { start, end } = customBounds(earliest, today);
   const net = await netBySiteDay(supabase, start, end, fx.rates);
-  const netBySite = new Map<string, number>();
-  for (const sites of net.values())
-    for (const [siteId, amount] of sites) netBySite.set(siteId, (netBySite.get(siteId) ?? 0) + amount);
-  const netTotal = [...netBySite.values()].reduce((n, v) => n + v, 0);
+
+  const netOf = (from: string, to: string, siteId?: string) => {
+    let sum = 0;
+    for (const [day, sites] of net) {
+      if (day < from || day > to) continue;
+      for (const [id, amount] of sites) if (!siteId || id === siteId) sum += amount;
+    }
+    return sum;
+  };
+  const netTotal = netOf(range.from, range.to);
 
   const siteName = new Map((sitesRes.data ?? []).map((s) => [s.id, s.name as string]));
   const siteOf = new Map((mapRes.data ?? []).map((m) => [m.campaign_id, m.site_id as string | null]));
 
   const inRange = rows.filter((r) => r.date >= range.from && r.date <= range.to);
-  const spendBySite = new Map<string, number>();
-  for (const r of inRange) {
-    const site = siteOf.get(r.campaign_id);
-    if (site) spendBySite.set(site, (spendBySite.get(site) ?? 0) + r.spend);
-  }
+
+  // Rough ROAS from real sales: all of a site's net revenue over the spend of the
+  // campaigns linked to it. It includes sales that didn't come from ads.
+  const orderlyRoas = (siteId: string | null, from: string, to: string) => {
+    if (!siteId) return null;
+    const spend = rows
+      .filter((r) => r.date >= from && r.date <= to && siteOf.get(r.campaign_id) === siteId)
+      .reduce((n, r) => n + r.spend, 0);
+    return ratio(netOf(from, to, siteId), spend);
+  };
 
   const liveAccounts = accounts
     .filter((a) => isSpending(rows.filter((r) => r.ad_account_id === a.id), today))
@@ -145,7 +161,7 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
           const site = siteOf.get(campaignId) ?? null;
           return {
             site_name: site ? siteName.get(site) ?? null : null,
-            real_roas_site: site ? ratio(netBySite.get(site) ?? 0, spendBySite.get(site) ?? 0) : null,
+            real_roas_site: orderlyRoas(site, range.from, range.to),
           };
         },
         a.currency
@@ -160,6 +176,12 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
         error: a.live_sync_error,
         target_cpa: target.value,
         target_estimated: target.estimated,
+        orderly_roas: {
+          site_name: a.site_id ? siteName.get(a.site_id) ?? null : null,
+          yesterday: orderlyRoas(a.site_id, yesterday, yesterday),
+          week: orderlyRoas(a.site_id, weekFrom, yesterday),
+          period: orderlyRoas(a.site_id, range.from, range.to),
+        },
         ...report,
       };
     })

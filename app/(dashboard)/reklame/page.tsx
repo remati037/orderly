@@ -12,6 +12,7 @@ import { formatMoney, leadCount, type AccountReport, type AdsetReport, type Camp
 interface Account extends AccountReport {
   id: string; name: string; currency: string; fb_account_id: string; status: number | null; synced_at: string | null; error: string | null;
   target_cpa: number | null; target_estimated: boolean;
+  orderly_roas: { site_name: string | null; yesterday: number | null; week: number | null; period: number | null };
 }
 interface Recommendation {
   id: string; created_at: string; account_name: string | null; level: string;
@@ -116,6 +117,13 @@ function ChipBadge({ chip }: { chip: Chip }) {
   );
 }
 
+const ORDERLY_HINT = "Okvirno: sav neto prihod sajta iz Orderly-ja podeljen sa potrošnjom kampanja povezanih sa tim sajtom. Uključuje i prodaje koje nisu od reklama.";
+
+function OrderlyRoas({ value }: { value: number | null }) {
+  if (value === null) return null;
+  return <p title={ORDERLY_HINT} style={{ fontSize: 12, fontWeight: 500, color: INK.secondary, margin: "2px 0 0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>Orderly {times(value)}</p>;
+}
+
 const LINK_HINT = "Koliko kampanja sa potrošnjom u poslednjih 7 dana je povezano sa sajtom, pa može da se uporedi sa stvarnom prodajom u Orderly-ju.";
 
 // Yesterday and the last 7 full days at a glance, independent of the period below.
@@ -142,6 +150,7 @@ function AccountCardTile({ account: a }: { account: Account }) {
           <p style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1, color: y.roas === null ? INK.muted : big, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>
             {y.roas === null ? "—" : y.roas.toFixed(2).replace(".", ",")}
           </p>
+          <OrderlyRoas value={a.orderly_roas.yesterday} />
         </div>
         <div style={{ minWidth: 0 }}>
           <p style={small}>Juče</p>
@@ -151,6 +160,7 @@ function AccountCardTile({ account: a }: { account: Account }) {
         <div style={{ minWidth: 0 }}>
           <p style={small}>7 dana ROAS</p>
           <p style={{ fontSize: 16, fontWeight: 600, color: INK.primary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>{w.roas === null ? "—" : w.roas.toFixed(2).replace(".", ",")}</p>
+          <OrderlyRoas value={a.orderly_roas.week} />
           <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0" }}>{money(w.spend, cur)} · {count(w.purchases)} kup.</p>
         </div>
       </div>
@@ -367,7 +377,7 @@ function AccountSection({ account: a }: { account: Account }) {
             <Stat label="Prodaje" value={count(m.purchases)} delta={<Delta now={m.purchases} before={p?.purchases} goodWhenUp />} hint={m.leads ? leadCount(m.leads) : undefined} />
             <Stat label="Prihod po Meta" value={money(m.revenue, cur)} delta={<Delta now={m.revenue} before={p?.revenue} goodWhenUp />} />
             <Stat label="Cena prodaje (CPA)" value={money(m.cpa, cur)} delta={<Delta now={m.cpa} before={p?.cpa} />} />
-            <Stat label="ROAS po Meta" value={times(m.roas)} delta={<Delta now={m.roas} before={p?.roas} goodWhenUp />} />
+            <Stat label="ROAS po Meta" value={times(m.roas)} delta={<Delta now={m.roas} before={p?.roas} goodWhenUp />} hint={a.orderly_roas.period === null ? undefined : `Orderly ${times(a.orderly_roas.period)}`} />
             <Stat label="CTR / CPM" value={percent(m.ctr)} hint={`CPM ${money(m.cpm, cur)}`} />
           </div>
 
