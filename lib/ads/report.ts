@@ -125,6 +125,12 @@ export function verdictOf(m: Metrics, target: number | null, currency = "EUR"): 
   return { level: "good", reason: `CPA ${eur(m.cpa!)} ispod praga ${eur(target)}` };
 }
 
+/** Whether an account is running: spend today or yesterday. Others stay off the page until they start again. */
+export function isSpending(rows: InsightRow[], today: string): boolean {
+  const yesterday = addDays(today, -1);
+  return rows.some((r) => (r.date === today || r.date === yesterday) && r.spend > 0);
+}
+
 export interface AdReport {
   id: string;
   name: string;

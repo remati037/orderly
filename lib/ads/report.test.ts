@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InsightRow } from "./insights";
-import { buildAccountReport, formatMoney, leadCount, linkChip, metricsOf, periodRange, trendChip, verdictOf } from "./report";
+import { buildAccountReport, formatMoney, isSpending, leadCount, linkChip, metricsOf, periodRange, trendChip, verdictOf } from "./report";
 
 const TODAY = "2026-11-04";
 const YESTERDAY = "2026-11-03";
@@ -198,5 +198,14 @@ describe("formatMoney", () => {
 describe("leadCount", () => {
   it("declines the word", () => {
     expect([1, 2, 5, 11, 12, 21, 22].map(leadCount)).toEqual(["1 lead", "2 leada", "5 leadova", "11 leadova", "12 leadova", "21 lead", "22 leada"]);
+  });
+});
+
+describe("isSpending", () => {
+  it("needs spend today or yesterday", () => {
+    expect(isSpending([row({ spend: 1 })], TODAY)).toBe(true);
+    expect(isSpending([row({ date: YESTERDAY, spend: 1 })], TODAY)).toBe(true);
+    expect(isSpending([row({ date: "2026-11-02", spend: 500 })], TODAY)).toBe(false);
+    expect(isSpending([row({ spend: 0 })], TODAY)).toBe(false);
   });
 });

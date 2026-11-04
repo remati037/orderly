@@ -4,7 +4,7 @@ import { fetchPaidOrders, fetchRefunds, type RevenueOrder, type RevenueRefund } 
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { belgradeDate, customBounds, dayBounds } from "@/lib/utils/tz";
 import { averageCpa, ratio, type InsightRow } from "./insights";
-import { buildAccountReport, metricsOf, periodRange, type PeriodKey } from "./report";
+import { buildAccountReport, isSpending, metricsOf, periodRange, type PeriodKey } from "./report";
 
 const INSIGHT_COLUMNS =
   "ad_account_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, date, spend, impressions, inline_link_clicks, frequency, ctr, purchases, purchase_value, add_to_cart, initiate_checkout, leads, landing_page_views, effective_status, thumbnail_url";
@@ -128,6 +128,7 @@ export async function loadLivePage(supabase: SupabaseClient, period: PeriodKey) 
   }
 
   const liveAccounts = accounts
+    .filter((a) => isSpending(rows.filter((r) => r.ad_account_id === a.id), today))
     .map((a) => {
       // Rows are in base currency; each account shows in its own.
       const rate = toBase(1, a.currency, fx.rates);

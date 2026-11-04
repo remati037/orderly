@@ -28,6 +28,8 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Dodata još 4 Meta naloga preko Vladimirovog ličnog tokena (`ads_read`, ističe oko 2027-01-03): AF $ BP ANT 01, Novi nalog, Filip Ćirić, Biznis Priče; 30 dana istorije učitano. 7 punih dana (28.10.–3.11.) po nalogu slaže se sa Meta konektorom (najveća razlika 2 centa na prihodu). Novi nalog ne šalje vrednost kupovine, pa nema ROAS.
 
+- `/reklame` prikazuje samo naloge sa potrošnjom danas ili juče; ostali se i dalje sinhronizuju i vraćaju se sami kad krenu.
+
 ## Sledeći korak
 - Meta live: napraviti mašinski token (hash u `settings.meta_live_token_sha256`, token u Keychain `orderly-meta-live` i Vault `meta_live_token`), merge i push, primeniti migraciju 034 (cron na 15 minuta), napraviti Claude zadatak za 9, 14 i 20h.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
