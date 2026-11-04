@@ -36,10 +36,10 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - `/reklame`: uz ROAS po Meti stoji i okvirni ROAS iz Orderly-ja (sav neto prihod sajta / potrošnja povezanih kampanja), na kartici za juče i 7 dana i na bloku naloga za izabrani period.
 
-- Grana `feat/nocni-rezim` (nije na `main`): noćni režim. Sam se pali od 20:00 do 07:00 po satu uređaja, prekidač "Noćni režim" je u bočnom meniju; ručni izbor važi do sledeće promene po rasporedu (`lib/theme/`). Sve boje ekrana prebačene na promenljive u `app/globals.css` (`--ui-*`, `--tone-*`); nove boje dodavati tamo, ne direktno u komponente. TV prikaz je već taman i nije diran. Izgled proveren na privremenoj stranici sa izmišljenim podacima (bočni meni, kartice, tabele, grafikoni, porudžbine) i na prijavi; ostali ekrani iza prijave nisu otvarani.
+- Noćni režim (na produkciji od 2026-11-05, `main`). Sam se pali od 20:00 do 07:00 po satu uređaja, prekidač "Noćni režim" je u bočnom meniju; ručni izbor važi do sledeće promene po rasporedu (`lib/theme/`). Sve boje ekrana prebačene na promenljive u `app/globals.css` (`--ui-*`, `--tone-*`); nove boje dodavati tamo, ne direktno u komponente. TV prikaz je već taman i nije diran. Izgled proveren na privremenoj stranici sa izmišljenim podacima (bočni meni, kartice, tabele, grafikoni, porudžbine) i na prijavi; ostali ekrani iza prijave nisu otvarani.
 
 ## Sledeći korak
-- Noćni režim: Vladimir da odobri push na `main`, pa da prođe ekrane iza prijave (Naplata, Reklame, Profit, Podešavanja).
+- Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
 - Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
