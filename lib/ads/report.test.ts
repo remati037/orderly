@@ -39,6 +39,17 @@ describe("metricsOf", () => {
   });
 });
 
+describe("metricsOf without purchase values", () => {
+  it("has no ROAS instead of a false zero, and still grades on CPA", () => {
+    const m = metricsOf([row({ spend: 40, purchases: 2 })]);
+    expect(m.roas).toBeNull();
+    expect(verdictOf(m, 25).level).toBe("good");
+  });
+  it("keeps a real zero when nothing sold", () => {
+    expect(metricsOf([row({ spend: 40 })]).roas).toBe(0);
+  });
+});
+
 describe("verdictOf", () => {
   it("waits for 1x target before judging", () => {
     expect(verdict({ spend: 19 })).toBe("low_data");

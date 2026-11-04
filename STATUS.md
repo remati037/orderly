@@ -26,6 +26,8 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - `/reklame` druga prepravka: na vrhu kartica za svaki nalog (ROAS juče, juče, 7 dana, trend, povezanost sa sajtom), bez Black Friday dela; jedan grafikon sa dve linije; ocene i najbolji i najgori oglasi uvek po poslednjih 7 punih dana. System User je "Orderly" u BM Vladsdigital, pa nalozi ulaze dodelom njemu, bez novog tokena.
 
+- Dodata još 4 Meta naloga preko Vladimirovog ličnog tokena (`ads_read`, ističe oko 2027-01-03): AF $ BP ANT 01, Novi nalog, Filip Ćirić, Biznis Priče; 30 dana istorije učitano. 7 punih dana (28.10.–3.11.) po nalogu slaže se sa Meta konektorom (najveća razlika 2 centa na prihodu). Novi nalog ne šalje vrednost kupovine, pa nema ROAS.
+
 ## Sledeći korak
 - Meta live: napraviti mašinski token (hash u `settings.meta_live_token_sha256`, token u Keychain `orderly-meta-live` i Vault `meta_live_token`), merge i push, primeniti migraciju 034 (cron na 15 minuta), napraviti Claude zadatak za 9, 14 i 20h.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
@@ -34,12 +36,13 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
-- Meta live, ostali nalozi: Orderly token vidi samo 1 od 5 naloga sa potrošnjom. Treba da se System User-u "Orderly" (BM Vladsdigital, ID 226508175103840) dodele AF $ BP ANT 01 [META], Novi nalog, Filip Ćirić Ad Account i Biznis Priče.
+- Meta live: povezati kampanje sa sajtovima (35 od 40 nije povezano); pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: dozvola za upis tokena u Keychain/Vault i za push; koje Meta naloge uključiti i System User token za njih (sada samo Vladsdigital); Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €); povezivanje kampanja sa sajtovima (4 kampanje koje troše nisu povezane).
 - Circle Admin API token mora imati pravo pisanja (sad je sačuvan na sajtu AI Profit Lab); potvrda da radi i test email za probu dodele.
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
+- Lični token: 4 naloga prestaju da se osvežavaju kad istekne ili kad se promeni Facebook lozinka; greška se vidi na njihovom bloku.
 - Meta live: Meta API nivo je `development_access`, pa rate limit može da zasmeta kad se doda više naloga. Upis preporuka (POST/PATCH) nije isproban uživo. Stvarni ROAS na vrhu računa sav neto prihod, i onaj koji nije od reklama. Claude zadatak kao lokalni radi samo kad je Mac budan.
 - Za Woo sajtove UI ne prikazuje webhook URL niti ih pravi sam — svaki novi Woo sajt ostaje bez webhook-a ako se to zaboravi.
 - Dug za Fazu 5: `settings.key` i `customers.email` su jedinstveni globalno, ne po organizaciji; većina endpointa još ne filtrira po org_id (registar metrika filtrira kad dobije orgId).

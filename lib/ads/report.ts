@@ -65,7 +65,8 @@ export function metricsOf(rows: InsightRow[]): Metrics {
     purchases,
     revenue,
     cpa: cpa(spend, purchases),
-    roas: ratio(revenue, spend),
+    // Purchases with no value mean the pixel sends none, not that they earned nothing.
+    roas: purchases > 0 && revenue === 0 ? null : ratio(revenue, spend),
     impressions,
     clicks,
     ctr: impressions > 0 ? clicks / impressions : null,
