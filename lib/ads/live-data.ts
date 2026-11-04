@@ -241,12 +241,13 @@ export async function loadLiveSummary(supabase: SupabaseClient) {
         target_cpa: target.value,
         target_estimated: target.estimated,
         ...periods(own),
-        campaigns: groupBy(own, (r) => r.campaign_id).map((c) => ({
+        // Only what spent lately: old boosted posts would bloat every scheduled run.
+        campaigns: groupBy(own.filter((r) => r.date >= weekAgo && r.spend > 0), (r) => r.campaign_id).map((recent) => own.filter((r) => r.campaign_id === recent[0].campaign_id)).map((c) => ({
           id: c[0].campaign_id,
           name: latest(c).campaign_name,
           active: c.some((r) => r.date >= yesterday && r.effective_status === "ACTIVE"),
           ...periods(c),
-          ads: groupBy(c, (r) => r.ad_id).map((ad) => {
+          ads: groupBy(c.filter((r) => r.date >= weekAgo && r.spend > 0), (r) => r.ad_id).map((recent) => c.filter((r) => r.ad_id === recent[0].ad_id)).map((ad) => {
             const last = latest(ad);
             return {
               id: last.ad_id,
