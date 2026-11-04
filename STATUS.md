@@ -32,7 +32,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Povezano 13 kampanja sa sajtovima po odobrenom predlogu (Filip Ćirić, Odgovori Univerzuma, Biznis priče, AI Profit Lab). AI Video Editor kampanja ide na AI Profit Lab, jer se tamo prodaje, ne na Vladsdigital kako je predlog glasio.
 
-- Nalog određuje sajt (`ad_accounts.site_id`, migracija 034): Vladsdigital na AI Profit Lab, AF $ BP ANT 01 na Nemanja Antic, Filip Ćirić i Biznis Priče na svoje sajtove; nove kampanje nasleđuju sajt, ručne veze ostaju. Dashboard tabela po sajtovima ima kolonu Facebook reklame, koja nije oduzeta od neto zarade.
+- Nalog određuje sajt (`ad_accounts.site_id`, migracija 034): Vladsdigital na AI Profit Lab, AF $ BP ANT 01 na Nemanja Antic, Filip Ćirić i Biznis Priče na svoje sajtove; nove kampanje nasleđuju sajt, ručne veze ostaju. Dashboard tabela po sajtovima: Prihod, Porudžbine, AOV, Facebook reklame (nije oduzeta od zarade), Neto zarada; Stripe naknade uklonjene iz tabele.
 
 ## Sledeći korak
 - Meta live: napraviti mašinski token (hash u `settings.meta_live_token_sha256`, token u Keychain `orderly-meta-live` i Vault `meta_live_token`), merge i push, primeniti migraciju 035 (cron na 15 minuta), napraviti Claude zadatak za 9, 14 i 20h.
