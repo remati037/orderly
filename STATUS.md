@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-03
+Ažurirano: 2026-11-04
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -17,19 +17,25 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Novi tab **Black Friday** (`/bonus`, samo vlasnik): Black Friday 2026 obračun za 1–30. novembar. Neto promet po sajtu; partneri (Nemanja Antic, FIlip Ćirić, Odgovori Univerzuma) sa 50%. Skala: 70k i 90k (3%), 100k 6.000 €, 125k 7.500 € (6%), 150k 18.000 €, 175k 22.000 €, 200k+ 30.000 €; između pragova procenat dostignutog praga × promet; deli se na 4 osobe. Podešavanja su u `settings.bonus_program` (migracija 030, primenjena). Sajt se rasklapa na proizvode sa ciljem po proizvodu (čuva se u `settings.bonus_program.product_goals`, poredi se sa obračunskim prometom). Već je na `origin/main`.
 
-- Dashboard: nova kompaktna lista po sajtovima ispod glavnih kartica (prihod, porudžbine, AOV, neto zarada, Stripe naknade), od najvećeg prihoda ka najmanjem, prati filtere; `components/dashboard/site-summary-table.tsx`. Zbir se poklapa sa karticama na stvarnim podacima. Izgled proveren na privremenoj stranici sa brojkama iz baze, ne na samom dashboardu iza prijave. NIJE push-ovano.
+- Dashboard: nova kompaktna lista po sajtovima ispod glavnih kartica (prihod, porudžbine, AOV, neto zarada, Stripe naknade), od najvećeg prihoda ka najmanjem, prati filtere; `components/dashboard/site-summary-table.tsx`. Zbir se poklapa sa karticama na stvarnim podacima. Izgled proveren na privremenoj stranici sa brojkama iz baze, ne na samom dashboardu iza prijave. Već je na `origin/main`.
+
+- Grana `feat/meta-live`: stranica **Reklame** (`/reklame`, vlasnik i agenti) po planu iz `~/Downloads/PLAN.md`: Meta podaci po oglasu, gornja traka sa Black Friday napretkom, kampanje po nalogu, najbolji i najgori oglasi, kartica preporuka, Telegram alarmi. Migracije 031 i 032 primenjene na bazu, 30 dana istorije učitano za nalog Vladsdigital. Popravljen i pomeren dan u ad spend prozoru (profit/kpi, ad-performance, ads/spend).
+  Provereno: juče 69,72 € / 8 kupovina / 599,62 € isto kao Meta konektor; Black Friday 5.361,73 € isto kao nezavisan SQL upit. NIJE push-ovano i NIJE na produkciji. Izgled proveren na privremenoj stranici, ne iza prijave.
 
 ## Sledeći korak
+- Meta live: napraviti mašinski token (hash u `settings.meta_live_token_sha256`, token u Keychain `orderly-meta-live` i Vault `meta_live_token`), merge i push, primeniti migraciju 033 (cron na 15 minuta), napraviti Claude zadatak za 9, 14 i 20h.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
 - Circle: test sa jednim email-om, pa `enabled = true` i merge grane `feat/circle-access`.
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
+- Meta live: dozvola za upis tokena u Keychain/Vault i za push; koje Meta naloge uključiti i System User token za njih (sada samo Vladsdigital); Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €); povezivanje kampanja sa sajtovima (4 kampanje koje troše nisu povezane).
 - Circle Admin API token mora imati pravo pisanja (sad je sačuvan na sajtu AI Profit Lab); potvrda da radi i test email za probu dodele.
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
+- Meta live: Meta API nivo je `development_access`, pa rate limit može da zasmeta kad se doda više naloga. Upis preporuka (POST/PATCH) nije isproban uživo. Stvarni ROAS na vrhu računa sav neto prihod, i onaj koji nije od reklama. Claude zadatak kao lokalni radi samo kad je Mac budan.
 - Za Woo sajtove UI ne prikazuje webhook URL niti ih pravi sam — svaki novi Woo sajt ostaje bez webhook-a ako se to zaboravi.
 - Dug za Fazu 5: `settings.key` i `customers.email` su jedinstveni globalno, ne po organizaciji; većina endpointa još ne filtrira po org_id (registar metrika filtrira kad dobije orgId).
 - Ad spend prozor u profit/kpi i ad-performance koristi UTC datume Beogradskih ponoći (dan pomeren) — postojeća greška, nije dirana.

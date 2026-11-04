@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { belgradeDayLabel, belgradeMonthProgress, customBounds, dayBounds, monthBounds } from "./tz";
+import { belgradeDate, belgradeDayLabel, belgradeMonthProgress, customBounds, dayBounds, monthBounds } from "./tz";
 
 afterEach(() => vi.useRealTimers());
 
@@ -40,5 +40,12 @@ describe("customBounds / belgradeDayLabel", () => {
   it("labels an instant with its Belgrade day", () => {
     expect(belgradeDayLabel("2026-09-28T22:30:00Z")).toBe("29.09");
     expect(belgradeDayLabel("2026-09-28T21:59:59Z")).toBe("28.09");
+  });
+});
+
+describe("belgradeDate", () => {
+  it("gives the Belgrade day of a bound whose UTC date is the day before", () => {
+    expect(belgradeDate("2026-10-31T23:00:00.000Z")).toBe("2026-11-01");
+    expect(belgradeDate("2026-07-31T22:00:00.000Z")).toBe("2026-08-01");
   });
 });

@@ -16,6 +16,10 @@ const PUBLIC_ROUTES = [
   /^\/api\/menubar$/,
   // SMS gateway authenticates with SMS_GATEWAY_TOKEN, not a user session.
   /^\/api\/sms\/gateway\//,
+  // Claude's scheduled run authenticates with the Meta live token; the page's
+  // PATCH on recommendations checks the member itself.
+  /^\/api\/ads\/live-summary$/,
+  /^\/api\/ads\/recommendations$/,
 ];
 
 export default async function proxy(request: NextRequest) {

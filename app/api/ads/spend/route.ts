@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
-import { monthBounds } from "@/lib/utils/tz";
+import { belgradeDate, monthBounds } from "@/lib/utils/tz";
 
 // Mapped ad spend per site / product over a period (defaults to current month).
 export async function GET(request: NextRequest) {
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
   const sp     = new URL(request.url).searchParams;
   const siteId = sp.get("siteId");
   const month  = monthBounds();
-  const from   = sp.get("from") ?? month.start.split("T")[0];
-  const to     = sp.get("to")   ?? month.end.split("T")[0];
+  const from   = sp.get("from") ?? belgradeDate(month.start);
+  const to     = sp.get("to")   ?? belgradeDate(month.end);
 
   const supabase = adminClient();
   const fx = await loadFxSettings(supabase);

@@ -29,6 +29,7 @@ const GROUPS: NavGroup[] = [
       { href: "/subscriptions", label: "Pretplate", icon: CreditCardIcon,       roles: ["owner"] },
       { href: "/profit",        label: "Profit",    icon: CircleDollarSignIcon, roles: ["owner"] },
       { href: "/bonus",         label: "Black Friday", icon: GiftIcon,             roles: ["owner", "agent"] },
+      { href: "/reklame",       label: "Reklame",   icon: MegaphoneIcon,        roles: ["owner", "agent"] },
     ],
   },
   {

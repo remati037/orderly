@@ -4,7 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { fetchRevenue } from "@/lib/metrics";
 import { loadFxSettings } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
-import { monthBounds } from "@/lib/utils/tz";
+import { belgradeDate, monthBounds } from "@/lib/utils/tz";
 
 export async function GET() {
   const { error: authError } = await requireRole(["owner"]);
@@ -29,7 +29,7 @@ export async function GET() {
   const netProfit = revenue.netProfit;
 
   // Subtract mapped Facebook ad spend for the same month.
-  const adSpend = await getMappedSpend(supabase, start.split("T")[0], end.split("T")[0], fx.rates);
+  const adSpend = await getMappedSpend(supabase, belgradeDate(start), belgradeDate(end), fx.rates);
   const netProfitAfterAds = netProfit - adSpend.total;
   const avgMargin = revenue.net > 0 ? (netProfitAfterAds / revenue.net) * 100 : 0;
 

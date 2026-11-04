@@ -105,6 +105,13 @@ export function customBounds(fromDate: string, toDate: string) {
   };
 }
 
+// "YYYY-MM-DD" of the Belgrade calendar day an instant falls on. Use this, not
+// toISOString().split("T"), on the bounds above: Belgrade midnight is still the
+// previous day in UTC.
+export function belgradeDate(date: Date | string = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(date));
+}
+
 // "DD.MM" label of the Belgrade calendar day an instant falls on.
 export function belgradeDayLabel(date: Date | string): string {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "2-digit", month: "2-digit" })

@@ -5,7 +5,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { getMappedSpend } from "@/lib/utils/ad-spend";
 import { PAID_STATUSES, orderKeptShare } from "@/lib/metrics";
-import { monthBounds } from "@/lib/utils/tz";
+import { belgradeDate, monthBounds } from "@/lib/utils/tz";
 
 interface Row {
   site_id: string;
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
 
   const sp    = new URL(request.url).searchParams;
   const month = monthBounds();
-  const from  = sp.get("from") ?? month.start.split("T")[0];
-  const to    = sp.get("to")   ?? month.end.split("T")[0];
+  const from  = sp.get("from") ?? belgradeDate(month.start);
+  const to    = sp.get("to")   ?? belgradeDate(month.end);
 
   const supabase = adminClient();
   const [fx, sitesRes] = await Promise.all([

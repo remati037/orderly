@@ -1,6 +1,7 @@
 import { adminClient } from "@/lib/supabase/admin";
+import { belgradeDate, dayBounds } from "@/lib/utils/tz";
 
-const GRAPH_VERSION = "v21.0";
+export const GRAPH_VERSION = "v21.0";
 
 interface InsightRow {
   campaign_id: string;
@@ -40,16 +41,11 @@ export async function syncMetaAccount(
   if (accErr || !account)
     return { rows: 0, campaigns: 0, error: "Ad account not found" };
 
-  const until = new Date();
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-
   const params = new URLSearchParams({
     level: "campaign",
     fields: "campaign_id,campaign_name,spend",
     time_increment: "1",
-    time_range: JSON.stringify({ since: fmt(since), until: fmt(until) }),
+    time_range: JSON.stringify({ since: belgradeDate(dayBounds(-(days - 1)).start), until: belgradeDate() }),
     limit: "500",
     access_token: account.access_token,
   });
