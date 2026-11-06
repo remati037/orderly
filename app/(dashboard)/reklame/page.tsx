@@ -20,6 +20,7 @@ interface Recommendation {
 }
 interface LiveData {
   base_currency: string;
+  period: PeriodKey;
   synced_at: string | null;
   totals: Metrics;
   previous: Metrics | null;
@@ -126,10 +127,17 @@ function OrderlyRoas({ value }: { value: number | null }) {
 
 const LINK_HINT = "Koliko kampanja sa potrošnjom u poslednjih 7 dana je povezano sa sajtom, pa može da se uporedi sa stvarnom prodajom u Orderly-ju.";
 
-// Yesterday and the last 7 full days at a glance, independent of the period below.
-function AccountCardTile({ account: a }: { account: Account }) {
-  const { yesterday: y, week: w, trend, link, top_campaigns: top } = a.card;
+// The chosen period at a glance, next to a second one for comparison: the last 7
+// full days, or the 7 before them when those are already on screen.
+function AccountCardTile({ account: a, period }: { account: Account; period: PeriodKey }) {
+  const { trend, link } = a.card;
   const cur = a.currency;
+  const y = a.metrics;
+  const isWeek = period === "7d";
+  const w = isWeek && a.previous ? a.previous : a.card.week;
+  const label = PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? "";
+  const top = a.campaigns.slice(0, 2).map((c) => ({ name: c.name, spend: c.metrics.spend }));
+  const trendChip = { ...trend, label: trend.label.startsWith("Juče") ? trend.label : `${trend.label} (juče)` };
   const small: React.CSSProperties = { fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.muted, margin: 0 };
   const big = y.roas !== null && y.roas < 1 ? "var(--tone-red-strong)" : "var(--tone-green-strong)";
   return (
@@ -143,24 +151,24 @@ function AccountCardTile({ account: a }: { account: Account }) {
           {[...top.map((c) => `${c.name} ${money(c.spend, cur)}`), a.fb_account_id.replace(/^act_/, "")].join(" · ")}
         </p>
       </div>
-      <div><ChipBadge chip={trend} /></div>
+      <div><ChipBadge chip={trendChip} /></div>
       <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) minmax(0, 1fr)", gap: 14, alignItems: "end" }}>
         <div>
-          <p style={small}>ROAS juče</p>
+          <p style={small}>ROAS {label.toLowerCase()}</p>
           <p style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1, color: y.roas === null ? INK.muted : big, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>
             {y.roas === null ? "—" : y.roas.toFixed(2).replace(".", ",")}
           </p>
-          <OrderlyRoas value={a.orderly_roas.yesterday} />
+          <OrderlyRoas value={a.orderly_roas.period} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={small}>Juče</p>
+          <p style={small}>{label}</p>
           <p style={{ fontSize: 16, fontWeight: 600, color: INK.primary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>{money(y.spend, cur)}</p>
           <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0" }}>{count(y.purchases)} kup. · {money(y.revenue, cur)}</p>
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={small}>7 dana ROAS</p>
+          <p style={small}>{isWeek ? "Prethodnih 7 dana" : "7 dana ROAS"}</p>
           <p style={{ fontSize: 16, fontWeight: 600, color: INK.primary, margin: "2px 0 0", fontVariantNumeric: "tabular-nums" }}>{w.roas === null ? "—" : w.roas.toFixed(2).replace(".", ",")}</p>
-          <OrderlyRoas value={a.orderly_roas.week} />
+          {!isWeek && <OrderlyRoas value={a.orderly_roas.week} />}
           <p style={{ fontSize: 12, color: INK.secondary, margin: "2px 0 0" }}>{money(w.spend, cur)} · {count(w.purchases)} kup.</p>
         </div>
       </div>
@@ -493,17 +501,20 @@ function Recommendations({ items, onDone }: { items: Recommendation[]; onDone: (
 }
 
 export default function ReklamePage() {
-  const [period, setPeriod] = useState<PeriodKey>("7d");
+  const [period, setPeriod] = useState<PeriodKey>("today");
   const { data, error, isLoading, mutate } = useSWR<LiveData>(`/api/ads/live?period=${period}`, jsonFetcher, { refreshInterval: 60_000, keepPreviousData: true });
   const cur = data?.base_currency ?? "EUR";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>Reklame</h1>
-        <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0" }}>
-          {data?.synced_at ? `Meta podaci osveženi u ${timeLabel(data.synced_at)}` : "Meta kampanje po nalozima"}
-        </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>Reklame</h1>
+          <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0" }}>
+            {data?.synced_at ? `Meta podaci osveženi u ${timeLabel(data.synced_at)}` : "Meta kampanje po nalozima"}
+          </p>
+        </div>
+        <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
       </div>
 
       {error && !data ? (
@@ -513,7 +524,7 @@ export default function ReklamePage() {
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 380px), 1fr))", gap: 14 }}>
-            {data.accounts.map((a) => <AccountCardTile key={a.id} account={a} />)}
+            {data.accounts.map((a) => <AccountCardTile key={a.id} account={a} period={data.period} />)}
           </div>
 
           <Recommendations items={data.recommendations} onDone={() => mutate()} />
@@ -524,14 +535,11 @@ export default function ReklamePage() {
             </p>
           )}
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: INK.primary, margin: 0 }}>Svi nalozi</h2>
-              <p style={{ fontSize: 12, color: INK.muted, margin: "2px 0 0" }}>
-                Orderly neto za izabrani period, svi sajtovi: {money(data.net, cur, 0)}, {times(data.real_roas)} u odnosu na potrošnju. Tu ulazi i prodaja koja nije od reklama.
-              </p>
-            </div>
-            <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
+          <div style={{ marginTop: 8 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: INK.primary, margin: 0 }}>Svi nalozi</h2>
+            <p style={{ fontSize: 12, color: INK.muted, margin: "2px 0 0" }}>
+              Orderly neto za izabrani period, svi sajtovi: {money(data.net, cur, 0)}, {times(data.real_roas)} u odnosu na potrošnju. Tu ulazi i prodaja koja nije od reklama.
+            </p>
           </div>
 
           {data.accounts.map((a) => <AccountSection key={a.id} account={a} />)}

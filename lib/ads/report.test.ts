@@ -153,7 +153,6 @@ describe("buildAccountReport", () => {
     expect(r.card.yesterday).toMatchObject({ spend: 10, roas: 5 });
     expect(r.card.week).toMatchObject({ spend: 40, purchases: 2 });
     expect(r.card.link.label).toBe("Povezano sa sajtom");
-    expect(r.card.top_campaigns).toEqual([{ name: "Kampanja", spend: 10 }]);
   });
 });
 

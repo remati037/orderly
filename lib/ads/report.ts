@@ -160,7 +160,6 @@ export interface AccountCard {
   week: Metrics;
   trend: Chip;
   link: Chip;
-  top_campaigns: { name: string; spend: number }[];
 }
 export interface AccountReport {
   metrics: Metrics;
@@ -319,11 +318,6 @@ export function buildAccountReport(
     week: metricsOf(weekRows),
     trend: trendChip(weekDays),
     link: linkChip(weekCampaigns.filter(([id]) => siteOf(id).site_name).length, weekCampaigns.length),
-    top_campaigns: [...groupBy(yesterdayRows, (r) => r.campaign_id).values()]
-      .map((list) => ({ name: latest(list).campaign_name ?? list[0].campaign_id, spend: metricsOf(list).spend }))
-      .filter((c) => c.spend > 0)
-      .sort((x, y) => y.spend - x.spend)
-      .slice(0, 2),
   };
 
   // Fatigue compares the last two full days, a running today would skew it.
