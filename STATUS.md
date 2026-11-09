@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-07
+Ažurirano: 2026-11-09
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -11,7 +11,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Popravljeno usput: 2 propuštene Woo porudžbine (#6513, #6514), zaglavljen status (#6862), test porudžbine iz Woo kante (#7094, #7095); Orderly sada prati Woo kantu.
 - Plan i odluke: `docs/analiza-metorik/FAZA-0.md`.
 
-- Grana `feat/circle-access`: automatski Circle pristup za kupce "70 Claude Eskperata" (Woo proizvod 44809 → access grupa 132017). Kod u `lib/circle/access.ts`, webhook + dnevni sweep, migracija 029 primenjena, uključeno u bazi od 2026-10-20 12:15 UTC (`settings.circle_access.enabled_from`), ali aktivno tek kad se grana spoji i deploy-uje. Endpointi za pisanje u Circle Admin API v2 još nisu isprobani uživo.
+- Circle pristup za kupce na Vladsdigital sajtu radi uživo (na `main` od 2026-10-20): Woo proizvodi 44806 AI Profit Lab → grupa 124997, 44807 500 Claude Skillova → 125666, 44809 70 Claude Eskperata → 132017. Webhook + dnevni sweep, `lib/circle/access.ts`. Provereno 2026-11-09: svih 21 plaćenih porudžbina od 20.10. dobilo pristup, 0 grešaka.
 
 - Novi sajt FIlip Ćirić (ciricfilip.com) dodat 2026-10-27: istorija učitana, ali u Woo nije bilo Orderly webhook-a, pa nove porudžbine nisu ulazile. Ručno povučene #5325–#5329. Posle promene ključa na Read/Write napravljeni webhook-ovi (order.created/updated/deleted, ID 2–4) i provereni potpisanim test pozivom.
 
@@ -46,13 +46,11 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
 - Prikazati Woo webhook URL u podešavanjima sajta (ili ih praviti automatski pri dodavanju sajta).
-- Circle: test sa jednim email-om, pa `enabled = true` i merge grane `feat/circle-access`.
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).
-- Circle Admin API token mora imati pravo pisanja (sad je sačuvan na sajtu AI Profit Lab); potvrda da radi i test email za probu dodele.
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
