@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InsightRow } from "./insights";
-import { actionOf, buildCampaigns } from "./library";
+import { actionOf, buildCampaigns, libraryRange } from "./library";
 
 const row = (over: Partial<InsightRow>): InsightRow => ({
   ad_account_id: "acc", campaign_id: "c1", campaign_name: "Kampanja", adset_id: "s1", adset_name: "Set",
@@ -34,6 +34,15 @@ describe("buildCampaigns", () => {
     expect(c.adsets[0].ads[0].frequency).toBe(3.1);
   });
 
+  it("shows one day but judges on the verdict rows", () => {
+    const week = [row({ date: "2026-11-05", spend: 60, purchases: 6 }), row({ date: "2026-11-08", spend: 30 })];
+    const today = [row({ date: "2026-11-09", spend: 30 })];
+    const [c] = buildCampaigns(today, [...week, ...today], 20, "EUR", week);
+    expect(c.metrics).toMatchObject({ spend: 30, purchases: 0 });
+    expect(c.action).toBe("push");
+    expect(c.adsets[0].ads[0].action).toBe("push");
+  });
+
   it("leaves out what did not spend in the window", () => {
     expect(buildCampaigns([row({ spend: 0 })], [], 20)).toEqual([]);
   });
@@ -44,5 +53,13 @@ describe("actionOf", () => {
     expect(actionOf({ level: "good", reason: "" }, false)).toBe("revive");
     expect(actionOf({ level: "bad", reason: "" }, true)).toBe("stop");
     expect(actionOf({ level: "idle", reason: "" }, true)).toBe("early");
+  });
+});
+
+describe("libraryRange", () => {
+  it("keeps single days apart from full-day windows ending yesterday", () => {
+    expect(libraryRange("today", "2026-11-09")).toEqual({ from: "2026-11-09", to: "2026-11-09" });
+    expect(libraryRange("yesterday", "2026-11-01")).toEqual({ from: "2026-10-31", to: "2026-10-31" });
+    expect(libraryRange("14d", "2026-11-09")).toEqual({ from: "2026-10-26", to: "2026-11-08" });
   });
 });

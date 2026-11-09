@@ -5,7 +5,7 @@ import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { belgradeDate, customBounds, dayBounds } from "@/lib/utils/tz";
 import { averageCpa, ratio, type InsightRow } from "./insights";
 import { buildAccountReport, isSpending, metricsOf, periodRange, type PeriodKey } from "./report";
-import { buildCampaigns, type LibraryDays } from "./library";
+import { buildCampaigns, libraryRange, type LibraryPeriod } from "./library";
 
 const INSIGHT_COLUMNS =
   "ad_account_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, date, spend, impressions, inline_link_clicks, frequency, ctr, purchases, purchase_value, add_to_cart, initiate_checkout, leads, landing_page_views, effective_status, thumbnail_url";
@@ -300,12 +300,14 @@ export async function loadLiveSummary(supabase: SupabaseClient) {
   };
 }
 
-/** "Svi oglasi": every campaign (with its ad sets and ads) that spent in the last `days` full days, per account in its own currency. */
-export async function loadAdLibrary(supabase: SupabaseClient, days: LibraryDays) {
+/** "Svi oglasi": every campaign (with its ad sets and ads) that spent in the period, per account in its own currency. */
+export async function loadAdLibrary(supabase: SupabaseClient, period: LibraryPeriod) {
   const { fx, accounts, rows, targets } = await loadLiveInsights(supabase, 31);
   const today = belgradeDate();
-  const to = belgradeDate(dayBounds(-1).start);
-  const from = belgradeDate(dayBounds(-days).start);
+  const { from, to } = libraryRange(period, today);
+  // A single day is judged on the last 7 full days, like the account overview.
+  const singleDay = period === "today" || period === "yesterday";
+  const week = libraryRange("7d", today);
 
   const list = accounts.flatMap((a) => {
     const rate = toBase(1, a.currency, fx.rates);
@@ -314,13 +316,21 @@ export async function loadAdLibrary(supabase: SupabaseClient, days: LibraryDays)
       .map((r) => ({ ...r, spend: r.spend / rate, purchase_value: r.purchase_value / rate }));
     if (own.length === 0) return [];
     const target = accountTarget(own, a.id, targets[a.id] ? { [a.id]: targets[a.id] / rate } : {});
-    const campaigns = buildCampaigns(own.filter((r) => r.date >= from && r.date <= to), own, target.value, a.currency);
+    const campaigns = buildCampaigns(
+      own.filter((r) => r.date >= from && r.date <= to),
+      own,
+      target.value,
+      a.currency,
+      singleDay ? own.filter((r) => r.date >= week.from && r.date <= week.to) : undefined
+    );
     return campaigns.map((c) => ({ ...c, spend_base: c.metrics.spend * rate }));
   });
 
   return {
     base_currency: fx.baseCurrency,
-    days,
+    period,
+    verdict_from: singleDay ? week.from : from,
+    verdict_to: singleDay ? week.to : to,
     from,
     to,
     today,

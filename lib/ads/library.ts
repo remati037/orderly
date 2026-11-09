@@ -4,8 +4,16 @@
 import type { InsightRow } from "./insights";
 import { metricsOf, verdictOf, type Metrics, type Verdict } from "./report";
 
-export const LIBRARY_DAYS = [7, 14, 30] as const;
-export type LibraryDays = (typeof LIBRARY_DAYS)[number];
+export const LIBRARY_PERIODS = ["today", "yesterday", "7d", "14d", "30d"] as const;
+export type LibraryPeriod = (typeof LIBRARY_PERIODS)[number];
+
+/** Days shown for a period. "7d" and longer are full days ending yesterday. */
+export function libraryRange(period: LibraryPeriod, today: string): { from: string; to: string } {
+  const add = (days: number) => new Date(Date.parse(`${today}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+  if (period === "today") return { from: today, to: today };
+  if (period === "yesterday") return { from: add(-1), to: add(-1) };
+  return { from: add(-Number.parseInt(period, 10)), to: add(-1) };
+}
 
 /** What the team should do, from the verdict and whether it still runs. */
 export type AdAction = "push" | "revive" | "watch" | "stop" | "stopped" | "early" | "lead";
@@ -51,13 +59,21 @@ export function actionOf(verdict: Verdict, active: boolean): AdAction {
 /**
  * Campaign → ad set → ad tree of one account for rows already cut to the window.
  * `allRows` (the stored history) gives each ad's current status and first day.
+ * `verdictRows`, when given, are what the verdicts look at instead of `rows`:
+ * one day says too little, so today and yesterday are judged on 7 full days.
  */
-export function buildCampaigns(rows: InsightRow[], allRows: InsightRow[], target: number | null, currency = "EUR"): LibraryCampaign[] {
+export function buildCampaigns(
+  rows: InsightRow[],
+  allRows: InsightRow[],
+  target: number | null,
+  currency = "EUR",
+  verdictRows?: InsightRow[]
+): LibraryCampaign[] {
   const history = groupBy(allRows, (r) => r.ad_id);
   // An ad's current status is the one on its newest stored row.
   const isActive = (adId: string) => latest(history.get(adId) ?? rows.filter((r) => r.ad_id === adId)).effective_status === "ACTIVE";
-  const judge = (m: Metrics, active: boolean) => {
-    const verdict = verdictOf(m, target, currency);
+  const judge = (m: Metrics, active: boolean, match: (r: InsightRow) => boolean) => {
+    const verdict = verdictOf(verdictRows ? metricsOf(verdictRows.filter(match)) : m, target, currency);
     return { verdict, action: actionOf(verdict, active) };
   };
 
@@ -88,7 +104,7 @@ export function buildCampaigns(rows: InsightRow[], allRows: InsightRow[], target
           frequency: delivered.length ? latest(delivered).frequency : 0,
           first_seen: firstDay(past),
           metrics: m,
-          ...judge(m, active),
+          ...judge(m, active, (r) => r.ad_id === adId),
         });
       }
 
@@ -100,7 +116,7 @@ export function buildCampaigns(rows: InsightRow[], allRows: InsightRow[], target
         active_ads: activeAds,
         first_seen: ads.reduce((d, a) => (a.first_seen < d ? a.first_seen : d), firstDay(setRows)),
         metrics: setMetrics,
-        ...judge(setMetrics, activeAds > 0),
+        ...judge(setMetrics, activeAds > 0, (r) => r.campaign_id === campaignId && (r.adset_id ?? "") === adsetId),
         ads: ads.sort(bySpend),
       });
     }
@@ -115,7 +131,7 @@ export function buildCampaigns(rows: InsightRow[], allRows: InsightRow[], target
       ad_count: adsets.reduce((n, s) => n + s.ads.length, 0),
       first_seen: adsets.reduce((d, s) => (s.first_seen < d ? s.first_seen : d), firstDay(campaignRows)),
       metrics,
-      ...judge(metrics, activeAds > 0),
+      ...judge(metrics, activeAds > 0, (r) => r.campaign_id === campaignId),
       adsets: adsets.sort(bySpend),
     });
   }

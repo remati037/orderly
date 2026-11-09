@@ -7,17 +7,19 @@ import { jsonFetcher } from "@/lib/hooks/json-fetcher";
 import { LoadError } from "@/components/dashboard/load-error";
 import { INK, Segmented } from "@/components/dashboard/analytics/chart-kit";
 import { count, dayLabel, money, percent, td, th, times } from "@/components/ads/ui";
-import type { AdAction, LibraryAd, LibraryAdset, LibraryCampaign, LibraryDays } from "@/lib/ads/library";
+import type { AdAction, LibraryAd, LibraryAdset, LibraryCampaign, LibraryPeriod } from "@/lib/ads/library";
 import type { Metrics } from "@/lib/ads/report";
 
 interface LibraryAccount { id: string; name: string; label: string; color: number; currency: string; fb_account_id: string; target_cpa: number | null; target_estimated: boolean }
 interface LibraryCampaignRow extends LibraryCampaign { spend_base: number }
-interface LibraryData { days: LibraryDays; from: string; to: string; accounts: LibraryAccount[]; campaigns: LibraryCampaignRow[] }
+interface LibraryData { period: LibraryPeriod; from: string; to: string; verdict_from: string; verdict_to: string; accounts: LibraryAccount[]; campaigns: LibraryCampaignRow[] }
 
-const DAY_OPTIONS: { value: LibraryDays; label: string }[] = [
-  { value: 7, label: "7 dana" },
-  { value: 14, label: "14 dana" },
-  { value: 30, label: "30 dana" },
+const PERIOD_OPTIONS: { value: LibraryPeriod; label: string }[] = [
+  { value: "today", label: "Danas" },
+  { value: "yesterday", label: "Juče" },
+  { value: "7d", label: "7 dana" },
+  { value: "14d", label: "14 dana" },
+  { value: "30d", label: "30 dana" },
 ];
 
 const ACTION: Record<AdAction, { label: string; hint: string; color: string; bg: string }> = {
@@ -245,18 +247,29 @@ function CampaignRows({ c, account }: { c: LibraryCampaignRow; account: LibraryA
   );
 }
 
+// What the numbers cover, and what the verdicts look at when that differs.
+function periodLine(d: LibraryData): string {
+  const shown = d.from === d.to
+    ? `Kampanje sa potrošnjom ${d.period === "today" ? "danas, do sada" : `juče, ${dayLabel(d.from)}`}.`
+    : `Kampanje sa potrošnjom od ${dayLabel(d.from)} do ${dayLabel(d.to)}, samo puni dani.`;
+  const judged = d.verdict_from !== d.from
+    ? ` Ocena „šta raditi" gleda poslednjih 7 punih dana (${dayLabel(d.verdict_from)} do ${dayLabel(d.verdict_to)}), jer jedan dan nije dovoljan.`
+    : "";
+  return `${shown}${judged} `;
+}
+
 const control: React.CSSProperties = {
   fontSize: 13, padding: "7px 10px", borderRadius: 8, border: `1px solid ${INK.border}`, background: "var(--ui-surface)", color: INK.primary,
 };
 
 export default function SviOglasiPage() {
-  const [days, setDays] = useState<LibraryDays>(7);
+  const [period, setPeriod] = useState<LibraryPeriod>("7d");
   const [account, setAccount] = useState("all");
   const [action, setAction] = useState<AdAction | "all">("all");
   const [onlyActive, setOnlyActive] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "spend", desc: true });
-  const { data, error, isLoading, mutate } = useSWR<LibraryData>(`/api/ads/library?days=${days}`, jsonFetcher, { refreshInterval: 300_000, keepPreviousData: true });
+  const { data, error, isLoading, mutate } = useSWR<LibraryData>(`/api/ads/library?period=${period}`, jsonFetcher, { refreshInterval: 300_000, keepPreviousData: true });
 
   const accounts = useMemo(() => new Map((data?.accounts ?? []).map((a) => [a.id, a])), [data]);
 
@@ -309,11 +322,11 @@ export default function SviOglasiPage() {
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: INK.primary, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>Svi oglasi</h1>
           <p style={{ fontSize: 13, color: INK.muted, margin: "4px 0 0", maxWidth: 720 }}>
-            {data ? `Kampanje sa potrošnjom od ${dayLabel(data.from)} do ${dayLabel(data.to)}, samo puni dani. ` : ""}
+            {data ? periodLine(data) : ""}
             Klik na kampanju otvara ad setove, klik na ad set otvara oglase. Svaki nivo ima svoju ocenu.
           </p>
         </div>
-        <Segmented label="Period" value={days} options={DAY_OPTIONS} onChange={setDays} />
+        <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
       </div>
 
       {error && !data ? (
