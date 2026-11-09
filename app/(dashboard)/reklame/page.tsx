@@ -7,7 +7,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import { jsonFetcher } from "@/lib/hooks/json-fetcher";
 import { LoadError } from "@/components/dashboard/load-error";
 import { ChartCard, INK, Legend, Segmented, TooltipBox, pct } from "@/components/dashboard/analytics/chart-kit";
-import { formatMoney, leadCount, type AccountReport, type AdsetReport, type CampaignReport, type Chip, type DayPoint, type Metrics, type PeriodKey, type Tone, type Verdict, type VerdictLevel } from "@/lib/ads/report";
+import { VerdictBadge, count, dayLabel, money, percent, td, th, timeLabel, times } from "@/components/ads/ui";
+import { leadCount, type AccountReport, type AdsetReport, type CampaignReport, type Chip, type DayPoint, type Metrics, type PeriodKey, type Tone } from "@/lib/ads/report";
 
 interface Account extends AccountReport {
   id: string; name: string; currency: string; fb_account_id: string; status: number | null; synced_at: string | null; error: string | null;
@@ -49,40 +50,6 @@ const TONE: Record<Tone, { color: string; bg: string; bar: string }> = {
   bad: { color: "var(--tone-red-strong)", bg: "var(--tone-red-2)", bar: "#EF4444" },
   neutral: { color: INK.secondary, bg: INK.grid, bar: "var(--ui-faint)" },
 };
-
-const VERDICT: Record<VerdictLevel, { label: string; color: string; bg: string }> = {
-  good: { label: "Dobro", color: "var(--tone-green-strong)", bg: "var(--tone-green-2)" },
-  watch: { label: "Pazi", color: "var(--tone-amber-deep)", bg: "var(--tone-amber-2)" },
-  bad: { label: "Loše", color: "var(--tone-red-strong)", bg: "var(--tone-red-2)" },
-  low_data: { label: "Rano za ocenu", color: INK.secondary, bg: INK.grid },
-  lead: { label: "Leadovi", color: "var(--tone-blue-strong)", bg: "var(--tone-blue-2)" },
-  idle: { label: "Bez potrošnje", color: INK.secondary, bg: INK.grid },
-};
-
-const money = (v: number | null, cur: string, digits = 2) => (v === null ? "—" : formatMoney(v, cur, digits));
-const times = (v: number | null) => (v === null ? "—" : `${v.toFixed(2).replace(".", ",")}x`);
-const count = (v: number) => v.toLocaleString("de-DE");
-const percent = (v: number | null) => (v === null ? "—" : pct(v, 2));
-
-const timeLabel = (iso: string) =>
-  new Intl.DateTimeFormat("sr-Latn-RS", { timeZone: "Europe/Belgrade", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
-const dayLabel = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
-
-const th: React.CSSProperties = {
-  padding: "8px 10px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
-  color: INK.muted, textAlign: "right", whiteSpace: "nowrap",
-};
-const td: React.CSSProperties = { padding: "10px", fontSize: 13, color: INK.primary, textAlign: "right", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" };
-
-function VerdictBadge({ verdict, withReason }: { verdict: Verdict; withReason?: boolean }) {
-  const v = VERDICT[verdict.level];
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: v.color, background: v.bg, borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>{v.label}</span>
-      {withReason && <span style={{ fontSize: 13, color: INK.secondary }}>{verdict.reason}</span>}
-    </span>
-  );
-}
 
 // Change against the previous period. Whether up is good depends on the metric.
 function Delta({ now, before, goodWhenUp }: { now: number | null; before: number | null | undefined; goodWhenUp?: boolean }) {

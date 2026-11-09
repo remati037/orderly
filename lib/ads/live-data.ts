@@ -5,6 +5,7 @@ import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { belgradeDate, customBounds, dayBounds } from "@/lib/utils/tz";
 import { averageCpa, ratio, type InsightRow } from "./insights";
 import { buildAccountReport, isSpending, metricsOf, periodRange, type PeriodKey } from "./report";
+import { buildCreatives, type LibraryDays } from "./library";
 
 const INSIGHT_COLUMNS =
   "ad_account_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, date, spend, impressions, inline_link_clicks, frequency, ctr, purchases, purchase_value, add_to_cart, initiate_checkout, leads, landing_page_views, effective_status, thumbnail_url";
@@ -295,5 +296,45 @@ export async function loadLiveSummary(supabase: SupabaseClient) {
       }))
       .sort((x, y) => y.total - x.total)
       .slice(0, LARGEST_ORDERS),
+  };
+}
+
+/** "Svi oglasi": every creative that spent in the last `days` full days, per account in its own currency. */
+export async function loadAdLibrary(supabase: SupabaseClient, days: LibraryDays) {
+  const { fx, accounts, rows, targets } = await loadLiveInsights(supabase, 31);
+  const today = belgradeDate();
+  const to = belgradeDate(dayBounds(-1).start);
+  const from = belgradeDate(dayBounds(-days).start);
+
+  const list = accounts.flatMap((a) => {
+    const rate = toBase(1, a.currency, fx.rates);
+    const own = rows
+      .filter((r) => r.ad_account_id === a.id)
+      .map((r) => ({ ...r, spend: r.spend / rate, purchase_value: r.purchase_value / rate }));
+    if (own.length === 0) return [];
+    const target = accountTarget(own, a.id, targets[a.id] ? { [a.id]: targets[a.id] / rate } : {});
+    const creatives = buildCreatives(own.filter((r) => r.date >= from && r.date <= to), own, target.value, a.currency);
+    return creatives.map((c) => ({ ...c, spend_base: c.metrics.spend * rate }));
+  });
+
+  return {
+    base_currency: fx.baseCurrency,
+    days,
+    from,
+    to,
+    today,
+    accounts: accounts
+      .filter((a) => list.some((c) => c.ad_account_id === a.id))
+      .map((a) => {
+        const own = rows.filter((r) => r.ad_account_id === a.id);
+        const rate = toBase(1, a.currency, fx.rates);
+        const target = accountTarget(
+          own.map((r) => ({ ...r, spend: r.spend / rate })),
+          a.id,
+          targets[a.id] ? { [a.id]: targets[a.id] / rate } : {}
+        );
+        return { id: a.id, name: a.name, currency: a.currency, fb_account_id: a.fb_account_id, target_cpa: target.value, target_estimated: target.estimated };
+      }),
+    creatives: list.sort((x, y) => y.spend_base - x.spend_base),
   };
 }

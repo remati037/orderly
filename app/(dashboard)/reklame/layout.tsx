@@ -1,4 +1,5 @@
 import { requirePageRole } from "@/lib/auth/page-guards";
+import { ReklameTabs } from "@/components/ads/ui";
 
 export default async function ReklameLayout({
   children,
@@ -6,5 +7,10 @@ export default async function ReklameLayout({
   children: React.ReactNode;
 }) {
   await requirePageRole(["owner", "agent"]);
-  return <>{children}</>;
+  return (
+    <>
+      <ReklameTabs />
+      {children}
+    </>
+  );
 }
