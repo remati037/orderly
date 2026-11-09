@@ -10,7 +10,7 @@ import { count, dayLabel, money, percent, td, th, times } from "@/components/ads
 import type { AdAction, LibraryAd, LibraryAdset, LibraryCampaign, LibraryDays } from "@/lib/ads/library";
 import type { Metrics } from "@/lib/ads/report";
 
-interface LibraryAccount { id: string; name: string; currency: string; fb_account_id: string; target_cpa: number | null; target_estimated: boolean }
+interface LibraryAccount { id: string; name: string; label: string; color: number; currency: string; fb_account_id: string; target_cpa: number | null; target_estimated: boolean }
 interface LibraryCampaignRow extends LibraryCampaign { spend_base: number }
 interface LibraryData { days: LibraryDays; from: string; to: string; accounts: LibraryAccount[]; campaigns: LibraryCampaignRow[] }
 
@@ -73,6 +73,12 @@ const adsetCount = (n: number) => {
   const tens = n % 100, ones = n % 10;
   if (ones === 1 && tens !== 11) return `${n} ad set`;
   return ones >= 2 && ones <= 4 && (tens < 12 || tens > 14) ? `${n} ad seta` : `${n} ad setova`;
+};
+
+// 1 kampanja, 2–4 kampanje, 5+ kampanja (11–14 too).
+const campaignWord = (n: number) => {
+  const tens = n % 100, ones = n % 10;
+  return ones >= 2 && ones <= 4 && (tens < 12 || tens > 14) ? "kampanje" : "kampanja";
 };
 
 const statusLabel = (status: string | null) =>
@@ -163,18 +169,71 @@ function AdsetRows({ adset, cur, account }: { adset: LibraryAdset; cur: string; 
   );
 }
 
+// Solid fill with white text reads the same in light and dark mode. Green, red and
+// amber stay out: they already mean good, bad and watch.
+const ACCOUNT_COLORS = ["#2563EB", "#7C3AED", "#EA580C", "#0891B2", "#DB2777", "#4F46E5", "#0D9488"];
+const accountColor = (a: LibraryAccount | undefined) => ACCOUNT_COLORS[(a?.color ?? 0) % ACCOUNT_COLORS.length];
+
+function AccountChip({ account }: { account: LibraryAccount }) {
+  return (
+    <span title={account.name} style={{ display: "inline-block", fontSize: 13, fontWeight: 700, color: "#fff", background: accountColor(account), borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" }}>
+      {account.label}
+    </span>
+  );
+}
+
+// Totals of an account's campaigns on screen, summed the way metricsOf does.
+function sumMetrics(list: Metrics[]): Metrics {
+  const sum = (f: (m: Metrics) => number) => list.reduce((n, m) => n + f(m), 0);
+  const spend = sum((m) => m.spend), purchases = sum((m) => m.purchases), revenue = sum((m) => m.revenue);
+  const impressions = sum((m) => m.impressions), clicks = sum((m) => m.clicks), leads = sum((m) => m.leads);
+  return {
+    spend, purchases, revenue, impressions, clicks, leads,
+    cpa: purchases > 0 ? spend / purchases : null,
+    roas: spend > 0 && !(purchases > 0 && revenue === 0) ? revenue / spend : null,
+    ctr: impressions > 0 ? clicks / impressions : null,
+    cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
+    cpc: clicks > 0 ? spend / clicks : null,
+    landing_page_views: sum((m) => m.landing_page_views),
+    add_to_cart: sum((m) => m.add_to_cart),
+    initiate_checkout: sum((m) => m.initiate_checkout),
+    cpl: leads > 0 ? spend / leads : null,
+  };
+}
+
+function AccountHeader({ account, campaigns }: { account: LibraryAccount; campaigns: LibraryCampaignRow[] }) {
+  const cell: React.CSSProperties = { ...td, fontWeight: 600, background: "var(--ui-sidebar)", borderTop: `2px solid ${accountColor(account)}` };
+  const active = campaigns.filter((c) => c.active).length;
+  return (
+    <tr id={`nalog-${account.id}`}>
+      <td style={{ ...cell, textAlign: "left", whiteSpace: "normal" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <AccountChip account={account} />
+          <span style={{ fontSize: 12, fontWeight: 400, color: INK.muted }}>
+            {campaigns.length} {campaignWord(campaigns.length)}{active ? `, aktivno ${active}` : ""} · {account.currency}
+          </span>
+        </span>
+      </td>
+      <MetricCells m={sumMetrics(campaigns.map((c) => c.metrics))} cur={account.currency} style={cell} />
+      <td style={{ ...cell, textAlign: "left", fontWeight: 400, fontSize: 12, color: INK.secondary }}>
+        Prag cene prodaje {money(account.target_cpa, account.currency)}{account.target_estimated ? " (procena)" : ""}
+      </td>
+    </tr>
+  );
+}
+
 function CampaignRows({ c, account }: { c: LibraryCampaignRow; account: LibraryAccount | undefined }) {
   const [open, setOpen] = useState(false);
   const cur = account?.currency ?? "EUR";
   return (
     <Fragment>
       <tr style={{ borderBottom: `1px solid ${INK.grid}`, cursor: "pointer" }} onClick={() => setOpen((o) => !o)} className="hover:bg-zinc-50 dark:hover:bg-[var(--ui-subtle)]">
-        <td style={{ ...td, textAlign: "left", whiteSpace: "normal", minWidth: 320 }}>
+        <td style={{ ...td, textAlign: "left", whiteSpace: "normal", minWidth: 320, boxShadow: `inset 4px 0 0 ${accountColor(account)}`, paddingLeft: 14 }}>
           <Toggle open={open} onClick={() => setOpen((o) => !o)} indent={0}>
             <span style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{c.name}</span>
             {!c.active && <span style={{ marginLeft: 8, fontSize: 11, color: INK.secondary, background: INK.grid, borderRadius: 4, padding: "1px 6px" }}>ne radi</span>}
             <span style={{ display: "block", fontSize: 12, color: INK.muted, marginTop: 2 }}>
-              {account?.name ?? ""} · {adsetCount(c.adsets.length)} · {c.ad_count === 1 ? "1 oglas" : `${c.ad_count} oglasa`}{c.active ? ` (aktivno ${c.active_ads})` : ""} · od {dayLabel(c.first_seen)}
+              {adsetCount(c.adsets.length)} · {c.ad_count === 1 ? "1 oglas" : `${c.ad_count} oglasa`}{c.active ? ` (aktivno ${c.active_ads})` : ""} · od {dayLabel(c.first_seen)}
             </span>
           </Toggle>
         </td>
@@ -229,12 +288,20 @@ export default function SviOglasiPage() {
     });
   }, [base, action, sort]);
 
+  // Campaigns stay inside their account; accounts follow the account's total spend on screen.
+  const groups = useMemo(() => {
+    const byAccount = new Map<string, LibraryCampaignRow[]>();
+    for (const c of shown) {
+      const g = byAccount.get(c.ad_account_id);
+      if (g) g.push(c);
+      else byAccount.set(c.ad_account_id, [c]);
+    }
+    const total = (list: LibraryCampaignRow[]) => list.reduce((n, c) => n + c.spend_base, 0);
+    return [...byAccount.entries()].sort(([, a], [, b]) => total(b) - total(a));
+  }, [shown]);
+
   const toggleSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "cpa" }));
-
-  const targets = (data?.accounts ?? [])
-    .filter((a) => account === "all" || a.id === account)
-    .map((a) => `${a.name} ${money(a.target_cpa, a.currency)}${a.target_estimated ? " (procena)" : ""}`);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -270,7 +337,7 @@ export default function SviOglasiPage() {
                 >
                   <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: a.color }}>{a.label}</span>
                   <span style={{ display: "block", fontSize: 24, fontWeight: 700, color: INK.primary, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>{counts.get(k)}</span>
-                  <span style={{ display: "block", fontSize: 11, color: INK.muted }}>kampanja</span>
+                  <span style={{ display: "block", fontSize: 11, color: INK.muted }}>{campaignWord(counts.get(k) ?? 0)}</span>
                 </button>
               );
             })}
@@ -286,7 +353,7 @@ export default function SviOglasiPage() {
               <span className="sr-only">Nalog</span>
               <select value={account} onChange={(e) => setAccount(e.target.value)} style={control}>
                 <option value="all">Svi nalozi</option>
-                {data.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                {data.accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
               </select>
             </label>
             <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: INK.secondary, cursor: "pointer" }}>
@@ -319,7 +386,15 @@ export default function SviOglasiPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {shown.map((c) => <CampaignRows key={c.id} c={c} account={accounts.get(c.ad_account_id)} />)}
+                    {groups.map(([accountId, list]) => {
+                      const acc = accounts.get(accountId);
+                      return (
+                        <Fragment key={accountId}>
+                          {acc && <AccountHeader account={acc} campaigns={list} />}
+                          {list.map((c) => <CampaignRows key={c.id} c={c} account={acc} />)}
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -328,7 +403,7 @@ export default function SviOglasiPage() {
 
           <p style={{ fontSize: 12, color: INK.muted, margin: 0, lineHeight: 1.5 }}>
             Ocena po M4 pravilima, u odnosu na prag cene prodaje naloga: ispod 1x praga potrošnje je rano za ocenu, 2x praga bez prodaje ili cena prodaje duplo iznad praga je loše.
-            {targets.length > 0 && ` Pragovi: ${targets.join(", ")}.`} Iznosi su u valuti naloga. Čuva se poslednjih 30 dana, starije reklame se ovde ne vide.
+ Prag svakog naloga piše u njegovom redu. Iznosi su u valuti naloga. Čuva se poslednjih 30 dana, starije reklame se ovde ne vide.
           </p>
         </>
       )}

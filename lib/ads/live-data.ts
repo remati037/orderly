@@ -19,6 +19,7 @@ export interface LiveAccount {
   live_synced_at: string | null;
   live_sync_error: string | null;
   site_id: string | null;
+  short_name: string | null;
 }
 
 /** Active accounts, with rows of the last `days` days in base currency. */
@@ -27,7 +28,7 @@ export async function loadLiveInsights(supabase: SupabaseClient, days: number) {
   const [accountsRes, cfgRes, rowsRes] = await Promise.all([
     supabase
       .from("ad_accounts")
-      .select("id, name, currency, fb_account_id, meta_account_status, live_synced_at, live_sync_error, site_id")
+      .select("id, name, currency, fb_account_id, meta_account_status, live_synced_at, live_sync_error, site_id, short_name")
       .eq("is_active", true)
       .order("name"),
     supabase.from("settings").select("value").eq("key", "meta_live").maybeSingle(),
@@ -333,7 +334,17 @@ export async function loadAdLibrary(supabase: SupabaseClient, days: LibraryDays)
           a.id,
           targets[a.id] ? { [a.id]: targets[a.id] / rate } : {}
         );
-        return { id: a.id, name: a.name, currency: a.currency, fb_account_id: a.fb_account_id, target_cpa: target.value, target_estimated: target.estimated };
+        return {
+          id: a.id,
+          name: a.name,
+          label: a.short_name ?? a.name,
+          // Position among all active accounts, so an account keeps its color whatever the filter.
+          color: accounts.indexOf(a),
+          currency: a.currency,
+          fb_account_id: a.fb_account_id,
+          target_cpa: target.value,
+          target_estimated: target.estimated,
+        };
       }),
     campaigns: list.sort((x, y) => y.spend_base - x.spend_base),
   };
