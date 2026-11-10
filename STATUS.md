@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-09
+Ažurirano: 2026-11-10
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -40,6 +40,8 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Noćni režim (na produkciji od 2026-11-05, `main`). Sam se pali od 20:00 do 07:00 po satu uređaja, prekidač "Noćni režim" je u bočnom meniju; ručni izbor važi do sledeće promene po rasporedu (`lib/theme/`). Sve boje ekrana prebačene na promenljive u `app/globals.css` (`--ui-*`, `--tone-*`); nove boje dodavati tamo, ne direktno u komponente. TV prikaz je već taman i nije diran. Izgled proveren na privremenoj stranici sa izmišljenim podacima (bočni meni, kartice, tabele, grafikoni, porudžbine) i na prijavi; ostali ekrani iza prijave nisu otvarani.
 
 - `/reklame`: izbor perioda (podrazumevano Danas) je na vrhu i važi i za kartice naloga; ocene, trend i oglasi i dalje gledaju poslednjih 7 punih dana.
+
+- Analiza ritma prodaje kroz dan (10.9.–9.11.2026, 1.792 nove plaćene porudžbine, bez obnova pretplata) objavljena kao Claude stranica "Ritam prodaje kroz dan" (https://claude.ai/artifact/74hN5TFvBqzGhSR4H2KnZX). Nalaz: od 8 do 23h prodaja je ravnomerna, najjače uveče 19–23h (29%), pad u 13h; pikovi su vezani za događaje (vebinar, newsletter, lansiranje), ne za sat. Meta oglasi jači pre podne, email i Stripe uveče. Snimak, ne osvežava se sam.
 
 ## Sledeći korak
 - Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
