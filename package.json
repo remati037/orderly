@@ -15,7 +15,8 @@
     "woo:resync": "node --env-file=.env.local scripts/woo-resync.mts",
     "db:query": "node --env-file=.env.local scripts/db.mjs query",
     "refunds:backfill": "node --env-file=.env.local scripts/backfill-refunds.mts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "demo": "node scripts/demo/start.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

@@ -7,7 +7,7 @@ export default defineConfig({
   },
   test: {
     include: ["**/*.test.ts"],
-    exclude: ["node_modules", ".next"],
+    exclude: ["node_modules", ".next", ".next-demo", ".demo"],
     // The server runs in UTC on Vercel — test the date math the same way.
     env: { TZ: "UTC" },
   },

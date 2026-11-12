@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { DEMO_AUTH_USER_ID, DEMO_MODE } from "@/lib/demo";
 
 export type Role = "owner" | "agent";
 
@@ -25,6 +26,15 @@ export interface Member {
  * Returns null for signed-out users, unknown users, and deactivated members.
  */
 export async function getMember(): Promise<Member | null> {
+  if (DEMO_MODE) {
+    const { data } = await adminClient()
+      .from("team_members")
+      .select("*")
+      .eq("auth_user_id", DEMO_AUTH_USER_ID)
+      .maybeSingle();
+    return (data as Member | null) ?? null;
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;

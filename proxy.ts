@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { DEMO_MODE } from "@/lib/demo";
 
 // Everything else requires a signed-in Supabase user.
 // /tv is intentionally NOT public — it renders live revenue.
@@ -23,6 +24,14 @@ const PUBLIC_ROUTES = [
 ];
 
 export default async function proxy(request: NextRequest) {
+  // Local demo database with made-up data: no sign-in (see lib/demo.ts).
+  if (DEMO_MODE) {
+    if (request.nextUrl.pathname.startsWith("/sign-in")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

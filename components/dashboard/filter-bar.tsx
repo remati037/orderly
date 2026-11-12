@@ -275,6 +275,8 @@ function FilterSelect({
     <Select
       value={value || ALL}
       onValueChange={(v) => onChange(!v || v === ALL ? "" : (v as string))}
+      // Without items the trigger shows the raw value ("__all") instead of its label.
+      items={[{ value: ALL, label: defaultLabel }, ...options]}
     >
       <SelectTrigger
         className="text-[13px]"

@@ -87,7 +87,9 @@ export async function GET(request: NextRequest) {
       .filter(([key]) => key.startsWith(`${siteId}::`))
       .reduce((s, [, v]) => s + v, 0);
     const wholeSiteSpend = siteSpend - productSpendForSite;
-    if (wholeSiteSpend <= 0) continue;
+    // Below a cent is float residue of the subtraction, not real spend; it
+    // would otherwise show as a ROAS in the trillions.
+    if (wholeSiteSpend < 0.005) continue;
 
     const site = sites.find((s) => s.id === siteId);
     const revenue = revenueBySite.get(siteId) ?? 0;

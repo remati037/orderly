@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-10
+Ažurirano: 2026-11-12
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -43,6 +43,9 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 - Analiza ritma prodaje kroz dan (10.9.–9.11.2026, 1.792 nove plaćene porudžbine, bez obnova pretplata) objavljena kao Claude stranica "Ritam prodaje kroz dan" (https://claude.ai/artifact/74hN5TFvBqzGhSR4H2KnZX). Nalaz: od 8 do 23h prodaja je ravnomerna, najjače uveče 19–23h (29%), pad u 13h; pikovi su vezani za događaje (vebinar, newsletter, lansiranje), ne za sat. Meta oglasi jači pre podne, email i Stripe uveče. Snimak, ne osvežava se sam.
 
+- **Demo za snimanje** (`npm run demo`, http://localhost:3100): ceo Orderly na lokalnoj bazi sa izmišljenim podacima (Sajt 1–4, Kupac 1…, Nalog 1–3, Kampanja 1…, Oglas 1…), bez prijave. Prava baza i pravi ključevi se ne dodiruju: Postgres u `.demo/pg`, PostgREST ispred njega, svi ključevi iz `.env.local` su prazni u demo procesu. Demo režim (`lib/demo.ts`) radi samo kad je Supabase adresa lokalna. Podaci se prave iznova pri svakom pokretanju, pa je "danas" uvek danas (`scripts/demo/seed.mjs`). Treba `brew install postgrest` (instaliran 2026-11-12). Pregledane sve sekcije; u bazi nema nijednog pravog imena, mejla ni sajta.
+- Usput popravljeno (na produkciji tek posle pusha): filteri na Porudžbinama su pokazivali "__all" umesto "Platforma/Status/Tip proizvoda"; Profit je za "Ceo sajt" mogao da pokaže ROAS u bilionima zbog ostatka od zaokruživanja.
+
 ## Sledeći korak
 - Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
 - Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
@@ -61,6 +64,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Meta live: Meta API nivo je `development_access`, pa rate limit može da zasmeta kad se doda više naloga. Upis preporuka je isproban uživo, ali dugme Urađeno nije probano iza prijave. Stvarni ROAS na vrhu računa sav neto prihod, i onaj koji nije od reklama. Claude zadatak kao lokalni radi samo kad je Mac budan.
 - Za Woo sajtove UI ne prikazuje webhook URL niti ih pravi sam — svaki novi Woo sajt ostaje bez webhook-a ako se to zaboravi.
 - Dug za Fazu 5: `settings.key` i `customers.email` su jedinstveni globalno, ne po organizaciji; većina endpointa još ne filtrira po org_id (registar metrika filtrira kad dobije orgId).
+- Naplata: "Otvoreno" sabira iznose u različitim valutama bez preračuna (RSD + EUR prikazano kao EUR). Nađeno u demou, nije dirano.
 - Ad spend prozor u profit/kpi i ad-performance koristi UTC datume Beogradskih ponoći (dan pomeren) — postojeća greška, nije dirana.
 - `profit/recalculate` ne preračunava net_profit za refunded porudžbine.
 - Stripe webhook treba da bude pretplaćen na `charge.refunded` u Stripe-u; dok nije, refundacije stižu dnevnim cronom (do 24h kašnjenja).
