@@ -49,7 +49,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Sledeći korak
 - Support Hub (njihova sesija): u Vercel env `ORDERLY_API_URL=https://orderly-drab.vercel.app`, `ORDERLY_API_TOKEN`, `ORDERLY_MOCK=false`; mapiranje: Vladsdigital = Vladsdigital + AI Profit Lab + Biznis priče (Biznis priče privremeno), Nemanja Antić = Nemanja Antic, Filip Ćirić = FIlip Ćirić.
-- Circle: novi Woo proizvodi na Vladsdigital sajtu (45521 AI Profit Lab, 45522 Claude Turbo Starter, 45523 Claude Pro biblioteka) nisu u `settings.circle_access`, pa njihovi kupci (npr. #45801, 15.11.) ne dobijaju Circle pristup automatski. Treba dodati pravila i proveriti ko je propušten.
+- Circle (2026-11-15): u `settings.circle_access` dodata pravila 45521 → Ai Profit Lab (124997), 45522 → Claude Turbo Starter (141196), 45523 → 500 Ai Skillova (125666) + 70 Claude Eskperata (132017), i imena grupa (`access_group_name`) na svim pravilima. Nove porudžbine od sada dobijaju pristup preko webhook-a. Propušteno je 5 kupaca (#45564, #45585, #45595, #45755, #45801; ostalih 13 je već u grupama). Dnevni cron u 04:00 sam pokriva 7 dana, pa će večeras dodeliti sve osim #45564 (6.11.). Za sve odjednom: `npm run circle:sweep -- --days 14 --yes` (probni prolaz bez `--yes`). Posle proveriti `circle_grants` za tih 5 porudžbina.
 - Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
 - Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
@@ -57,13 +57,14 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
-- Circle: da li novi proizvodi 45521/45522/45523 treba da daju pristup grupama (koje?), da se dodaju pravila.
+- Circle: pokrenuti `npm run circle:sweep -- --days 14 --yes` (ili dozvoliti Claude-u), jer bi se kupcu #45564 inače pristup morao dati ručno. Odluka: da li "30 Claude Eskperata" (44833) i "AI Profit Lab - 7 dana" (44864) treba da daju neku Circle grupu (sada ne daju i niko od tih kupaca nije u grupama 70 Eksperata / AIPL).
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
-- Support Hub API: limit od 120/min se broji po instanci servera (u memoriji, jer ruta ne sme da piše u bazu). Circle nema imena grupa u bazi, pa Support Hub vidi "Circle grupa 124997" dok se pravilu u `settings.circle_access` ne doda `access_group_name`.
+- Support Hub API: limit od 120/min se broji po instanci servera (u memoriji, jer ruta ne sme da piše u bazu).
+- Circle: kupce novih proizvoda u grupe ubacuje i nešto van Orderly-ja (13 od 18 je bilo u grupi bez Orderly dodele). Nije utvrđeno šta je to; Orderly dodela je idempotentna, pa duplo dodavanje ne smeta. Novi Woo proizvod sa Circle pristupom traži novo pravilo u `settings.circle_access`.
 - Zakazani zadatak `orderly-meta-preporuke` je stajao na komandi Keychain + curl. Od 2026-11-07 čita i piše samo preko `scripts/meta-preporuke.sh`, a `sh` je već dozvoljen, pa ne bi trebalo da traži odobrenje. Skripta je isprobana ručno, a ceo prolaz zadatka još nije potvrđen. Zadatak više ne zove Meta konektor, pa proveru budžeta menjanog u poslednjih 48h ostavlja čoveku u tekstu preporuke.
 - Lični token: 4 naloga prestaju da se osvežavaju kad istekne ili kad se promeni Facebook lozinka; greška se vidi na njihovom bloku.
 - Meta live: Meta API nivo je `development_access`, pa rate limit može da zasmeta kad se doda više naloga. Upis preporuka je isproban uživo, ali dugme Urađeno nije probano iza prijave. Stvarni ROAS na vrhu računa sav neto prihod, i onaj koji nije od reklama. Claude zadatak kao lokalni radi samo kad je Mac budan.
