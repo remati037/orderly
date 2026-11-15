@@ -3,7 +3,7 @@ Ažurirano: 2026-11-15
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
-- **Support Hub zbirni LTV** (2026-11-15, commit na lokalnom `main`, NIJE na produkciji): `POST /api/support/customers/summary` (do 500 emailova, do 20 sajtova) za LTV kolonu i filtere na listi kontakata u Support Hubu; iste brojke kao kartica kupca, SQL funkcija `support_customers_summary` (migracija 038, NIJE primenjena). Testovi (244/244) i build prolaze.
+- **Support Hub zbirni LTV** (uživo od 2026-11-15, `main`): `POST /api/support/customers/summary` (do 500 emailova, do 20 sajtova) za LTV kolonu i filtere na listi kontakata u Support Hubu; iste brojke kao kartica kupca, SQL funkcija `support_customers_summary` (migracija 038, primenjena; izvršava je samo service_role). Testovi (244/244) i build prolaze.
 - **Support Hub API** (uživo od 2026-11-15, `main`): `GET /api/support/sites` i `GET /api/support/customer?email=&site_ids=`, samo čitanje, token `settings.support_hub_token_sha256` (samo heš; token predat Support Hub sesiji, nije u repou), 120 zahteva/min po tokenu, filter po org_id i po traženim sajtovima u SQL funkciji `support_customer_lookup` (migracija 037, primenjena; izvršava je samo service_role). LTV samo od plaćenih, neto od refundacija. Opis: `docs/support-hub-api.md`. Provereno na produkciji: 6 sajtova, kupac sa porudžbinom #45801 se vidi na Vladsdigital sajtu, a ne na tuđem, 400/401 kodovi tačni.
 - Faza 0 završena i na produkciji (migracije 020–028, 40 refundacija, spojeni kupci, UTM izvori, daily_stats, registar metrika).
 - Provera sa Metorikom (nemanjaantic.com, neto = bruto − refundacije):
@@ -49,7 +49,6 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Usput popravljeno (na produkciji tek posle pusha): filteri na Porudžbinama su pokazivali "__all" umesto "Platforma/Status/Tip proizvoda"; Profit je za "Ceo sajt" mogao da pokaže ROAS u bilionima zbog ostatka od zaokruživanja.
 
 ## Sledeći korak
-- Support Hub zbirni LTV, uz Vladimirovo odobrenje: `npm run db:migrate` (038), pa `git push` na `main`; onda javiti Support Hub sesiji.
 - Support Hub (njihova sesija): u Vercel env `ORDERLY_API_URL=https://orderly-drab.vercel.app`, `ORDERLY_API_TOKEN`, `ORDERLY_MOCK=false`; mapiranje: Vladsdigital = Vladsdigital + AI Profit Lab + Biznis priče (Biznis priče privremeno), Nemanja Antić = Nemanja Antic, Filip Ćirić = FIlip Ćirić.
 - Circle (2026-11-15): u `settings.circle_access` dodata pravila 45521 → Ai Profit Lab (124997), 45522 → Claude Turbo Starter (141196), 45523 → 500 Ai Skillova (125666) + 70 Claude Eskperata (132017), i imena grupa (`access_group_name`) na svim pravilima. Nove porudžbine od sada dobijaju pristup preko webhook-a. Propušteno je 5 kupaca (#45564, #45585, #45595, #45755, #45801; ostalih 13 je već u grupama). Dnevni cron u 04:00 sam pokriva 7 dana, pa će večeras dodeliti sve osim #45564 (6.11.). Za sve odjednom: `npm run circle:sweep -- --days 14 --yes` (probni prolaz bez `--yes`). Posle proveriti `circle_grants` za tih 5 porudžbina.
 - Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
@@ -59,7 +58,6 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
-- Odobrenje za migraciju 038 i push (zbirni LTV za Support Hub).
 - Circle: pokrenuti `npm run circle:sweep -- --days 14 --yes` (ili dozvoliti Claude-u), jer bi se kupcu #45564 inače pristup morao dati ručno. Odluka: da li "30 Claude Eskperata" (44833) i "AI Profit Lab - 7 dana" (44864) treba da daju neku Circle grupu (sada ne daju i niko od tih kupaca nije u grupama 70 Eksperata / AIPL).
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).
