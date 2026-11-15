@@ -1,8 +1,9 @@
 # Status: Orderly
-Ažurirano: 2026-11-12
+Ažurirano: 2026-11-15
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
+- **Support Hub API** (2026-11-15, commit na lokalnom `main`, NIJE na produkciji): `GET /api/support/sites` i `GET /api/support/customer?email=&site_ids=`, samo čitanje, token `settings.support_hub_token_sha256` (samo heš), 120 zahteva/min po tokenu, filter po org_id i po traženim sajtovima u SQL funkciji `support_customer_lookup` (migracija 037, još NIJE primenjena na produkciju). LTV samo od plaćenih, neto od refundacija. Opis i komanda za token: `docs/support-hub-api.md`. Testovi (`test/db/support-api.test.ts`, Zod šema iz ugovora) i build prolaze; isprobano preko `npm run demo` pravim HTTP pozivima.
 - Faza 0 završena i na produkciji (migracije 020–028, 40 refundacija, spojeni kupci, UTM izvori, daily_stats, registar metrika).
 - Provera sa Metorikom (nemanjaantic.com, neto = bruto − refundacije):
   avgust 371 / €15.984 i septembar 381 / €16.863 — tačno isto kao Metorik.
@@ -47,6 +48,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Usput popravljeno (na produkciji tek posle pusha): filteri na Porudžbinama su pokazivali "__all" umesto "Platforma/Status/Tip proizvoda"; Profit je za "Ceo sajt" mogao da pokaže ROAS u bilionima zbog ostatka od zaokruživanja.
 
 ## Sledeći korak
+- Support Hub API, uz Vladimirovo odobrenje, ovim redom: `npm run db:migrate` (037), `git push` na `main` (Vercel deploy), napraviti token po `docs/support-hub-api.md`, pa u Support Hubu `ORDERLY_API_URL=https://orderly-drab.vercel.app`, `ORDERLY_API_TOKEN`, `ORDERLY_MOCK=false` i mapiranje sajtova na projekte.
 - Noćni režim: Vladimir da prođe ekrane iza prijave (Naplata, Reklame, Profit, Kupci, Pretplate, Podešavanja) i javi šta se slabo čita.
 - Meta live: potvrditi prvi prolaz zakazanog zadatka `orderly-meta-preporuke` (9, 14 i 20h, napravljen 2026-11-04) i da su preporuke stigle na /reklame.
 - Kad Vladimir odobri: push na `main` da bi lista po sajtovima bila na produkciji.
@@ -54,11 +56,13 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
+- Support Hub API: odobrenje za migraciju 037 na produkciji, push na `main` i pravljenje tokena.
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
+- Support Hub API: limit od 120/min se broji po instanci servera (u memoriji, jer ruta ne sme da piše u bazu). Push pre migracije 037 = ruta za kupca vraća 500 dok se migracija ne primeni. Circle nema imena grupa u bazi, pa Support Hub vidi "Circle grupa 124997" dok se pravilu u `settings.circle_access` ne doda `access_group_name`. Push nosi i 3 ranija lokalna commita (demo, status).
 - Zakazani zadatak `orderly-meta-preporuke` je stajao na komandi Keychain + curl. Od 2026-11-07 čita i piše samo preko `scripts/meta-preporuke.sh`, a `sh` je već dozvoljen, pa ne bi trebalo da traži odobrenje. Skripta je isprobana ručno, a ceo prolaz zadatka još nije potvrđen. Zadatak više ne zove Meta konektor, pa proveru budžeta menjanog u poslednjih 48h ostavlja čoveku u tekstu preporuke.
 - Lični token: 4 naloga prestaju da se osvežavaju kad istekne ili kad se promeni Facebook lozinka; greška se vidi na njihovom bloku.
 - Meta live: Meta API nivo je `development_access`, pa rate limit može da zasmeta kad se doda više naloga. Upis preporuka je isproban uživo, ali dugme Urađeno nije probano iza prijave. Stvarni ROAS na vrhu računa sav neto prihod, i onaj koji nije od reklama. Claude zadatak kao lokalni radi samo kad je Mac budan.

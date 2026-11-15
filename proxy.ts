@@ -21,6 +21,10 @@ const PUBLIC_ROUTES = [
   // PATCH on recommendations checks the member itself.
   /^\/api\/ads\/live-summary$/,
   /^\/api\/ads\/recommendations$/,
+  // Support Hub (helpdesk) reads customers read-only with its own token
+  // (settings.support_hub_token_sha256, lib/auth/service-token.ts).
+  /^\/api\/support\/sites$/,
+  /^\/api\/support\/customer$/,
 ];
 
 export default async function proxy(request: NextRequest) {
