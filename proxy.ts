@@ -25,6 +25,7 @@ const PUBLIC_ROUTES = [
   // (settings.support_hub_token_sha256, lib/auth/service-token.ts).
   /^\/api\/support\/sites$/,
   /^\/api\/support\/customer$/,
+  /^\/api\/support\/customers\/summary$/,
 ];
 
 export default async function proxy(request: NextRequest) {

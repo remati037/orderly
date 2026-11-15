@@ -93,7 +93,18 @@ function table(name: string) {
 
 const fakeClient = {
   from: (t: string) => table(t),
-  async rpc(fn: string, args: { p_org: string; p_email: string; p_site_ids: string[] }) {
+  async rpc(fn: string, args: { p_org: string; p_email?: string; p_emails?: string[]; p_site_ids: string[] }) {
+    if (fn === "support_customers_summary") {
+      // Set-returning function: PostgREST hands back plain rows with ISO dates.
+      const { rows } = await db.query<Record<string, unknown>>(
+        "SELECT * FROM public.support_customers_summary($1, $2::text[], $3::uuid[])",
+        [args.p_org, args.p_emails, args.p_site_ids]
+      );
+      const data = rows.map((r) =>
+        Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v instanceof Date ? v.toISOString() : v]))
+      );
+      return { data, error: null };
+    }
     expect(fn).toBe("support_customer_lookup");
     const { rows } = await db.query<{ r: unknown }>(
       "SELECT public.support_customer_lookup($1, $2, $3::uuid[]) AS r",
@@ -107,6 +118,20 @@ vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => fakeClient }));
 
 const { GET: getCustomer } = await import("@/app/api/support/customer/route");
 const { GET: getSites } = await import("@/app/api/support/sites/route");
+const { POST: postSummary } = await import("@/app/api/support/customers/summary/route");
+
+const SummaryResponse = z.object({
+  customers: z.array(
+    z.object({
+      email: z.string(),
+      site_id: z.string(),
+      total_spent: money,
+      orders_count: z.number().int().min(1),
+      last_order_at: iso,
+      currency: z.string().length(3),
+    })
+  ),
+});
 
 const ORG = "00000000-0000-0000-0000-000000000001";
 const OTHER_ORG = "00000000-0000-0000-0000-0000000000b2";
@@ -165,6 +190,19 @@ const req = (path: string, token: string | null = TOKEN) =>
 
 async function customer(query: string, token: string | null = TOKEN) {
   const res = await getCustomer(req(`/api/support/customer?${query}`, token));
+  return { status: res.status, body: await res.json() };
+}
+
+async function summary(body: unknown, token: string | null = TOKEN) {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await postSummary(
+    new NextRequest("https://orderly.test/api/support/customers/summary", {
+      method: "POST",
+      headers,
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    })
+  );
   return { status: res.status, body: await res.json() };
 }
 
@@ -419,6 +457,89 @@ describe("GET /api/support/customer", () => {
       expect((await getSites(req("/api/support/sites"))).status).toBe(200);
       // Sanity check that the switch is really on.
       await expect(db.exec("INSERT INTO organizations (name) VALUES ('x')")).rejects.toThrow(/read-only/);
+    } finally {
+      await db.exec("SET default_transaction_read_only = off");
+    }
+  });
+});
+
+describe("POST /api/support/customers/summary", () => {
+  const BOB = "bob@example.com";
+
+  it("401 without or with a wrong token", async () => {
+    expect((await summary({ emails: [EMAIL], site_ids: [siteA] }, null)).status).toBe(401);
+    expect((await summary({ emails: [EMAIL], site_ids: [siteA] }, "pogresan")).status).toBe(401);
+  });
+
+  it("400 for an empty list, over 500 emails, bad site_ids or a bad body", async () => {
+    expect((await summary({ emails: [], site_ids: [siteA] })).status).toBe(400);
+    expect((await summary({ site_ids: [siteA] })).status).toBe(400);
+    const many = Array.from({ length: 501 }, (_, i) => `k${i}@example.com`);
+    expect((await summary({ emails: many, site_ids: [siteA] })).status).toBe(400);
+    expect((await summary({ emails: many.slice(0, 500), site_ids: [siteA] })).status).toBe(200);
+    expect((await summary({ emails: [EMAIL], site_ids: [] })).status).toBe(400);
+    expect((await summary({ emails: [EMAIL], site_ids: ["not-a-uuid"] })).status).toBe(400);
+    const sites21 = Array.from({ length: 21 }, () => siteA);
+    expect((await summary({ emails: [EMAIL], site_ids: sites21 })).status).toBe(400);
+    expect((await summary({ emails: [42], site_ids: [siteA] })).status).toBe(400);
+    expect((await summary("{nije json")).status).toBe(400);
+  });
+
+  it("one row per (email, site) with a kept paid order, same numbers as the customer card", async () => {
+    await db.query("INSERT INTO customers (email, name) VALUES ($1, 'Bob')", [BOB]);
+    await order(siteA, { total: 100, at: "2026-09-01T10:00:00Z" });
+    const partial = await order(siteA, { total: 200, at: "2026-09-03T10:00:00Z" });
+    await refund(partial, siteA, 50);
+    await order(siteA, { status: "processing", total: 1000, currency: "RSD", at: "2026-09-02T10:00:00Z" });
+    await order(siteA, { status: "pending", total: 999, at: "2026-09-09T10:00:00Z", wooData: {} });
+    await order(siteA, { status: "failed", total: 999, at: "2026-09-09T10:00:00Z", wooData: {} });
+    await order(siteB, { total: 30, at: "2026-09-05T10:00:00Z" });
+    // Bob: only a fully refunded order on A → no row; one cancelled on B → no row.
+    const bobRefunded = await order(siteA, { email: BOB, status: "refunded", total: 80 });
+    await refund(bobRefunded, siteA, 80);
+    await order(siteB, { email: BOB, status: "cancelled", total: 80, wooData: {} });
+    // Another org's order and a site that wasn't asked for never count.
+    await order(otherOrgSite, { total: 500, org: OTHER_ORG });
+    const siteC = await site("Gama");
+    await order(siteC, { total: 700 });
+
+    const { status, body } = await summary({
+      emails: [" ANA@example.com ", BOB, "niko@example.com", "bez-et"],
+      site_ids: [siteA, siteB, otherOrgSite],
+    });
+    expect(status).toBe(200);
+    const parsed = SummaryResponse.parse(body);
+    expect(parsed.customers).toEqual([
+      { email: EMAIL, site_id: expect.any(String), total_spent: expect.any(Number), orders_count: expect.any(Number), last_order_at: expect.any(String), currency: "EUR" },
+      { email: EMAIL, site_id: expect.any(String), total_spent: expect.any(Number), orders_count: expect.any(Number), last_order_at: expect.any(String), currency: "EUR" },
+    ]);
+    const bySite = Object.fromEntries(parsed.customers.map((c) => [c.site_id, c]));
+    expect(bySite[siteA]).toMatchObject({ total_spent: 260, orders_count: 3 }); // 100 + 150 + 1000 RSD × 0.01
+    expect(bySite[siteA].last_order_at.startsWith("2026-09-03T10:00:00")).toBe(true);
+    expect(bySite[siteB]).toMatchObject({ total_spent: 30, orders_count: 1 });
+
+    for (const s of [siteA, siteB]) {
+      const card = (await customer(`email=${EMAIL}&site_ids=${s}`)).body.customer;
+      expect({ total_spent: card.total_spent, orders_count: card.orders_count }).toEqual({
+        total_spent: bySite[s].total_spent,
+        orders_count: bySite[s].orders_count,
+      });
+    }
+  });
+
+  it("counts as one request against the rate limit", async () => {
+    for (let i = 0; i < SUPPORT_RATE_LIMIT - 1; i++) await getSites(req("/api/support/sites"));
+    expect((await summary({ emails: [EMAIL], site_ids: [siteA] })).status).toBe(200);
+    expect((await summary({ emails: [EMAIL], site_ids: [siteA] })).status).toBe(429);
+  });
+
+  it("only reads", async () => {
+    await order(siteA);
+    await db.exec("SET default_transaction_read_only = on");
+    try {
+      const { status, body } = await summary({ emails: [EMAIL], site_ids: [siteA] });
+      expect(status).toBe(200);
+      expect(body.customers).toHaveLength(1);
     } finally {
       await db.exec("SET default_transaction_read_only = off");
     }
