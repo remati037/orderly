@@ -1,8 +1,9 @@
 # Status: Orderly
-Ažurirano: 2026-11-15
+Ažurirano: 2026-11-16
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
+- **InfoCash Akcelerator iz Stripe-a** (2026-11-16, commit na `main`, NIJE pushovan): Stripe filter sada zna i `product:prod_…` / `price:price_…` (`lib/sync/stripe-line-items.ts`): proizvod se čita iz linija računa (rate) ili Checkout Session-a (jednokratno), sve ostalo na nalogu se preskače. Proizvod je `prod_Vdd6tqlZ7DLVFl` na Stripe nalogu Vladsdigital `acct_1LU7TgLYgg4k6Dle` (to NIJE nalog sajta AI Profit Lab), cene 497 € jednokratno i 2 × 270 €. Provereno na pravim naplatama AIPL naloga, testovi 252/252. Ostaje: push, restricted key i webhook na tom nalogu, novi Stripe sajt „InfoCash Akcelerator" sa filterom `product:prod_Vdd6tqlZ7DLVFl`.
 - **Support Hub zbirni LTV** (uživo od 2026-11-15, `main`): `POST /api/support/customers/summary` (do 500 emailova, do 20 sajtova) za LTV kolonu i filtere na listi kontakata u Support Hubu; iste brojke kao kartica kupca, SQL funkcija `support_customers_summary` (migracija 038, primenjena; izvršava je samo service_role). Testovi (244/244) i build prolaze.
 - **Support Hub API** (uživo od 2026-11-15, `main`): `GET /api/support/sites` i `GET /api/support/customer?email=&site_ids=`, samo čitanje, token `settings.support_hub_token_sha256` (samo heš; token predat Support Hub sesiji, nije u repou), 120 zahteva/min po tokenu, filter po org_id i po traženim sajtovima u SQL funkciji `support_customer_lookup` (migracija 037, primenjena; izvršava je samo service_role). LTV samo od plaćenih, neto od refundacija. Opis: `docs/support-hub-api.md`. Provereno na produkciji: 6 sajtova, kupac sa porudžbinom #45801 se vidi na Vladsdigital sajtu, a ne na tuđem, 400/401 kodovi tačni.
 - Faza 0 završena i na produkciji (migracije 020–028, 40 refundacija, spojeni kupci, UTM izvori, daily_stats, registar metrika).
@@ -58,6 +59,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Faza 1 (ciljevi, digest, export, ⌘K pretraga, izveštaj refundacija): grana `feat/faza-1`, plan u `docs/analiza-metorik/FAZA-1.md`.
 
 ## Šta fali od Vladimira
+- InfoCash Akcelerator: dozvola za push i za restricted key + webhook na Stripe nalogu Vladsdigital (acct_1LU7Tg…), ili da ih napravi sam.
 - Circle: pokrenuti `npm run circle:sweep -- --days 14 --yes` (ili dozvoliti Claude-u), jer bi se kupcu #45564 inače pristup morao dati ručno. Odluka: da li "30 Claude Eskperata" (44833) i "AI Profit Lab - 7 dana" (44864) treba da daju neku Circle grupu (sada ne daju i niko od tih kupaca nije u grupama 70 Eksperata / AIPL).
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).

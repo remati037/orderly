@@ -909,7 +909,7 @@ export default function SitesManager() {
 
                   <FormField
                     label="Filter (metadata ključ)"
-                    hint='Za Stripe nalog koji deli više sajtova. "znak" = samo naplate sa metadata znak, "!znak" = sve osim njih. Prazno = sve.'
+                    hint='Za Stripe nalog koji deli više sajtova. "znak" = samo naplate sa metadata znak, "!znak" = sve osim njih, "product:prod_…" = samo naplate tog proizvoda (više ID-jeva odvoji zarezom). Prazno = sve.'
                   >
                     <Input
                       placeholder="znak"

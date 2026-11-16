@@ -6,8 +6,10 @@ import {
   stripeProductName,
   stripeAmount,
   matchesStripeFilter,
+  mapStripeStatus,
   isUncontactableLoss,
 } from "@/lib/sync/normalize-stripe-event";
+import { parseProductFilter, fetchStripeLineItems, matchingLines } from "@/lib/sync/stripe-line-items";
 import { upsertCustomer, logSync } from "@/lib/sync/db";
 import { fetchCirclePhone } from "@/lib/sync/circle";
 import { fetchStripeRefunds, isFullyRefunded } from "@/lib/sync/refunds";
@@ -116,6 +118,28 @@ export async function POST(
   if (!matchesStripeFilter(obj, site.stripe_filter))
     return NextResponse.json({ ok: true }, { status: 200 });
 
+  // Event type we don't track — acknowledge before any Stripe lookups.
+  if (!mapStripeStatus(ev.type)) return NextResponse.json({ ok: true }, { status: 200 });
+
+  // Product filter ("product:prod_…" / "price:price_…"): keep only charges for
+  // those products. A lookup failure answers 500 so Stripe redelivers.
+  const productFilter = parseProductFilter(site.stripe_filter);
+  let lineName: string | null = null;
+  let isInstallment = false;
+  if (productFilter) {
+    try {
+      const { items, viaInvoice } = await fetchStripeLineItems(obj, site.consumer_key ?? "");
+      const lines = matchingLines(items, productFilter);
+      if (!lines.length) return NextResponse.json({ ok: true }, { status: 200 });
+      lineName = lines[0].description;
+      isInstallment = viaInvoice || lines.some((l) => l.recurring);
+    } catch (err) {
+      console.error(`[stripe-webhook] "${site.name}" line item lookup failed:`, (err as Error).message);
+      await logSync(supabase, siteId, "webhook", "error", 0, `line items: ${(err as Error).message}`);
+      return NextResponse.json({ error: "Line item lookup failed" }, { status: 500 });
+    }
+  }
+
   // Only pull the fee for a successful charge.
   const fee =
     ev.type === "charge.succeeded"
@@ -131,6 +155,10 @@ export async function POST(
 
   // Event type we don't track — acknowledge and move on.
   if (!normalized) return NextResponse.json({ ok: true }, { status: 200 });
+  if (isInstallment) {
+    normalized.product_type = "subscription";
+    normalized.payment_type = "subscription";
+  }
 
   // Circle never passes the phone to Stripe — fetch it from the member profile.
   if (!normalized.customer_phone && normalized.customer_email && site.circle_token) {
@@ -156,7 +184,7 @@ export async function POST(
   await supabase.from("order_items").delete().eq("order_id", row.id);
   await supabase.from("order_items").insert({
     order_id: row.id,
-    product_name: stripeProductName(obj, site.name),
+    product_name: lineName || stripeProductName(obj, site.name),
     product_type: normalized.product_type,
     quantity: 1,
     price: normalized.total,

@@ -136,6 +136,8 @@ export function stripeProductName(obj: any, siteName: string): string {
 export function matchesStripeFilter(obj: any, filter: string | null | undefined): boolean {
   const f = (filter ?? "").trim();
   if (!f) return true;
+  // "product:…" / "price:…" filters need line items — see stripe-line-items.ts.
+  if (/^(product|price)\s*:/i.test(f)) return true;
   const negate = f.startsWith("!");
   const key = negate ? f.slice(1).trim() : f;
   if (!key) return true;

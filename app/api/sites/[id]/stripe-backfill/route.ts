@@ -7,6 +7,7 @@ import {
   stripeAmount,
   matchesStripeFilter,
 } from "@/lib/sync/normalize-stripe-event";
+import { parseProductFilter, fetchStripeLineItems, matchingLines } from "@/lib/sync/stripe-line-items";
 import { upsertCustomer } from "@/lib/sync/db";
 
 // Imports historical *successful* charges from Stripe into orders. Runs one
@@ -22,7 +23,7 @@ export async function POST(
   const { id: siteId } = await params;
   const body = await request.json().catch(() => ({}));
   const startingAfter: string | null = body?.starting_after ?? null;
-  const pageSize = Math.min(100, Math.max(10, Number(body?.limit ?? 100)));
+  let pageSize = Math.min(100, Math.max(10, Number(body?.limit ?? 100)));
 
   const supabase = adminClient();
 
@@ -36,6 +37,11 @@ export async function POST(
     return NextResponse.json({ error: "Nije Stripe sajt" }, { status: 400 });
   if (!site.consumer_key)
     return NextResponse.json({ error: "Nedostaje Stripe secret key" }, { status: 400 });
+
+  // Product filter costs 1–2 Stripe lookups per charge: smaller pages keep
+  // each call inside the Vercel timeout.
+  const productFilter = parseProductFilter(site.stripe_filter);
+  if (productFilter) pageSize = Math.min(pageSize, 25);
 
   // Expand the fee inline so we don't make a second call per charge.
   const url = new URL("https://api.stripe.com/v1/charges");
@@ -58,9 +64,33 @@ export async function POST(
 
   let imported = 0;
 
+  // Resolve products for the whole page in parallel (only with a product filter).
+  const lineInfo = new Map<string, { name: string | null; installment: boolean }>();
+  if (productFilter) {
+    try {
+      await Promise.all(
+        charges
+          .filter((c) => c.status === "succeeded" && !c.refunded)
+          .map(async (c) => {
+            const { items, viaInvoice } = await fetchStripeLineItems(c, site.consumer_key!);
+            const lines = matchingLines(items, productFilter);
+            if (lines.length)
+              lineInfo.set(c.id, {
+                name: lines[0].description,
+                installment: viaInvoice || lines.some((l) => l.recurring),
+              });
+          })
+      );
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message.slice(0, 200) }, { status: 502 });
+    }
+  }
+
   for (const charge of charges) {
     if (charge.status !== "succeeded" || charge.refunded) continue;
     if (!matchesStripeFilter(charge, site.stripe_filter)) continue;
+    const line = lineInfo.get(charge.id);
+    if (productFilter && !line) continue;
 
     const bt = charge.balance_transaction;
     const fee =
@@ -75,6 +105,10 @@ export async function POST(
       fee
     );
     if (!normalized) continue;
+    if (line?.installment) {
+      normalized.product_type = "subscription";
+      normalized.payment_type = "subscription";
+    }
 
     const { data: row, error } = await supabase
       .from("orders")
@@ -87,7 +121,7 @@ export async function POST(
     await supabase.from("order_items").delete().eq("order_id", row.id);
     await supabase.from("order_items").insert({
       order_id: row.id,
-      product_name: stripeProductName(charge, site.name),
+      product_name: line?.name || stripeProductName(charge, site.name),
       product_type: normalized.product_type,
       quantity: 1,
       price: normalized.total,
