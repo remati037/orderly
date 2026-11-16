@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { matchAccessGroups, isPaidStatus, grantCircleAccess, parseCircleConfig } from "./access";
+import { matchAccessGroups, matchCircleTargets, isPaidStatus, grantCircleAccess, parseCircleConfig } from "./access";
 
 const order = { line_items: [{ product_id: 11 }, { product_id: 22 }] };
 
@@ -70,5 +70,31 @@ describe("enabled_from", () => {
     expect(parseCircleConfig({ enabled: true, enabled_from: "2026-10-20T12:00:00Z", rules: [] }).enabled_from).toBe(
       "2026-10-20T12:00:00Z"
     );
+  });
+});
+
+describe("matchCircleTargets (whole-site and space group rules)", () => {
+  it("whole-site rule matches any order of that site, space groups are negative", () => {
+    const rules = [
+      { site_id: "ic", access_group_id: 124997 },
+      { site_id: "ic", space_group_id: 1202906 },
+    ];
+    expect(matchCircleTargets(null, "ic", rules)).toEqual([124997, -1202906]);
+    expect(matchCircleTargets(null, "other", rules)).toEqual([]);
+  });
+  it("a rule without product and without site never matches", () => {
+    expect(matchCircleTargets(null, "s1", [{ access_group_id: 5 }])).toEqual([]);
+  });
+  it("matchAccessGroups keeps only access groups", () => {
+    expect(matchAccessGroups(null, "ic", [{ site_id: "ic", access_group_id: 5, space_group_id: 9 }])).toEqual([5]);
+  });
+});
+
+describe("grantCircleAccess to a space group", () => {
+  it("posts to space_group_members", async () => {
+    const f = vi.fn().mockResolvedValueOnce(res(200)).mockResolvedValueOnce(res(200));
+    await grantCircleAccess("t", { email: "a@b.com", name: "A", accessGroupId: -1202906 }, f as unknown as typeof fetch);
+    expect(f.mock.calls[1][0]).toMatch(/\/space_group_members$/);
+    expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({ email: "a@b.com", space_group_id: 1202906 });
   });
 });

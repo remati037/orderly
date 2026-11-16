@@ -14,6 +14,7 @@ import { upsertCustomer, logSync } from "@/lib/sync/db";
 import { fetchCirclePhone } from "@/lib/sync/circle";
 import { fetchStripeRefunds, isFullyRefunded } from "@/lib/sync/refunds";
 import { saveStripeRefunds } from "@/lib/sync/refunds-db";
+import { isPaidStatus, processOrderCircleAccess } from "@/lib/circle/access";
 
 // Fetch the real processor fee for a charge/invoice, in the order currency.
 // Returns null if it can't be resolved (caller falls back to the 5% estimate).
@@ -200,6 +201,14 @@ export async function POST(
   }
 
   await logSync(supabase, siteId, "webhook", "success", 1);
+
+  // Paid charge on a site with a Circle rule (e.g. InfoCash) → create the member
+  // and grant access. Never fails the webhook; the daily sweep retries errors.
+  if (isPaidStatus(normalized.status)) {
+    await processOrderCircleAccess(supabase, row.id).catch((e) =>
+      console.error("[stripe-webhook] circle access failed:", e)
+    );
+  }
 
   console.log(`[stripe-webhook] "${site.name}" ${ev.type} → ${normalized.status} (${normalized.total} ${normalized.currency})`);
   return NextResponse.json({ ok: true }, { status: 200 });

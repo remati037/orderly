@@ -1,9 +1,17 @@
-// Grants Circle access to buyers of a WooCommerce product.
+// Grants Circle access to buyers.
 //
-// A paid order (processing / completed) whose line items match a rule in
+// A paid order (processing / completed) that matches a rule in
 // settings.circle_access creates the buyer in Circle and adds them to the rule's
-// access group. circle_grants makes it idempotent per (order, group); failed
-// grants are retried by the daily cron sweep.
+// access group or space group. Two kinds of rules:
+//   • Woo product rule: { site_id?, woo_product_id, access_group_id | space_group_id }
+//     — the order's line items must contain the product.
+//   • Whole-site rule: { site_id, access_group_id | space_group_id } (no
+//     woo_product_id) — every paid order of that site matches. Meant for Stripe
+//     sites whose stripe_filter already narrows the account to one product
+//     (e.g. "InfoCash Stripe").
+// circle_grants makes it idempotent per (order, target); failed grants are
+// retried by the daily cron sweep. circle_grants.access_group_id holds the
+// access group id, or the NEGATIVE space group id for space group targets.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -11,9 +19,16 @@ const ADMIN_URL = "https://app.circle.so/api/admin/v2";
 
 export interface CircleRule {
   site_id?: string;
-  woo_product_id: number;
-  access_group_id: number;
+  woo_product_id?: number;
+  access_group_id?: number;
+  space_group_id?: number;
+  access_group_name?: string;
 }
+
+// A Circle grant target, encoded as one number: access group id (> 0) or
+// minus the space group id (< 0). This is the key stored in circle_grants.
+export type CircleTarget = number;
+export const spaceGroupTarget = (spaceGroupId: number): CircleTarget => -Math.abs(spaceGroupId);
 
 export interface CircleConfig {
   enabled: boolean;
@@ -24,29 +39,44 @@ export interface CircleConfig {
 }
 
 const PAID = new Set(["processing", "completed"]);
+const SOURCES = ["woocommerce", "stripe"];
 
 export function isPaidStatus(status: string | null | undefined): boolean {
   return !!status && PAID.has(status);
 }
 
-// Access groups the order's line items entitle the buyer to.
+// Targets (access groups > 0, space groups < 0) the order entitles the buyer to.
+export function matchCircleTargets(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  wooData: any,
+  siteId: string,
+  rules: CircleRule[]
+): CircleTarget[] {
+  const productIds = new Set<number>(
+    (wooData?.line_items ?? [])
+      .map((i: { product_id?: number }) => Number(i.product_id))
+      .filter((n: number) => Number.isFinite(n))
+  );
+  const targets = new Set<CircleTarget>();
+  for (const r of rules) {
+    if (r.site_id && r.site_id !== siteId) continue;
+    const hasProduct = r.woo_product_id != null && Number.isFinite(Number(r.woo_product_id));
+    // Whole-site rules must name their site, so a typo can't grant everything.
+    if (hasProduct ? !productIds.has(Number(r.woo_product_id)) : !r.site_id) continue;
+    if (r.access_group_id != null && Number(r.access_group_id) > 0) targets.add(Number(r.access_group_id));
+    if (r.space_group_id != null && Number(r.space_group_id) > 0) targets.add(spaceGroupTarget(Number(r.space_group_id)));
+  }
+  return [...targets];
+}
+
+// Access groups only (kept for scripts that report on access groups).
 export function matchAccessGroups(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   wooData: any,
   siteId: string,
   rules: CircleRule[]
 ): number[] {
-  const productIds = new Set<number>(
-    (wooData?.line_items ?? [])
-      .map((i: { product_id?: number }) => Number(i.product_id))
-      .filter((n: number) => Number.isFinite(n))
-  );
-  const groups = new Set<number>();
-  for (const r of rules) {
-    if (r.site_id && r.site_id !== siteId) continue;
-    if (productIds.has(Number(r.woo_product_id))) groups.add(Number(r.access_group_id));
-  }
-  return [...groups];
+  return matchCircleTargets(wooData, siteId, rules).filter((t) => t > 0);
 }
 
 export function parseCircleConfig(value: unknown): CircleConfig {
@@ -73,10 +103,11 @@ async function circleCall(f: Fetch, token: string, method: string, path: string,
 }
 
 // Creates the member if Circle doesn't know the email, then adds them to the
-// access group. Throws with Circle's response on failure.
+// access group (accessGroupId > 0) or space group (accessGroupId < 0, see
+// CircleTarget). Throws with Circle's response on failure.
 export async function grantCircleAccess(
   token: string,
-  args: { email: string; name: string; accessGroupId: number },
+  args: { email: string; name: string; accessGroupId: CircleTarget },
   f: Fetch = fetch
 ): Promise<void> {
   const email = args.email.trim().toLowerCase();
@@ -95,7 +126,10 @@ export async function grantCircleAccess(
       throw new Error(`Circle create member ${created.status}: ${created.text.slice(0, 200)}`);
   }
 
-  const added = await circleCall(f, token, "POST", `/access_groups/${args.accessGroupId}/community_members`, { email });
+  const added =
+    args.accessGroupId > 0
+      ? await circleCall(f, token, "POST", `/access_groups/${args.accessGroupId}/community_members`, { email })
+      : await circleCall(f, token, "POST", "/space_group_members", { email, space_group_id: -args.accessGroupId });
   // 422 on an existing membership is fine; anything else is a real failure.
   if (!added.ok && !(added.status === 422 && /already|exist/i.test(added.text)))
     throw new Error(`Circle add to group ${added.status}: ${added.text.slice(0, 200)}`);
@@ -130,11 +164,11 @@ export async function processOrderCircleAccess(
     .select("id, site_id, status, customer_email, customer_name, woo_data, source, created_at")
     .eq("id", orderId)
     .single();
-  if (!order || order.source !== "woocommerce") return "no-match";
+  if (!order || !SOURCES.includes(order.source)) return "no-match";
   if (!isPaidStatus(order.status)) return "not-paid";
   if (config.enabled_from && new Date(order.created_at) < new Date(config.enabled_from)) return "too-old";
 
-  const groups = matchAccessGroups(order.woo_data, order.site_id, config.rules);
+  const groups = matchCircleTargets(order.woo_data, order.site_id, config.rules);
   if (groups.length === 0) return "no-match";
   if (!order.customer_email) return "no-email";
 
@@ -184,7 +218,7 @@ export async function processOrderCircleAccess(
   return failed ? "partial" : "done";
 }
 
-// Daily safety net: paid Woo orders of the last `days` days that are missing a
+// Daily safety net: paid Woo / Stripe orders of the last `days` days that are missing a
 // successful grant (missed webhook, Circle outage, token fixed later).
 export async function sweepCircleAccess(
   supabase: SupabaseClient,
@@ -199,12 +233,12 @@ export async function sweepCircleAccess(
   const { data: orders } = await supabase
     .from("orders")
     .select("id, site_id, woo_data")
-    .eq("source", "woocommerce")
+    .in("source", SOURCES)
     .in("status", [...PAID])
     .gte("created_at", since);
 
   for (const o of orders ?? []) {
-    if (matchAccessGroups(o.woo_data, o.site_id, config.rules).length === 0) continue;
+    if (matchCircleTargets(o.woo_data, o.site_id, config.rules).length === 0) continue;
     stats.checked++;
     const r = await processOrderCircleAccess(supabase, o.id, { config });
     if (r === "done") stats.granted++;
