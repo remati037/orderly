@@ -18,7 +18,7 @@ const GROUPS: NavGroup[] = [
     title: "Pregled",
     items: [
       { href: "/dashboard",     label: "Dashboard",  icon: LayoutDashboardIcon, roles: ["owner"] },
-      { href: "/porudzbine",    label: "Porudžbine", icon: ShoppingBagIcon,     roles: ["owner"] },
+      { href: "/porudzbine",    label: "Porudžbine", icon: ShoppingBagIcon,     roles: ["owner", "agent"] },
       { href: "/analytics",     label: "Analitika",  icon: BarChart2Icon,       roles: ["owner"] },
     ],
   },

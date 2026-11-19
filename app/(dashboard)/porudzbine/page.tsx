@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import { FilterBar } from "@/components/dashboard/filter-bar";
 import { OrdersTable } from "@/components/dashboard/orders-table";
+import { getMember } from "@/lib/auth/roles";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function PorudzbinePage({ searchParams }: PageProps) {
+export default async function PorudzbinePage({ searchParams }: PageProps) {
+  const member = await getMember();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
@@ -19,7 +21,7 @@ export default function PorudzbinePage({ searchParams }: PageProps) {
       </div>
 
       <Suspense fallback={<div style={{ height: 48, background: "var(--ui-subtle)", borderRadius: 10, animation: "pulse 2s infinite" }} />}>
-        <FilterBar />
+        <FilterBar canExport={member?.role === "owner"} />
       </Suspense>
 
       <Suspense fallback={

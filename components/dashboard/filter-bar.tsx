@@ -400,7 +400,7 @@ function DateFilter({
 
 // ── main component ─────────────────────────────────────────────────────────────
 
-export function FilterBar() {
+export function FilterBar({ canExport = true }: { canExport?: boolean } = {}) {
   const f = useFilters();
 
   return (
@@ -467,14 +467,14 @@ export function FilterBar() {
               Resetuj filtere
             </Button>
           )}
-          <a
+          {canExport && <a
             href={f.exportHref}
             download
             className={cn(buttonVariants({ variant: "outline" }), "text-[13px] gap-1.5")}
           >
             <DownloadIcon className="size-3.5" />
             Izvezi CSV
-          </a>
+          </a>}
         </div>
       </div>
     </div>

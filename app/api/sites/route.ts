@@ -4,10 +4,17 @@ import { adminClient } from "@/lib/supabase/admin";
 import { PUBLIC_SITE_COLUMNS, secretFlags } from "@/lib/utils/site-columns";
 
 export async function GET() {
-  const { error: authError } = await requireRole(["owner"]);
+  // Agents only need the site filter on Porudžbine: name and color, nothing else.
+  const { error: authError, member } = await requireRole(["owner", "agent"]);
   if (authError) return authError;
 
   const supabase = adminClient();
+
+  if (member!.role !== "owner") {
+    const { data, error } = await supabase.from("sites").select("id, name, color_hex").order("created_at");
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data ?? []);
+  }
 
   const { data: sites, error } = await supabase
     .from("sites")

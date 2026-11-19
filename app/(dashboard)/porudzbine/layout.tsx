@@ -5,6 +5,6 @@ export default async function OrdersLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requirePageRole(["owner"]);
+  await requirePageRole(["owner", "agent"]);
   return <>{children}</>;
 }

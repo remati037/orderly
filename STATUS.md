@@ -1,8 +1,9 @@
 # Status: Orderly
-Ažurirano: 2026-11-16
+Ažurirano: 2026-11-19
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
+- **Porudžbine za agente** (2026-11-19): `/porudzbine` sada vide i agenti (Nevena, Marija), uz Black Friday koji su već videli. Agentima `/api/sites` vraća samo naziv i boju sajta (za filter), CSV izvoz ostaje samo vlasnicima.
 - **InfoCash → Circle pristup** (2026-11-16): svaka plaćena InfoCash porudžbina (sajt „InfoCash Stripe") dobija AI Profit Lab (access grupa 124997) i InfoCash Akcelerator (space grupa 1202906). `settings.circle_access` sada zna i pravila za ceo sajt (bez `woo_product_id`, obavezan `site_id`) i `space_group_id`; Stripe webhook i dnevni sweep obrađuju i Stripe porudžbine. U `circle_grants.access_group_id` space grupa se čuva kao negativan broj. Ručno pokretanje: `POST /api/circle/sweep?days=7` (vlasnik). Prvih 9 kupaca sa webinara 16.11. ubačeno ranije preko Make scenarija 8618726 (jednokratni, ugašen).
 - **InfoCash Akcelerator iz Stripe-a** (uživo od 2026-11-16, `main`): Stripe filter zna i `product:prod_…` / `price:price_…` (`lib/sync/stripe-line-items.ts`), proizvod se čita iz linija računa (rate) ili Checkout Session-a (jednokratno). Stripe sajt „InfoCash Stripe" (`d6109d1c-…`) na nalogu Vladsdigital `acct_1LU7TgLYgg4k6Dle` (NIJE nalog sajta AI Profit Lab), filter `product:prod_Vdd6tqlZ7DLVFl` (497 € jednokratno, 2 × 270 €). Radi uživo: na webinaru 16.11. od 18:46 UTC ušlo 9 InfoCash porudžbina (rate kao pretplata), nijedna Woo naplata sa istog naloga.
 - **Support Hub zbirni LTV** (uživo od 2026-11-15, `main`): `POST /api/support/customers/summary` (do 500 emailova, do 20 sajtova) za LTV kolonu i filtere na listi kontakata u Support Hubu; iste brojke kao kartica kupca, SQL funkcija `support_customers_summary` (migracija 038, primenjena; izvršava je samo service_role). Testovi (244/244) i build prolaze.
