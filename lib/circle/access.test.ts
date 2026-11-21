@@ -110,3 +110,23 @@ describe("single space rules", () => {
     expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({ email: "a@b.com", space_id: 2797317 });
   });
 });
+
+describe("space member already in the space", () => {
+  it("treats Circle's 422 as success when the member is already there", async () => {
+    const f = vi.fn()
+      .mockResolvedValueOnce(res(200))
+      .mockResolvedValueOnce(res(422, '{"message":"User not added to space."}'))
+      .mockResolvedValueOnce(res(200));
+    await grantCircleAccess("t", { email: "a@b.com", name: "A", accessGroupId: -1_002_797_317 }, f as unknown as typeof fetch);
+    expect(f.mock.calls[2][0]).toMatch(/\/space_member\?space_id=2797317&email=a%40b\.com$/);
+  });
+  it("still fails when the member is not in the space", async () => {
+    const f = vi.fn()
+      .mockResolvedValueOnce(res(200))
+      .mockResolvedValueOnce(res(422, '{"message":"User not added to space."}'))
+      .mockResolvedValueOnce(res(404));
+    await expect(
+      grantCircleAccess("t", { email: "a@b.com", name: "A", accessGroupId: -1_002_797_317 }, f as unknown as typeof fetch)
+    ).rejects.toThrow(/422/);
+  });
+});

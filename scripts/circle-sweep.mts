@@ -33,16 +33,24 @@ if (!config.enabled) {
 let since = new Date(Date.now() - days * 86_400_000).toISOString();
 if (config.enabled_from && config.enabled_from > since) since = config.enabled_from;
 
-const { data: orders, error } = await supabase
-  .from("orders")
-  .select("id, woo_order_id, site_id, status, created_at, customer_email, woo_data, circle_grants(access_group_id, status)")
-  .eq("source", "woocommerce")
-  .gte("created_at", since)
-  .order("created_at");
-if (error) throw error;
+// PostgREST caps a response at 1000 rows, so page through the window.
+const orders = [];
+for (let from = 0; ; from += 1000) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, woo_order_id, site_id, status, created_at, customer_email, woo_data, circle_grants(access_group_id, status)")
+    .in("source", ["woocommerce", "stripe"])
+    .gte("created_at", since)
+    .order("created_at")
+    .order("id")
+    .range(from, from + 999);
+  if (error) throw error;
+  orders.push(...(data ?? []));
+  if (!data || data.length < 1000) break;
+}
 
 let todo = 0;
-for (const o of orders ?? []) {
+for (const o of orders) {
   if (!isPaidStatus(o.status)) continue;
   const ok = new Set(
     (o.circle_grants as { access_group_id: number; status: string }[])

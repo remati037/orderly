@@ -147,7 +147,15 @@ export async function grantCircleAccess(
         ? await circleCall(f, token, "POST", "/space_members", { email, space_id: -args.accessGroupId - SPACE_OFFSET })
         : await circleCall(f, token, "POST", "/space_group_members", { email, space_group_id: -args.accessGroupId });
   // 422 on an existing membership is fine; anything else is a real failure.
-  if (!added.ok && !(added.status === 422 && /already|exist/i.test(added.text)))
+  // Circle answers an existing space member with a bare "User not added to
+  // space.", so for spaces ask whether they are a member already.
+  let alreadyIn = added.status === 422 && /already|exist/i.test(added.text);
+  if (!added.ok && !alreadyIn && added.status === 422 && isSpaceTarget(args.accessGroupId)) {
+    const spaceId = -args.accessGroupId - SPACE_OFFSET;
+    const member = await circleCall(f, token, "GET", `/space_member?space_id=${spaceId}&email=${encodeURIComponent(email)}`);
+    alreadyIn = member.ok;
+  }
+  if (!added.ok && !alreadyIn)
     throw new Error(`Circle add to group ${added.status}: ${added.text.slice(0, 200)}`);
 }
 
@@ -246,14 +254,24 @@ export async function sweepCircleAccess(
 
   let since = new Date(Date.now() - days * 86_400_000).toISOString();
   if (config.enabled_from && config.enabled_from > since) since = config.enabled_from;
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, site_id, woo_data")
-    .in("source", SOURCES)
-    .in("status", [...PAID])
-    .gte("created_at", since);
+  // PostgREST caps a response at 1000 rows, so page through the window.
+  const orders: { id: string; site_id: string; woo_data: unknown }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, site_id, woo_data")
+      .in("source", SOURCES)
+      .in("status", [...PAID])
+      .gte("created_at", since)
+      .order("created_at")
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    orders.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
 
-  for (const o of orders ?? []) {
+  for (const o of orders) {
     if (matchCircleTargets(o.woo_data, o.site_id, config.rules).length === 0) continue;
     stats.checked++;
     const r = await processOrderCircleAccess(supabase, o.id, { config });
