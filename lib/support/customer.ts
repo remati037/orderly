@@ -4,7 +4,7 @@
 // the test in test/db/support-api.test.ts holds a copy of its Zod schema.
 
 import { toBase } from "@/lib/utils/fx";
-import { isPaidStatus, type CircleConfig } from "@/lib/circle/access";
+import { isPaidStatus, ruleTargets, type CircleConfig } from "@/lib/circle/access";
 
 export type SupportOrderStatus =
   | "paid" | "pending" | "on_hold" | "refunded" | "partially_refunded" | "cancelled" | "failed";
@@ -210,7 +210,7 @@ function circleAccess(raw: LookupResult, cfg: CircleConfig) {
   const ruleFor = (siteId: string, groupId: number, productIds: Set<number>) =>
     cfg.rules.find(
       (r) =>
-        Number(r.access_group_id) === groupId &&
+        ruleTargets(r).includes(groupId) &&
         (!r.site_id || r.site_id === siteId) &&
         productIds.has(Number(r.woo_product_id))
     );
@@ -247,10 +247,12 @@ function circleAccess(raw: LookupResult, cfg: CircleConfig) {
       for (const r of cfg.rules) {
         if (r.site_id && r.site_id !== o.site_id) continue;
         if (!productIds.has(Number(r.woo_product_id))) continue;
-        const key = `${o.id}|${Number(r.access_group_id)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push({ ...describe(o, Number(r.access_group_id)), status: "pending", granted_at: null, error: null });
+        for (const t of ruleTargets(r)) {
+          const key = `${o.id}|${t}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ ...describe(o, t), status: "pending", granted_at: null, error: null });
+        }
       }
     }
   }

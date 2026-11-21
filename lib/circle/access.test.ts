@@ -98,3 +98,15 @@ describe("grantCircleAccess to a space group", () => {
     expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({ email: "a@b.com", space_group_id: 1202906 });
   });
 });
+
+describe("single space rules", () => {
+  it("encode space_id below -1e9 and post to space_members", async () => {
+    expect(matchCircleTargets({ line_items: [{ product_id: 44833 }] }, "v", [
+      { site_id: "v", woo_product_id: 44833, space_id: 2797317 },
+    ])).toEqual([-1_002_797_317]);
+    const f = vi.fn().mockResolvedValueOnce(res(200)).mockResolvedValueOnce(res(200));
+    await grantCircleAccess("t", { email: "a@b.com", name: "A", accessGroupId: -1_002_797_317 }, f as unknown as typeof fetch);
+    expect(f.mock.calls[1][0]).toMatch(/\/space_members$/);
+    expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({ email: "a@b.com", space_id: 2797317 });
+  });
+});

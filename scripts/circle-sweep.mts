@@ -10,7 +10,7 @@
 
 import { parseArgs } from "node:util";
 import { createClient } from "@supabase/supabase-js";
-import { isPaidStatus, matchAccessGroups, parseCircleConfig, sweepCircleAccess } from "../lib/circle/access.ts";
+import { isPaidStatus, matchCircleTargets, parseCircleConfig, sweepCircleAccess } from "../lib/circle/access.ts";
 
 const { values: a } = parseArgs({
   options: { days: { type: "string", default: "7" }, yes: { type: "boolean", default: false } },
@@ -49,7 +49,7 @@ for (const o of orders ?? []) {
       .filter((g) => g.status === "ok")
       .map((g) => Number(g.access_group_id))
   );
-  const missing = matchAccessGroups(o.woo_data, o.site_id, config.rules).filter((g) => !ok.has(g));
+  const missing = matchCircleTargets(o.woo_data, o.site_id, config.rules).filter((g) => !ok.has(g));
   if (!missing.length) continue;
   todo++;
   const domain = (o.customer_email ?? "").split("@")[1] ?? "(no email)";

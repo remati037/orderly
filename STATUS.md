@@ -1,5 +1,5 @@
 # Status: Orderly
-Ažurirano: 2026-11-19
+Ažurirano: 2026-11-21
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
@@ -62,7 +62,8 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Šta fali od Vladimira
 - InfoCash webhook sluša samo charge.succeeded/failed/refunded: dodati `checkout.session.expired` (napušteni checkout-i za naplatu) i `charge.refund.updated`, ili dozvoliti Claude-u.
-- Circle: pokrenuti `npm run circle:sweep -- --days 14 --yes` (ili dozvoliti Claude-u), jer bi se kupcu #45564 inače pristup morao dati ručno. Odluka: da li "30 Claude Eskperata" (44833) i "AI Profit Lab - 7 dana" (44864) treba da daju neku Circle grupu (sada ne daju i niko od tih kupaca nije u grupama 70 Eksperata / AIPL).
+- Circle: pokrenuti `npm run circle:sweep -- --days 14 --yes` (ili dozvoliti Claude-u), jer bi se kupcu #45564 inače pristup morao dati ručno. Odluka za "AI Profit Lab - 7 dana" (44864): da li daje neku Circle grupu (sada ne daje).
+- Circle, 30 Claude Eksperata (44833): kod sada ume da doda kupca u pojedinačan space (`space_id` u pravilu, Circle `POST /space_members`), commit na `main`, nije pushovan. Ostaje: (1) push na `main`, (2) upis pravila `{site_id: Vladsdigital, woo_product_id: 44833, space_id: 2797317}` u `settings.circle_access`, (3) `npm run circle:sweep -- --days 40 --yes` za ranije kupce. Claude-u je upis u bazu blokiran dozvolom; treba Vladimirovo odobrenje.
 - Meta live: pre 3. januara obnoviti lični token ili napraviti dugme "Poveži Facebook".
 - Meta live: Telegram bot token i chat_id; ciljni CPA po nalogu (sada procena 27,52 €).
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).

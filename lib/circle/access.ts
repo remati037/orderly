@@ -2,8 +2,8 @@
 //
 // A paid order (processing / completed) that matches a rule in
 // settings.circle_access creates the buyer in Circle and adds them to the rule's
-// access group or space group. Two kinds of rules:
-//   • Woo product rule: { site_id?, woo_product_id, access_group_id | space_group_id }
+// access group, space group or single space. Two kinds of rules:
+//   • Woo product rule: { site_id?, woo_product_id, access_group_id | space_group_id | space_id }
 //     — the order's line items must contain the product.
 //   • Whole-site rule: { site_id, access_group_id | space_group_id } (no
 //     woo_product_id) — every paid order of that site matches. Meant for Stripe
@@ -11,7 +11,8 @@
 //     (e.g. "InfoCash Stripe").
 // circle_grants makes it idempotent per (order, target); failed grants are
 // retried by the daily cron sweep. circle_grants.access_group_id holds the
-// access group id, or the NEGATIVE space group id for space group targets.
+// access group id, the NEGATIVE space group id for space group targets, or
+// -(1e9 + space id) for single space targets (see CircleTarget).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -22,13 +23,18 @@ export interface CircleRule {
   woo_product_id?: number;
   access_group_id?: number;
   space_group_id?: number;
+  space_id?: number;
   access_group_name?: string;
 }
 
-// A Circle grant target, encoded as one number: access group id (> 0) or
-// minus the space group id (< 0). This is the key stored in circle_grants.
+// A Circle grant target, encoded as one number: access group id (> 0), minus
+// the space group id (-1e9 < t < 0) or -(1e9 + space id) for a single space.
+// This is the key stored in circle_grants.
 export type CircleTarget = number;
+const SPACE_OFFSET = 1_000_000_000;
 export const spaceGroupTarget = (spaceGroupId: number): CircleTarget => -Math.abs(spaceGroupId);
+export const spaceTarget = (spaceId: number): CircleTarget => -(SPACE_OFFSET + Math.abs(spaceId));
+export const isSpaceTarget = (t: CircleTarget): boolean => t <= -SPACE_OFFSET;
 
 export interface CircleConfig {
   enabled: boolean;
@@ -63,10 +69,18 @@ export function matchCircleTargets(
     const hasProduct = r.woo_product_id != null && Number.isFinite(Number(r.woo_product_id));
     // Whole-site rules must name their site, so a typo can't grant everything.
     if (hasProduct ? !productIds.has(Number(r.woo_product_id)) : !r.site_id) continue;
-    if (r.access_group_id != null && Number(r.access_group_id) > 0) targets.add(Number(r.access_group_id));
-    if (r.space_group_id != null && Number(r.space_group_id) > 0) targets.add(spaceGroupTarget(Number(r.space_group_id)));
+    for (const t of ruleTargets(r)) targets.add(t);
   }
   return [...targets];
+}
+
+// The targets one rule grants, whatever the order.
+export function ruleTargets(r: CircleRule): CircleTarget[] {
+  const out: CircleTarget[] = [];
+  if (r.access_group_id != null && Number(r.access_group_id) > 0) out.push(Number(r.access_group_id));
+  if (r.space_group_id != null && Number(r.space_group_id) > 0) out.push(spaceGroupTarget(Number(r.space_group_id)));
+  if (r.space_id != null && Number(r.space_id) > 0) out.push(spaceTarget(Number(r.space_id)));
+  return out;
 }
 
 // Access groups only (kept for scripts that report on access groups).
@@ -103,7 +117,7 @@ async function circleCall(f: Fetch, token: string, method: string, path: string,
 }
 
 // Creates the member if Circle doesn't know the email, then adds them to the
-// access group (accessGroupId > 0) or space group (accessGroupId < 0, see
+// access group (accessGroupId > 0), space group or single space (negative, see
 // CircleTarget). Throws with Circle's response on failure.
 export async function grantCircleAccess(
   token: string,
@@ -129,7 +143,9 @@ export async function grantCircleAccess(
   const added =
     args.accessGroupId > 0
       ? await circleCall(f, token, "POST", `/access_groups/${args.accessGroupId}/community_members`, { email })
-      : await circleCall(f, token, "POST", "/space_group_members", { email, space_group_id: -args.accessGroupId });
+      : isSpaceTarget(args.accessGroupId)
+        ? await circleCall(f, token, "POST", "/space_members", { email, space_id: -args.accessGroupId - SPACE_OFFSET })
+        : await circleCall(f, token, "POST", "/space_group_members", { email, space_group_id: -args.accessGroupId });
   // 422 on an existing membership is fine; anything else is a real failure.
   if (!added.ok && !(added.status === 422 && /already|exist/i.test(added.text)))
     throw new Error(`Circle add to group ${added.status}: ${added.text.slice(0, 200)}`);
