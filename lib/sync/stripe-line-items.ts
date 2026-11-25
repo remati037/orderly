@@ -4,8 +4,9 @@
 // sells several things (and only some of them belong to an Orderly site), we
 // look the product up: a subscription/installment charge through its invoice
 // lines, a one-time Checkout / Payment Link charge through its Checkout
-// Session line items. Anything else (e.g. WooCommerce charges on the same
-// account) has no line items and is therefore not this site's.
+// Session line items, and a custom-checkout charge through its metadata
+// (product_ids / price_ids). Anything else (e.g. WooCommerce charges on the
+// same account) has no line items and is therefore not this site's.
 //
 // Filter syntax in sites.stripe_filter:
 //   "product:prod_A"            → only charges for that product
@@ -99,8 +100,27 @@ export async function fetchStripeLineItems(
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items = (sessions.data ?? []).flatMap((s: any) => s.line_items?.data ?? []).map(toLine);
-    return { items, viaInvoice: false };
+    if (items.length) return { items, viaInvoice: false };
   }
 
-  return { items: [], viaInvoice: false };
+  return { items: metadataLines(charge), viaInvoice: false };
+}
+
+// Custom checkouts that charge a PaymentIntent directly (e.g. knjiga.biznisprice.com)
+// have no invoice or Checkout Session; they list what was bought in the charge
+// metadata as "product_ids" / "price_ids" (comma-separated, same order).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function metadataLines(charge: any): StripeLineItem[] {
+  const split = (v: unknown) =>
+    typeof v === "string" ? v.split(",").map((x) => x.trim()).filter(Boolean) : [];
+  const products = split(charge?.metadata?.product_ids);
+  const prices = split(charge?.metadata?.price_ids);
+  const n = Math.max(products.length, prices.length);
+  const description = typeof charge?.description === "string" ? charge.description : null;
+  return Array.from({ length: n }, (_, i) => ({
+    product: products[i] ?? null,
+    price: prices[i] ?? null,
+    description,
+    recurring: false,
+  }));
 }

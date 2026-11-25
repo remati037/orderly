@@ -73,4 +73,23 @@ describe("fetchStripeLineItems", () => {
     stub({});
     await expect(fetchStripeLineItems({ id: "cs_1", object: "checkout.session" }, "rk")).rejects.toThrow(/Stripe 404/);
   });
+
+  it("falls back to product_ids / price_ids in the charge metadata", async () => {
+    stub({ "checkout/sessions?payment_intent=pi_2": { data: [] } });
+    const r = await fetchStripeLineItems({
+      id: "ch_2", object: "charge", invoice: null, payment_intent: "pi_2",
+      description: "55 Biznis Priča – Ebook + 55 Biznis Priča – audio knjiga",
+      metadata: { product_ids: "prod_E,prod_A", price_ids: "price_E,price_A" },
+    }, "rk");
+    expect(r.viaInvoice).toBe(false);
+    expect(r.items).toHaveLength(2);
+    expect(r.items[1]).toMatchObject({ product: "prod_A", price: "price_A", recurring: false });
+    expect(matchingLines(r.items, parseProductFilter("product:prod_E")!)).toHaveLength(1);
+  });
+
+  it("returns no lines for a charge without invoice, session or metadata", async () => {
+    stub({ "checkout/sessions?payment_intent=pi_3": { data: [] } });
+    const r = await fetchStripeLineItems({ id: "ch_3", object: "charge", invoice: null, payment_intent: "pi_3", metadata: {} }, "rk");
+    expect(r.items).toHaveLength(0);
+  });
 });
