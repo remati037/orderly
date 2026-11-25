@@ -1,6 +1,7 @@
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings, toBase } from "@/lib/utils/fx";
 import { stripeAmount } from "@/lib/sync/normalize-stripe-event";
+import { parseProductFilter, type ProductFilter } from "@/lib/sync/stripe-line-items";
 
 type Supa = ReturnType<typeof adminClient>;
 
@@ -72,15 +73,35 @@ export async function fetchSubscriptionsPage(
   return { ok: true, subs: page.data ?? [], hasMore: !!page.has_more };
 }
 
+// Subscription items that belong to a site's product/price filter.
+// No product/price filter → every item (unchanged behaviour). Metadata filters
+// ("key" / "!key") stay charge-only: that metadata usually lives on the charge,
+// not on the subscription, so applying it here could drop a site's subscriptions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function matchingSubItems(sub: any, filter: ProductFilter | null): any[] {
+  const items = sub?.items?.data ?? [];
+  if (!filter) return items;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return items.filter((it: any) => {
+    const price = it?.price ?? it?.plan ?? {};
+    const id =
+      filter.kind === "price"
+        ? price.id
+        : typeof price.product === "string" ? price.product : price.product?.id;
+    return id != null && filter.ids.has(id);
+  });
+}
+
 // Upsert one Stripe subscription into the subscriptions table (idempotent).
 export async function upsertSubscription(
   supabase: Supa,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sub: any,
   siteId: string,
-  rates: Record<string, number>
+  rates: Record<string, number>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  item: any = sub.items?.data?.[0]
 ): Promise<{ ok: boolean; error?: string }> {
-  const item = sub.items?.data?.[0];
   const { amount, currency } = monthlyAmount(item);
   const mrrBase = Math.round(toBase(amount, currency, rates) * 100) / 100;
 
@@ -111,10 +132,11 @@ export async function upsertSubscription(
 // Full re-sync of every Stripe subscription for one site (loops all pages).
 export async function syncSiteSubscriptions(
   supabase: Supa,
-  site: { id: string; consumer_key: string | null },
+  site: { id: string; consumer_key: string | null; stripe_filter?: string | null },
   rates: Record<string, number>
 ): Promise<{ imported: number; error?: string }> {
   if (!site.consumer_key) return { imported: 0, error: "Nedostaje Stripe secret key" };
+  const filter = parseProductFilter(site.stripe_filter);
 
   let imported = 0;
   let cursor: string | null = null;
@@ -125,8 +147,10 @@ export async function syncSiteSubscriptions(
     if (!res.ok) return { imported, error: res.error };
 
     for (const sub of res.subs) {
+      const items = matchingSubItems(sub, filter);
+      if (!items.length) continue; // another product on a shared Stripe account
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await upsertSubscription(supabase, sub as any, site.id, rates);
+      const r = await upsertSubscription(supabase, sub as any, site.id, rates, items[0]);
       if (r.ok) imported++;
       else if (!firstError) firstError = r.error;
     }
@@ -147,7 +171,7 @@ export async function syncAllStripeSubscriptions(): Promise<{
 }> {
   const supabase = adminClient();
   const [{ data: sites }, fx] = await Promise.all([
-    supabase.from("sites").select("id, consumer_key").eq("platform", "stripe"),
+    supabase.from("sites").select("id, consumer_key, stripe_filter").eq("platform", "stripe"),
     loadFxSettings(supabase),
   ]);
 

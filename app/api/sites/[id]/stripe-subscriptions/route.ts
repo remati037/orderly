@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { adminClient } from "@/lib/supabase/admin";
 import { loadFxSettings } from "@/lib/utils/fx";
-import { fetchSubscriptionsPage, upsertSubscription } from "@/lib/sync/sync-stripe-subscriptions";
+import { fetchSubscriptionsPage, upsertSubscription, matchingSubItems } from "@/lib/sync/sync-stripe-subscriptions";
+import { parseProductFilter } from "@/lib/sync/stripe-line-items";
 
 // Imports Stripe subscriptions (all statuses) into the subscriptions table.
 // One page per call; the client loops on next_cursor. Idempotent via
@@ -21,7 +22,7 @@ export async function POST(
   const supabase = adminClient();
 
   const [{ data: site }, fx] = await Promise.all([
-    supabase.from("sites").select("id, platform, consumer_key").eq("id", siteId).single(),
+    supabase.from("sites").select("id, platform, consumer_key, stripe_filter").eq("id", siteId).single(),
     loadFxSettings(supabase),
   ]);
 
@@ -33,11 +34,14 @@ export async function POST(
   const res = await fetchSubscriptionsPage(site.consumer_key, startingAfter);
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: 502 });
 
+  const filter = parseProductFilter(site.stripe_filter);
   let imported = 0;
   let firstError: string | undefined;
   for (const sub of res.subs) {
+    const items = matchingSubItems(sub, filter);
+    if (!items.length) continue; // another product on a shared Stripe account
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const r = await upsertSubscription(supabase, sub as any, siteId, fx.rates);
+    const r = await upsertSubscription(supabase, sub as any, siteId, fx.rates, items[0]);
     if (r.ok) imported++;
     else if (!firstError) firstError = r.error;
   }
