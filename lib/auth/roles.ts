@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { DEMO_AUTH_USER_ID, DEMO_MODE } from "@/lib/demo";
 
-export type Role = "owner" | "agent";
+export type Role = "owner" | "agent" | "naplata";
 
 export interface Member {
   id: string;

@@ -9,7 +9,7 @@ const WINDOW_DAYS = 7;
 // for why: processing is a paid status, mixing it into the unpaid-orders
 // pipeline would fight the recovery trigger).
 export async function GET() {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   const supabase = adminClient();
@@ -50,7 +50,7 @@ export async function GET() {
 
 // Mark (or re-mark) an order as called.
 export async function POST(request: NextRequest) {
-  const { error: authError, member } = await requireRole(["owner", "agent"]);
+  const { error: authError, member } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
   if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
 // Undo an accidental "called" mark.
 export async function DELETE(request: NextRequest) {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   const orderId = new URL(request.url).searchParams.get("order_id");

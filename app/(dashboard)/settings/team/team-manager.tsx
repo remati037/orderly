@@ -7,7 +7,7 @@ interface TeamMember {
   auth_user_id: string | null;
   email: string;
   name: string | null;
-  role: "owner" | "agent";
+  role: "owner" | "agent" | "naplata";
   is_active: boolean;
   created_at: string;
 }
@@ -142,6 +142,7 @@ export default function TeamManager() {
             <select style={{ ...INPUT, padding: "8px" }}
               value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="agent">Agent</option>
+              <option value="naplata">Naplata</option>
               <option value="owner">Vlasnik</option>
             </select>
           </div>
@@ -182,6 +183,7 @@ export default function TeamManager() {
                 onChange={(e) => patch(m.id, { role: e.target.value })}
               >
                 <option value="agent">Agent</option>
+                <option value="naplata">Naplata</option>
                 <option value="owner">Vlasnik</option>
               </select>
               <button style={btn()} onClick={() => patch(m.id, { is_active: !m.is_active })}>

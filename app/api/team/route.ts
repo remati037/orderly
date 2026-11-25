@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const { email, name, role } = await request.json();
   if (!email) return NextResponse.json({ error: "email is required" }, { status: 400 });
 
-  const wanted = role === "owner" ? "owner" : "agent";
+  const wanted = role === "owner" || role === "naplata" ? role : "agent";
 
   const supabase = adminClient();
   const { data, error } = await supabase
@@ -56,14 +56,14 @@ export async function PATCH(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   // Never let the acting owner lock themselves out.
-  if (member && id === member.id && (role === "agent" || is_active === false))
+  if (member && id === member.id && ((role && role !== "owner") || is_active === false))
     return NextResponse.json(
       { error: "Ne možeš sebi oduzeti vlasnički pristup." },
       { status: 400 }
     );
 
   const patch: Record<string, unknown> = {};
-  if (role === "owner" || role === "agent") patch.role = role;
+  if (role === "owner" || role === "agent" || role === "naplata") patch.role = role;
   if (typeof is_active === "boolean") patch.is_active = is_active;
   if (!Object.keys(patch).length)
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

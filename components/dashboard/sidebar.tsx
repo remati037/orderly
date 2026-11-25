@@ -25,7 +25,7 @@ const GROUPS: NavGroup[] = [
   {
     title: "Prodaja",
     items: [
-      { href: "/naplata",       label: "Naplata",   icon: PhoneCallIcon,        roles: ["owner", "agent"] },
+      { href: "/naplata",       label: "Naplata",   icon: PhoneCallIcon,        roles: ["owner", "agent", "naplata"] },
       { href: "/customers",     label: "Kupci",     icon: UsersIcon,            roles: ["owner"] },
       { href: "/subscriptions", label: "Pretplate", icon: CreditCardIcon,       roles: ["owner"] },
       { href: "/profit",        label: "Profit",    icon: CircleDollarSignIcon, roles: ["owner"] },
@@ -204,7 +204,7 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
           {email}
         </div>
         <div style={{ fontSize: 11, color: "var(--ui-faint)", marginBottom: 10 }}>
-          {role === "owner" ? "Vlasnik" : "Agent"}
+          {role === "owner" ? "Vlasnik" : role === "naplata" ? "Naplata" : "Agent"}
         </div>
         <ThemeToggle />
         <SignOutButton />

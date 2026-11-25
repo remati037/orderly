@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/roles";
 // Reminders for one or more tasks (a merged board card can fold in several),
 // or ?summary=1 for the count waiting on a decision.
 export async function GET(request: NextRequest) {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   const params = new URL(request.url).searchParams;
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 // approve | cancel | edit. Only a person flips pending_approval → approved; the
 // gateway never sees a message that wasn't explicitly approved here.
 export async function PATCH(request: NextRequest) {
-  const { error: authError, member } = await requireRole(["owner", "agent"]);
+  const { error: authError, member } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
   if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

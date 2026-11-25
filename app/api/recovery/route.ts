@@ -34,7 +34,7 @@ function stuckReason(status: string, wooData: any): string {
 // Agents may see the order amount (they need it to talk to the customer) but
 // never net_profit — it is not selected here.
 export async function GET() {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   const supabase = adminClient();
@@ -200,7 +200,7 @@ export async function GET() {
 // apply the change to the whole group, so a later retry doesn't un-merge back
 // to a lower stage than what the agent already set.
 export async function PATCH(request: NextRequest) {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   const { id, stage, assigned_to, linked_task_ids, order_status } = await request.json();

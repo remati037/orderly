@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/roles";
 const CHANNELS = ["telefon", "email", "napomena"] as const;
 
 export async function GET(request: NextRequest) {
-  const { error: authError } = await requireRole(["owner", "agent"]);
+  const { error: authError } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
 
   // A merged card (see /api/recovery GET) can fold in several retry attempts —
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 // Logging a note is how a contact attempt gets recorded: a phone/email note
 // bumps `attempts` and stamps `last_contacted_at`. A plain "napomena" does not.
 export async function POST(request: NextRequest) {
-  const { error: authError, member } = await requireRole(["owner", "agent"]);
+  const { error: authError, member } = await requireRole(["owner", "agent", "naplata"]);
   if (authError) return authError;
   if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

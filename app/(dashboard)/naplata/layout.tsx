@@ -5,6 +5,6 @@ export default async function RecoveryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requirePageRole(["owner", "agent"]);
+  await requirePageRole(["owner", "agent", "naplata"]);
   return <>{children}</>;
 }
