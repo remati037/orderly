@@ -1,8 +1,9 @@
 # Status: Orderly
-Ažurirano: 2026-11-21
+Ažurirano: 2026-11-26
 Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 
 ## Gde smo stali
+- **AI Profit Lab Stripe pretplate → Circle** (2026-11-26, `main`): nove pretplate sa aiprofitlab.rs (Stripe proizvod `apl_membership`, sajt „AI Profit Lab") sada same dobijaju grupu Ai Profit Lab (124997); godišnje (cene `price_1UfRTZ3qt764ELv7LdbCGbKb` 447 €, `price_1UfRTZ3qt764ELv7m3wM1dUH` 527 €) i InfoCash Akcelerator (174456). Pravila u `settings.circle_access` mogu da imaju `stripe_product` / `stripe_price` (uz obavezan `site_id`); linije računa se jednom čitaju iz Stripe-a i čuvaju u `woo_data._orderly_lines`. Ubačeni Maja (kvartalno) i Milan (godišnje), Predrag i Aleksandar su već bili unutra (ručno). Proveren u Circle-u. Obrisana dupla Aleksandrova porudžbina sa ugašenog sajta „AI Profit Lab - Novi Funnel".
 - **Rola Naplata** (2026-11-25): nova rola `naplata` vidi samo tab Naplata (`/naplata`: povrat uplata, pozivi za obradu, SMS). Bira se u Podešavanja → Tim. Sve ostale stranice je vraćaju na `/naplata`, API rute van Naplate joj daju 403. Migracija 039 (proširuje CHECK na `team_members.role`) mora da se primeni na bazu pre dodele role.
 - **Porudžbine za agente** (2026-11-19): `/porudzbine` sada vide i agenti (Nevena, Marija), uz Black Friday koji su već videli. Agentima `/api/sites` vraća samo naziv i boju sajta (za filter), CSV izvoz ostaje samo vlasnicima.
 - **InfoCash → Circle pristup** (2026-11-16): svaka plaćena InfoCash porudžbina (sajt „InfoCash Stripe") dobija AI Profit Lab (access grupa 124997) i InfoCash Akcelerator (space grupa 1202906). `settings.circle_access` sada zna i pravila za ceo sajt (bez `woo_product_id`, obavezan `site_id`) i `space_group_id`; Stripe webhook i dnevni sweep obrađuju i Stripe porudžbine. U `circle_grants.access_group_id` space grupa se čuva kao negativan broj. Ručno pokretanje: `POST /api/circle/sweep?days=7` (vlasnik). Prvih 9 kupaca sa webinara 16.11. ubačeno ranije preko Make scenarija 8618726 (jednokratni, ugašen).
@@ -71,6 +72,7 @@ Faza: uživo (razvoj Faze 0 iz docs/analiza-metorik/PLAN-FAZE.md)
 - Pretplatiti Stripe webhookove oba Stripe sajta na `charge.refunded` (do tada refundacije stižu dnevnim cronom).
 
 ## Otvorena pitanja / rizici
+- AI Profit Lab pretplate: otkazana pretplata ne skida Circle pristup (Orderly samo daje). Bonus AI Video Editor (kvartalno, godišnje) i koktel 18.12. i dalje ručno; Telegram poruka iz funnela i dalje kaže „pošalji pozivnicu za Circle", iako to sada ide samo.
 - **100 knjiga webhook više ne hvata InfoCash** (16.11.): Stripe destinacija `100knjiga-resend` (we_1Ua22q…) je do 20:16 CET slala svaki `checkout.session.completed` na 100knjiga.biznisprice.com, pa su InfoCash kupci dobili 100 knjiga i praznu Woo porudžbinu od 0 € na sajtu Vladsdigital (#45827–#45835). Od 20:16 CET destinacija gađa orderly relej `https://orderly-drab.vercel.app/api/webhook/stripe/relay/100knjiga` (config `settings.stripe_relays`), koji prosleđuje samo sesije sa `prod_Vb6xO3AEXX3ccv`, telo i Stripe potpis nepromenjeni (secret isti). Na produkciji provereno da InfoCash sesiju preskače. Kod 100 knjiga handlera nije na ovom računaru ni na GitHub-u; trajno bi trebalo da sam proverava proizvod.
 - Support Hub API: limit od 120/min se broji po instanci servera (u memoriji, jer ruta ne sme da piše u bazu).
 - Circle: kupce novih proizvoda u grupe ubacuje i nešto van Orderly-ja (13 od 18 je bilo u grupi bez Orderly dodele). Nije utvrđeno šta je to; Orderly dodela je idempotentna, pa duplo dodavanje ne smeta. Novi Woo proizvod sa Circle pristupom traži novo pravilo u `settings.circle_access`.
