@@ -9,12 +9,18 @@
 //     woo_product_id) — every paid order of that site matches. Meant for Stripe
 //     sites whose stripe_filter already narrows the account to one product
 //     (e.g. "InfoCash Stripe").
+//   • Stripe product rule: { site_id, stripe_product | stripe_price, targets… }
+//     — the charge's invoice / Checkout lines must contain one of the products
+//     (or prices). Stripe charges don't carry their products, so the lines are
+//     read from Stripe once and cached in woo_data._orderly_lines
+//     (ensureStripeLines).
 // circle_grants makes it idempotent per (order, target); failed grants are
 // retried by the daily cron sweep. circle_grants.access_group_id holds the
 // access group id, the NEGATIVE space group id for space group targets, or
 // -(1e9 + space id) for single space targets (see CircleTarget).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchStripeLineItems } from "../sync/stripe-line-items.ts";
 
 const ADMIN_URL = "https://app.circle.so/api/admin/v2";
 
@@ -24,8 +30,22 @@ export interface CircleRule {
   access_group_id?: number;
   space_group_id?: number;
   space_id?: number;
+  // Stripe product / price id(s); the rule must also name its site_id.
+  stripe_product?: string | string[];
+  stripe_price?: string | string[];
   access_group_name?: string;
 }
+
+export interface CachedStripeLine {
+  product: string | null;
+  price: string | null;
+}
+
+const ids = (v: string | string[] | undefined): string[] =>
+  (Array.isArray(v) ? v : v ? [v] : []).map((x) => String(x).trim()).filter(Boolean);
+
+export const isStripeRule = (r: CircleRule): boolean =>
+  ids(r.stripe_product).length > 0 || ids(r.stripe_price).length > 0;
 
 // A Circle grant target, encoded as one number: access group id (> 0), minus
 // the space group id (-1e9 < t < 0) or -(1e9 + space id) for a single space.
@@ -63,9 +83,20 @@ export function matchCircleTargets(
       .map((i: { product_id?: number }) => Number(i.product_id))
       .filter((n: number) => Number.isFinite(n))
   );
+  const stripeLines: CachedStripeLine[] = Array.isArray(wooData?._orderly_lines) ? wooData._orderly_lines : [];
   const targets = new Set<CircleTarget>();
   for (const r of rules) {
     if (r.site_id && r.site_id !== siteId) continue;
+    if (isStripeRule(r)) {
+      if (!r.site_id) continue;
+      const products = new Set(ids(r.stripe_product));
+      const prices = new Set(ids(r.stripe_price));
+      const hit = stripeLines.some(
+        (l) => (l.product != null && products.has(l.product)) || (l.price != null && prices.has(l.price))
+      );
+      if (hit) for (const t of ruleTargets(r)) targets.add(t);
+      continue;
+    }
     const hasProduct = r.woo_product_id != null && Number.isFinite(Number(r.woo_product_id));
     // Whole-site rules must name their site, so a typo can't grant everything.
     if (hasProduct ? !productIds.has(Number(r.woo_product_id)) : !r.site_id) continue;
@@ -175,6 +206,34 @@ async function loadToken(supabase: SupabaseClient, siteId: string): Promise<stri
   return any?.[0]?.circle_token ?? null;
 }
 
+// Stripe orders on a site with a Stripe product rule need their invoice /
+// Checkout lines. Reads them from Stripe once and caches them in
+// woo_data._orderly_lines; returns the (possibly updated) woo_data. Throws on
+// Stripe errors so the caller can retry later.
+export async function ensureStripeLines(
+  supabase: SupabaseClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  order: { id: string; site_id: string; source?: string; woo_data: any },
+  rules: CircleRule[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
+  const wd = order.woo_data;
+  if (order.source && order.source !== "stripe") return wd;
+  if (!wd?.id || wd.object !== "charge" || Array.isArray(wd._orderly_lines)) return wd;
+  if (!rules.some((r) => isStripeRule(r) && r.site_id === order.site_id)) return wd;
+
+  const { data: site } = await supabase.from("sites").select("consumer_key").eq("id", order.site_id).single();
+  if (!site?.consumer_key) throw new Error(`site ${order.site_id} has no Stripe key`);
+  // Pass only the id so the charge is re-read on the pinned API version (the
+  // stored copy may lack `invoice`).
+  const { items } = await fetchStripeLineItems({ id: wd.id, object: "charge" }, site.consumer_key);
+  const lines: CachedStripeLine[] = items.map((i) => ({ product: i.product, price: i.price }));
+  const next = { ...wd, _orderly_lines: lines };
+  await supabase.from("orders").update({ woo_data: next }).eq("id", order.id);
+  order.woo_data = next;
+  return next;
+}
+
 export async function processOrderCircleAccess(
   supabase: SupabaseClient,
   orderId: string,
@@ -192,6 +251,12 @@ export async function processOrderCircleAccess(
   if (!isPaidStatus(order.status)) return "not-paid";
   if (config.enabled_from && new Date(order.created_at) < new Date(config.enabled_from)) return "too-old";
 
+  try {
+    await ensureStripeLines(supabase, order, config.rules);
+  } catch (err) {
+    console.error(`[circle] Stripe line lookup failed for order ${orderId}:`, err);
+    return "partial";
+  }
   const groups = matchCircleTargets(order.woo_data, order.site_id, config.rules);
   if (groups.length === 0) return "no-match";
   if (!order.customer_email) return "no-email";
@@ -255,11 +320,11 @@ export async function sweepCircleAccess(
   let since = new Date(Date.now() - days * 86_400_000).toISOString();
   if (config.enabled_from && config.enabled_from > since) since = config.enabled_from;
   // PostgREST caps a response at 1000 rows, so page through the window.
-  const orders: { id: string; site_id: string; woo_data: unknown }[] = [];
+  const orders: { id: string; site_id: string; source: string; woo_data: unknown }[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase
       .from("orders")
-      .select("id, site_id, woo_data")
+      .select("id, site_id, source, woo_data")
       .in("source", SOURCES)
       .in("status", [...PAID])
       .gte("created_at", since)
@@ -272,6 +337,13 @@ export async function sweepCircleAccess(
   }
 
   for (const o of orders) {
+    try {
+      await ensureStripeLines(supabase, o, config.rules);
+    } catch (err) {
+      console.error(`[circle] Stripe line lookup failed for order ${o.id}:`, err);
+      stats.failed++;
+      continue;
+    }
     if (matchCircleTargets(o.woo_data, o.site_id, config.rules).length === 0) continue;
     stats.checked++;
     const r = await processOrderCircleAccess(supabase, o.id, { config });

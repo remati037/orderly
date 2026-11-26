@@ -10,7 +10,7 @@
 
 import { parseArgs } from "node:util";
 import { createClient } from "@supabase/supabase-js";
-import { isPaidStatus, matchCircleTargets, parseCircleConfig, sweepCircleAccess } from "../lib/circle/access.ts";
+import { ensureStripeLines, isPaidStatus, matchCircleTargets, parseCircleConfig, sweepCircleAccess } from "../lib/circle/access.ts";
 
 const { values: a } = parseArgs({
   options: { days: { type: "string", default: "7" }, yes: { type: "boolean", default: false } },
@@ -38,7 +38,7 @@ const orders = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await supabase
     .from("orders")
-    .select("id, woo_order_id, site_id, status, created_at, customer_email, woo_data, circle_grants(access_group_id, status)")
+    .select("id, woo_order_id, site_id, source, status, created_at, customer_email, woo_data, circle_grants(access_group_id, status)")
     .in("source", ["woocommerce", "stripe"])
     .gte("created_at", since)
     .order("created_at")
@@ -52,6 +52,8 @@ for (let from = 0; ; from += 1000) {
 let todo = 0;
 for (const o of orders) {
   if (!isPaidStatus(o.status)) continue;
+  // Stripe orders on sites with a Stripe product rule: read (and cache) their lines.
+  await ensureStripeLines(supabase, o, config.rules).catch((e) => console.error(`#${o.woo_order_id}: ${e.message}`));
   const ok = new Set(
     (o.circle_grants as { access_group_id: number; status: string }[])
       .filter((g) => g.status === "ok")

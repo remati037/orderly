@@ -130,3 +130,35 @@ describe("space member already in the space", () => {
     ).rejects.toThrow(/422/);
   });
 });
+
+describe("Stripe product rules", () => {
+  const charge = (lines?: { product: string | null; price: string | null }[]) => ({
+    id: "ch_1",
+    object: "charge",
+    ...(lines ? { _orderly_lines: lines } : {}),
+  });
+  const rules = [
+    { site_id: "apl", stripe_product: "apl_membership", access_group_id: 124997 },
+    { site_id: "apl", stripe_price: ["price_year_a", "price_year_b"], access_group_id: 174456 },
+  ];
+  it("matches the cached product line on its own site only", () => {
+    const c = charge([{ product: "apl_membership", price: "price_month" }]);
+    expect(matchCircleTargets(c, "apl", rules)).toEqual([124997]);
+    expect(matchCircleTargets(c, "other", rules)).toEqual([]);
+  });
+  it("price rules add the yearly bonus", () => {
+    const c = charge([{ product: "apl_membership", price: "price_year_b" }]);
+    expect(matchCircleTargets(c, "apl", rules).sort()).toEqual([124997, 174456]);
+  });
+  it("other products and uncached charges never match", () => {
+    expect(matchCircleTargets(charge([{ product: "video_editor", price: "p" }]), "apl", rules)).toEqual([]);
+    expect(matchCircleTargets(charge(), "apl", rules)).toEqual([]);
+  });
+  it("a Stripe rule without site_id never matches", () => {
+    const c = charge([{ product: "apl_membership", price: null }]);
+    expect(matchCircleTargets(c, "apl", [{ stripe_product: "apl_membership", access_group_id: 1 }])).toEqual([]);
+  });
+  it("is not treated as a whole-site rule", () => {
+    expect(matchCircleTargets({ id: "ch_2", object: "charge" }, "apl", [rules[0]])).toEqual([]);
+  });
+});
